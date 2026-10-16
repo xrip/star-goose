@@ -117,14 +117,23 @@ static unsigned player_y(const Game *game) {
     return (game->flight.camera_y + 112u) & 1023u;
 }
 
-static int column_z(int stored, int column) {
+static int column_z(int tile_row, int count) {
     unsigned z = 0;
-    for (int c = 0; c < column; c++) {
-        int tile = map_tiles[stored * 12 + c];
+    if (tile_row < 0) tile_row = 0;
+    if (tile_row > 63) tile_row = 63;
+    for (int c = 0; c < count; c++) {
+        int tile = map_tiles[tile_row * 12 + c];
         if (tile > 41) tile = 0;
         z = (z + goose_height_delta[tile]) & 255u;
     }
     return signed_byte(z);
+}
+
+/* CS:06D6 column bits 0x0200..0x0001, CS:0902 state byte starts at 10.
+ * Stream column 0 is bit 9 and is placed when that byte has fallen to 1.
+ * x = 24 * grid - 4. Height sums that many tiles on row 63-stored. */
+static int map_object_x(int stream_column) {
+    return 24 * (stream_column + 1) - 4;
 }
 
 static Actor *spawn(void) {
@@ -191,9 +200,9 @@ static void place_map(Game *game, unsigned camera) {
         actor->param = info->param;
         actor->animated = info->animated;
         actor->state[2] = info->hp;
-        actor->x = 24 * map->objects[i].column - 4;
+        actor->x = map_object_x(map->objects[i].column);
         actor->y = (unsigned)map->objects[i].stored_row << 4;
-        actor->z = (int8_t)column_z(map->objects[i].stored_row, map->objects[i].column);
+        actor->z = (int8_t)column_z(63 - map->objects[i].stored_row, map->objects[i].column + 1);
         snprintf(actor->sprite, sizeof actor->sprite, "%s", info->sprite);
         char name[24];
         if (actor->animated) snprintf(name, sizeof name, "%s_00", actor->sprite);
@@ -507,6 +516,13 @@ static void update_gate(Game *game, Actor *actor, int entrance_b) {
 }
 
 static void update_exit(Game *game, Actor *actor) {
+    /* CS:18C7: the exit stays shut until every collectible flag is set. */
+    int ready = 1;
+    for (int i = 0; i < 6; i++) ready &= collected[i] != 0;
+    if (!ready) {
+        if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
+        return;
+    }
     int dx = game->flight.x - actor->x - 12;
     if (dx < 0) dx = -dx;
     int dy = (int)player_y(game) - 8 - (int)actor->y;
@@ -521,7 +537,7 @@ static void update_exit(Game *game, Actor *actor) {
         int pull = game->flight.x - actor->x - 12;
         if (pull < 0) pull = -pull;
         nudge_x(game, game->flight.x - actor->x - 12);
-        if (pull <= 8 && dy <= 8) {
+        if (open == 8 && pull <= 8 && dy <= 8) {
             if (game->flight.frame == 0) {
                 pending_object = actor->object_index;
                 pending_part = level_part;
