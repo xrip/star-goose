@@ -4,6 +4,7 @@
 #include "atlas.h"
 #include "raylib.h"
 #if defined(__SWITCH__)
+#include "rlgl.h"
 #include <switch.h>
 #endif
 #include <stdint.h>
