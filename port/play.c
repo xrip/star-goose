@@ -114,6 +114,9 @@ enum {
     MOBILE_HP_B = 40,
     MOBILE_HP_C = 60,
     LAYER_TOP = 7,
+    LAYER_FLASH = 5,
+    LAYER_PLAYER = 4,
+    LAYER_SHOT = 3,
     LAYER_SHIP = 2,
     TILE_ROWS = 64,
     MAP_COLS = 12,
@@ -216,31 +219,32 @@ typedef struct Kind {
     uint8_t hp;
     int animated;
     const char *sprite;
+    uint8_t layer;
 } Kind;
 
 /* Handlers from the map templates. Kinds 15..20 share the collectible handler. */
 static const Kind KINDS[] = {
-    {HANDLER_LOOP, 0, 0, 1, "fs_0E2B"},
-    {HANDLER_PINGPONG, 0, 0, 1, "fs_0E52"},
-    {HANDLER_PROP, 0, 0, 0, "map_kind_02"},
-    {HANDLER_EMIT_DIRECT, 0, 0, 1, "fs_0E73"},
-    {HANDLER_EMIT_ARC, 0, 0, 1, "fs_0E9C"},
-    {HANDLER_EMIT_GROUND, 0, 0, 1, "fs_0EC5"},
-    {HANDLER_REFILL, 0, 0, 0, "map_kind_06"},
-    {HANDLER_BLOCK, 0, 0, 0, "map_kind_07"},
-    {HANDLER_GATE_A, 0, 0, 0, "map_kind_08"},
-    {HANDLER_GATE_B, 0, 0, 0, "map_kind_09"},
-    {HANDLER_BLOCK_B, 0, 0, 0, "map_kind_10"},
-    {HANDLER_MOBILE, 0, MOBILE_HP_A, 1, "fs_0EEE"},
-    {HANDLER_MOBILE, 1, MOBILE_HP_B, 1, "fs_0F3F"},
-    {HANDLER_LEVEL_EXIT, 0, 0, 0, "map_kind_13"},
-    {HANDLER_MOBILE, 2, MOBILE_HP_C, 1, "fs_0F90"},
-    {HANDLER_COLLECTIBLE, 0, 0, 0, "collectible_00"},
-    {HANDLER_COLLECTIBLE, 1, 0, 0, "collectible_00"},
-    {HANDLER_COLLECTIBLE, 2, 0, 0, "collectible_00"},
-    {HANDLER_COLLECTIBLE, 3, 0, 0, "collectible_03"},
-    {HANDLER_COLLECTIBLE, 4, 0, 0, "collectible_04"},
-    {HANDLER_COLLECTIBLE, 5, 0, 0, "collectible_05"}
+    {HANDLER_LOOP, 0, 0, 1, "fs_0E2B", LAYER_TOP},
+    {HANDLER_PINGPONG, 0, 0, 1, "fs_0E52", LAYER_TOP},
+    {HANDLER_PROP, 0, 0, 0, "map_kind_02", LAYER_TOP},
+    {HANDLER_EMIT_DIRECT, 0, 0, 1, "fs_0E73", LAYER_TOP},
+    {HANDLER_EMIT_ARC, 0, 0, 1, "fs_0E9C", LAYER_TOP},
+    {HANDLER_EMIT_GROUND, 0, 0, 1, "fs_0EC5", LAYER_TOP},
+    {HANDLER_REFILL, 0, 0, 0, "map_kind_06", LAYER_TOP},
+    {HANDLER_BLOCK, 0, 0, 0, "map_kind_07", LAYER_TOP},
+    {HANDLER_GATE_A, 0, 0, 0, "map_kind_08", LAYER_TOP},
+    {HANDLER_GATE_B, 0, 0, 0, "map_kind_09", LAYER_TOP},
+    {HANDLER_BLOCK_B, 0, 0, 0, "map_kind_10", 1},
+    {HANDLER_MOBILE, 0, MOBILE_HP_A, 1, "fs_0EEE", 6},
+    {HANDLER_MOBILE, 1, MOBILE_HP_B, 1, "fs_0F3F", 6},
+    {HANDLER_LEVEL_EXIT, 0, 0, 0, "map_kind_13", LAYER_TOP},
+    {HANDLER_MOBILE, 2, MOBILE_HP_C, 1, "fs_0F90", 6},
+    {HANDLER_COLLECTIBLE, 0, 0, 0, "collectible_00", LAYER_TOP},
+    {HANDLER_COLLECTIBLE, 1, 0, 0, "collectible_00", LAYER_TOP},
+    {HANDLER_COLLECTIBLE, 2, 0, 0, "collectible_00", LAYER_TOP},
+    {HANDLER_COLLECTIBLE, 3, 0, 0, "collectible_03", LAYER_TOP},
+    {HANDLER_COLLECTIBLE, 4, 0, 0, "collectible_04", LAYER_TOP},
+    {HANDLER_COLLECTIBLE, 5, 0, 0, "collectible_05", LAYER_TOP}
 };
 
 /* DS:031E. Index is the handler that stood on the obstacle before it was broken. */
@@ -453,6 +457,7 @@ static void spawn_replaced(int index, const GooseMapObject *object, int active) 
     actor->z = (int8_t)column_z(TILE_ROWS - 1 - object->stored_row, object->column + 1);
     snprintf(actor->sprite, sizeof actor->sprite, "%s", REPLACEMENT_SPRITE[handler]);
     actor->waiting = active ? 0 : 1;
+    actor->layer = LAYER_TOP;
     if (active) actor->flags = GOOSE_RENDER;
 }
 
@@ -481,6 +486,7 @@ static void apply_replacement(Actor *actor) {
     actor->z = z;
     actor->object_index = index;
     actor->flags = GOOSE_RENDER;
+    actor->layer = LAYER_TOP;
     actor->waiting = 0;
     snprintf(actor->sprite, sizeof actor->sprite, "%s", REPLACEMENT_SPRITE[handler]);
 }
@@ -555,6 +561,7 @@ static void place_map(Game *game, unsigned camera) {
             if (kind == KIND_LARGE) actor->flags |= GOOSE_LARGE_ANCHOR;
         }
         actor->handler = info->handler;
+        actor->layer = info->layer;
         actor->kind = (uint8_t)kind;
         actor->param = info->param;
         actor->animated = info->animated;
@@ -653,6 +660,7 @@ static void spawn_shot(Game *game, int x, unsigned y, int z, int frame, int heig
     shot->object_index = -1;
     shot->flags = GOOSE_RENDER | GOOSE_PROJECTILE;
     shot->handler = HANDLER_PLAYER_SHOT;
+    shot->layer = LAYER_SHOT;
     shot->frame = (uint8_t)frame;
     shot->height = (uint8_t)height;
     shot->x = x;
@@ -676,6 +684,7 @@ static void fire(Game *game) {
         flash->object_index = -1;
         flash->flags = GOOSE_RENDER;
         flash->handler = HANDLER_COUNTDOWN;
+        flash->layer = LAYER_FLASH;
         flash->frame = VARIATION[variation & VARIATION_MASK];
         flash->animated = 1;
         flash->x = game->flight.x + LEFT_DX[frame];
@@ -690,6 +699,7 @@ static void fire(Game *game) {
         flash->object_index = -1;
         flash->flags = GOOSE_RENDER;
         flash->handler = HANDLER_COUNTDOWN;
+        flash->layer = LAYER_FLASH;
         flash->frame = VARIATION[variation & VARIATION_MASK];
         flash->animated = 1;
         flash->x = game->flight.x + RIGHT_DX[frame];
@@ -724,7 +734,7 @@ static void spawn_aimed(Game *game, Actor *from, int fire) {
         flash->object_index = -1;
         flash->flags = GOOSE_RENDER;
         flash->handler = HANDLER_COUNTDOWN;
-        flash->layer = 5;
+        flash->layer = LAYER_FLASH;
         flash->animated = 1;
         flash->frame = VARIATION[variation & VARIATION_MASK];
         flash->x = x;
@@ -743,6 +753,7 @@ static void spawn_aimed(Game *game, Actor *from, int fire) {
     shot->object_index = -1;
     shot->flags = GOOSE_RENDER;
     shot->handler = HANDLER_ENEMY_SHOT;
+    shot->layer = LAYER_SHOT;
     shot->param = (uint8_t)direction;
     shot->height = AIMED_H[direction];
     shot->x = x;
@@ -790,7 +801,7 @@ static const unsigned IMPACT_SPRITE[IMPACT_FRAMES] = {0x3b06, 0x3b0a, 0x3b0e, 0x
 static void become_impact(Actor *shot) {
     shot->flags = GOOSE_RENDER;
     shot->handler = HANDLER_IMPACT;
-    shot->layer = 3;
+    shot->layer = LAYER_SHOT;
     shot->frame = 0;
     shot->state[0] = 0;
     shot->height = IMPACT_H;
@@ -808,7 +819,7 @@ static void become_side_impact(Actor *shot) {
     side_impact_mask = (uint8_t)(side_impact_mask | bit);
     shot->flags = (uint8_t)(GOOSE_RENDER | (right ? GOOSE_SIDE : 0));
     shot->handler = HANDLER_SIDE_IMPACT;
-    shot->layer = 5;
+    shot->layer = LAYER_FLASH;
     shot->frame = 0;
     shot->state[3] = 0;
     shot->animated = 1;
@@ -980,7 +991,7 @@ static void emit_mobile_shot(Game *game, Actor *from, int dx, int dy, int dz) {
         flash->object_index = -1;
         flash->flags = GOOSE_RENDER;
         flash->handler = HANDLER_COUNTDOWN;
-        flash->layer = 5;
+        flash->layer = LAYER_FLASH;
         flash->animated = 1;
         flash->frame = VARIATION[variation & VARIATION_MASK];
         flash->x = x;
@@ -998,6 +1009,7 @@ static void emit_mobile_shot(Game *game, Actor *from, int dx, int dy, int dz) {
     shot->object_index = -1;
     shot->flags = GOOSE_RENDER;
     shot->handler = HANDLER_ENEMY_SHOT;
+    shot->layer = LAYER_SHOT;
     shot->param = 2;
     shot->frame = (uint8_t)frame;
     shot->height = SHOT_HEIGHTS[frame];
@@ -1041,6 +1053,7 @@ static void spawn_lobbed(Actor *from, int direction, int handler) {
     shot->object_index = -1;
     shot->flags = GOOSE_RENDER;
     shot->handler = (uint8_t)handler;
+    shot->layer = arc ? LAYER_SHIP : LAYER_SHOT;
     shot->param = (uint8_t)direction;
     shot->animated = arc ? 0 : 1;
     shot->x = from->x + (arc ? arc_dx[direction] : ground_dx[direction]);
@@ -1150,6 +1163,7 @@ static void update_arcing(Game *game, Actor *shot) {
     shot->state[3]++;
     if (shot->state[3] >= ARC_LIFE) {
         shot->handler = HANDLER_ARC_BURST;
+        shot->layer = LAYER_SHIP;
         shot->animated = 1;
         shot->frame = 0;
         shot->state[3] = 0;
@@ -1298,6 +1312,7 @@ static int arm_surface_side(int side) {
     actor->flags = GOOSE_RENDER | GOOSE_PROJECTILE;
     if (side) actor->flags |= GOOSE_SIDE;
     actor->handler = HANDLER_SIDE_FOLLOW;
+    actor->layer = LAYER_SHIP;
     actor->animated = 1;
     actor->state[2] = GROUND_LIFE;
     snprintf(actor->sprite, sizeof actor->sprite, "fs_0DDA");
@@ -1341,7 +1356,10 @@ static void update_side_follow(Game *game, Actor *actor) {
     }
     position_side(actor);
     uint8_t state = (actor->flags & GOOSE_SIDE) ? right_device : left_device;
-    if (state == 3) actor->handler = HANDLER_SIDE_GROUND;
+    if (state == 3) {
+        actor->handler = HANDLER_SIDE_GROUND;
+        actor->layer = LAYER_SHOT;
+    }
 }
 
 static void update_ground_shot(Game *game, Actor *actor) {
@@ -1410,6 +1428,7 @@ static void spawn_explosion(int x, unsigned y, int z) {
     boom->object_index = -1;
     boom->flags = GOOSE_RENDER;
     boom->handler = HANDLER_EXPLOSION;
+    boom->layer = LAYER_FLASH;
     boom->animated = 1;
     boom->x = x;
     boom->y = y;
@@ -2160,6 +2179,7 @@ static void spawn_attract(int frame) {
     actor->object_index = -1;
     actor->flags = GOOSE_RENDER;
     actor->handler = HANDLER_DRIFT;
+    actor->layer = LAYER_PLAYER;
     actor->waiting = 1;
     actor->animated = 1;
     actor->frame = (uint8_t)frame;
@@ -2304,6 +2324,34 @@ void game_tick(Game *game, unsigned controls) {
     update_surface_actors(game);
 }
 
+static void draw_surface_actor(const Actor *actor, int camera) {
+    if ((actor->flags & GOOSE_RENDER) == 0 || actor->waiting) return;
+    if (actor->handler == HANDLER_GATE_A || actor->handler == HANDLER_GATE_B) {
+        unsigned index = actor->state[0];
+        if (index >= sizeof GATE_SPRITE / sizeof GATE_SPRITE[0]) index = 0;
+        pictures_bank_sprite(BANK_BLOX, GATE_SPRITE[index], GATE_W, GATE_H,
+                             GATE_AX, GATE_AY, actor->x, (int)actor->y, actor->z, camera);
+        return;
+    }
+    if (actor->handler == HANDLER_LEVEL_EXIT) {
+        unsigned index = actor->state[0];
+        if (index >= sizeof EXIT_SPRITE / sizeof EXIT_SPRITE[0]) index = 0;
+        pictures_bank_sprite(BANK_BIRD2, EXIT_SPRITE[index], EXIT_W, EXIT_H,
+                             EXIT_AX, EXIT_AY, actor->x, (int)actor->y, actor->z, camera);
+        return;
+    }
+    if (actor->handler == HANDLER_IMPACT) {
+        unsigned index = actor->state[0];
+        if (index >= IMPACT_FRAMES) index = IMPACT_FRAMES - 1;
+        pictures_bank_sprite(BANK_BIRD1, IMPACT_SPRITE[index], IMPACT_W, IMPACT_H,
+                             IMPACT_ANCHOR, IMPACT_ANCHOR, actor->x, (int)actor->y, actor->z, camera);
+        return;
+    }
+    char name[24];
+    sprite_name(actor, name, sizeof name);
+    pictures_sprite(name, actor->x, (int)actor->y, actor->z, camera);
+}
+
 static void draw_tunnel_layer(int layer) {
     for (int i = 0; i < ACTORS; i++) {
         if (actors[i].flags == 0 || actors[i].layer != (uint8_t)layer) continue;
@@ -2318,7 +2366,9 @@ void game_draw(Game *game) {
     if (game->mode == MODE_TITLE) {
         pictures_intro();
         poll_name();
+        for (int layer = LAYER_TOP; layer >= 1; layer--)
         for (int i = 0; i < ACTORS; i++) {
+            if (actors[i].layer != (uint8_t)layer) continue;
             if (actors[i].flags == 0 || actors[i].waiting) continue;
             char name[24];
             sprite_name(&actors[i], name, sizeof name);
@@ -2349,38 +2399,14 @@ void game_draw(Game *game) {
         draw_tunnel_layer(1);
     } else {
         pictures_draw_tiles(&game->flight);
-        for (int i = 0; i < ACTORS; i++) {
-            if (actors[i].flags == 0 || actors[i].waiting) continue;
-            if (actors[i].handler == HANDLER_GATE_A || actors[i].handler == HANDLER_GATE_B) {
-                if (actors[i].layer == 0 && actors[i].frame != 0) continue;
-                unsigned index = actors[i].state[0];
-                if (index >= sizeof GATE_SPRITE / sizeof GATE_SPRITE[0]) index = 0;
-                pictures_bank_sprite(BANK_BLOX, GATE_SPRITE[index], GATE_W, GATE_H,
-                                     GATE_AX, GATE_AY, actors[i].x, (int)actors[i].y,
-                                     actors[i].z, (int)game->flight.camera_y);
-                continue;
+        int camera = (int)game->flight.camera_y;
+        for (int layer = LAYER_TOP; layer >= 1; layer--) {
+            for (int i = 0; i < ACTORS; i++) {
+                if (actors[i].layer != (uint8_t)layer) continue;
+                draw_surface_actor(&actors[i], camera);
             }
-            if (actors[i].handler == HANDLER_LEVEL_EXIT) {
-                unsigned index = actors[i].state[0];
-                if (index >= sizeof EXIT_SPRITE / sizeof EXIT_SPRITE[0]) index = 0;
-                pictures_bank_sprite(BANK_BIRD2, EXIT_SPRITE[index], EXIT_W, EXIT_H,
-                                     EXIT_AX, EXIT_AY, actors[i].x, (int)actors[i].y,
-                                     actors[i].z, (int)game->flight.camera_y);
-                continue;
-            }
-            if (actors[i].handler == HANDLER_IMPACT) {
-                unsigned index = actors[i].state[0];
-                if (index >= IMPACT_FRAMES) index = IMPACT_FRAMES - 1;
-                pictures_bank_sprite(BANK_BIRD1, IMPACT_SPRITE[index], IMPACT_W, IMPACT_H,
-                                     IMPACT_ANCHOR, IMPACT_ANCHOR, actors[i].x, (int)actors[i].y,
-                                     actors[i].z, (int)game->flight.camera_y);
-                continue;
-            }
-            char name[24];
-            sprite_name(&actors[i], name, sizeof name);
-            pictures_sprite(name, actors[i].x, (int)actors[i].y, actors[i].z, (int)game->flight.camera_y);
+            if (layer == LAYER_PLAYER && game->flight.alive) pictures_draw_ship(&game->flight);
         }
-        if (game->flight.alive) pictures_draw_ship(&game->flight);
     }
     if (game->mode != MODE_TITLE) {
         hud_draw(game->flight.fuel, game->ammo, game->flight.shield, game->lives, side_charges,
