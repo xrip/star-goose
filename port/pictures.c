@@ -1,4 +1,5 @@
 #include "pictures.h"
+#include "tunnel.h"
 #include "atlas.h"
 #include "raylib.h"
 #include <stdint.h>
@@ -14,7 +15,23 @@ enum {
     VIEW_W = 256,
     VIEW_H = 160,
     TILES = 42,
-    CLEAR = 255
+    CLEAR = 255,
+    MAP_ROWS = 64,
+    MAP_COLS = 12,
+    TILE_W = 24,
+    ROW_H = 16,
+    EDGE_W = 8,
+    CROP = 16,
+    SHIP_LAST = 10,
+    BYTE_MASK = 255,
+    WORLD_HALF = 512,
+    PACKED_STRIDE = 160,
+    BANK_BLOX = 4,
+    TUNNEL_STRIDE = 32,
+    BIT7 = 0x80,
+    KEY_COLOR = 2,
+    GAUGE_FLIP = 7,
+    PRESENT_SCALE = 3
 };
 
 static const Color EGA[16] = {
@@ -168,8 +185,8 @@ static void blit_sprite(const AtlasSprite *sprite, int src_dx, int width, int de
 }
 
 static int screen_y(int world_y, int camera_y) {
-    int relative = (world_y - camera_y) & 1023;
-    if (relative >= 512) relative -= 1024;
+    int relative = (world_y - camera_y) & WORLD_MASK;
+    if (relative >= WORLD_HALF) relative -= WORLD_MASK + 1;
     return VIEW_Y + relative;
 }
 
@@ -194,7 +211,7 @@ void pictures_anchor(const char *name, int *anchor_x, int *anchor_y) {
 void pictures_sprite(const char *name, int world_x, int world_y, int z, int camera_y) {
     const AtlasSprite *sprite = find_sprite(name);
     if (!sprite) return;
-    int z_sum = (z + sprite->anchor_y) & 255;
+    int z_sum = (z + sprite->anchor_y) & BYTE_MASK;
     int dest_x = VIEW_X + world_x - sprite->anchor_x;
     int dest_y = screen_y(world_y - signed8((unsigned)z_sum), camera_y);
     blit_sprite(sprite, 0, sprite->w, dest_x, dest_y);
@@ -207,9 +224,9 @@ void pictures_intro(void) {
 void pictures_tunnel(const uint8_t *bits, int color) {
     if (color < 0 || color > 15) color = 3;
     for (int row = 0; row < VIEW_H; row++) {
-        const uint8_t *src = bits + (row + 26) * 32;
+        const uint8_t *src = bits + (row + TUNNEL_CAMERA) * TUNNEL_STRIDE;
         for (int x = 0; x < VIEW_W; x++) {
-            if (src[x >> 3] & (uint8_t)(0x80u >> (x & 7))) {
+            if (src[x >> 3] & (uint8_t)(BIT7 >> (x & 7))) {
                 screen[(VIEW_Y + row) * SCREEN_W + VIEW_X + x] = (uint8_t)color;
             }
         }
@@ -225,27 +242,27 @@ void pictures_finish(void) {
 void pictures_draw_tiles(const Surface *game) {
     const uint8_t *tiles = game->tiles;
     int camera = (int)game->camera_y;
-    for (int stored = 0; stored < 64; stored++) {
+    for (int stored = 0; stored < MAP_ROWS; stored++) {
         unsigned running = 0;
-        int world_row = 63 - stored;
-        for (int column = 0; column < 12; column++) {
+        int world_row = MAP_ROWS - 1 - stored;
+        for (int column = 0; column < MAP_COLS; column++) {
             unsigned z = running;
-            int tile = tiles[stored * 12 + column];
+            int tile = tiles[stored * MAP_COLS + column];
             if (tile >= TILES) tile = 0;
-            running = (running + goose_height_delta[tile]) & 255u;
+            running = (running + goose_height_delta[tile]) & BYTE_MASK;
             const AtlasSprite *sprite = &atlas_tiles[tile];
             int src_dx = 0;
             int width = sprite->w;
-            int dest_x = VIEW_X + 8 + (column - 1) * 24;
+            int dest_x = VIEW_X + EDGE_W + (column - 1) * TILE_W;
             if (column == 0) {
-                src_dx = 16;
-                width = 8;
+                src_dx = CROP;
+                width = EDGE_W;
                 dest_x = VIEW_X;
-            } else if (column == 11) {
-                width = 8;
-                dest_x = VIEW_X + 248;
+            } else if (column == MAP_COLS - 1) {
+                width = EDGE_W;
+                dest_x = VIEW_X + VIEW_W - EDGE_W;
             }
-            int world_y = world_row * 16 + TILE_Y_ADJUST[tile] - signed8(z);
+            int world_y = world_row * ROW_H + TILE_Y_ADJUST[tile] - signed8(z);
             blit_sprite(sprite, src_dx, width, dest_x, screen_y(world_y, camera));
         }
     }
@@ -253,10 +270,10 @@ void pictures_draw_tiles(const Surface *game) {
 
 void pictures_draw_ship(const Surface *game) {
     int frame_index = game->frame;
-    if (frame_index < 0 || frame_index > 10) return;
+    if (frame_index < 0 || frame_index > SHIP_LAST) return;
     const AtlasSprite *sprite = &atlas_ship[frame_index];
-    int z_sum = (game->z + sprite->anchor_y) & 255;
-    int world_y = (int)((game->camera_y + 112u) & 1023u) - signed8((unsigned)z_sum);
+    int z_sum = (game->z + sprite->anchor_y) & BYTE_MASK;
+    int world_y = (int)((game->camera_y + PLAYER_AHEAD) & WORLD_MASK) - signed8((unsigned)z_sum);
     int dest_x = VIEW_X + game->x - sprite->anchor_x;
     blit_sprite(sprite, 0, sprite->w, dest_x, screen_y(world_y, (int)game->camera_y));
 }
@@ -270,11 +287,11 @@ void pictures_draw_surface(const Surface *game) {
 
 void pictures_blit_bank(int bank_offset, unsigned offset, int width, int height,
                         int dest_x, int dest_y, int live_columns) {
-    const uint8_t *bank = bank_offset == 4 ? bank_blox : bank_bird2;
-    int bank_ready = bank_offset == 4 ? bank_blox_ready : bank_bird2_ready;
+    const uint8_t *bank = bank_offset == BANK_BLOX ? bank_blox : bank_bird2;
+    int bank_ready = bank_offset == BANK_BLOX ? bank_blox_ready : bank_bird2_ready;
     if (!bank_ready || width <= 0 || height <= 0) return;
-    int src_y = (int)(offset / 160u);
-    int src_x = (int)(offset % 160u) * 2;
+    int src_y = (int)(offset / PACKED_STRIDE);
+    int src_x = (int)(offset % PACKED_STRIDE) * 2;
     int live = live_columns < 0 ? width : live_columns;
     for (int dy = 0; dy < height; dy++) {
         int y = dest_y + dy;
@@ -284,8 +301,8 @@ void pictures_blit_bank(int bank_offset, unsigned offset, int width, int height,
             if (x < 0 || x >= SCREEN_W || src_x + dx < 0 || src_x + dx >= SCREEN_W) continue;
             int color = bank[(src_y + dy) * SCREEN_W + src_x + dx];
             if (dx >= live) {
-                if (color == 2 || (color & 1) == 0) color = (color == 2 ? 0 : color) ^ 7;
-            } else if (color == 2) {
+                if (color == KEY_COLOR || (color & 1) == 0) color = (color == KEY_COLOR ? 0 : color) ^ GAUGE_FLIP;
+            } else if (color == KEY_COLOR) {
                 continue;
             }
             screen[y * SCREEN_W + x] = (uint8_t)color;
@@ -294,7 +311,7 @@ void pictures_blit_bank(int bank_offset, unsigned offset, int width, int height,
 }
 
 void pictures_present(void) {
-    DrawTextureEx(frame, (Vector2){0, 0}, 0, 3, WHITE);
+    DrawTextureEx(frame, (Vector2){0, 0}, 0, PRESENT_SCALE, WHITE);
 }
 
 void pictures_save(const char *path) {

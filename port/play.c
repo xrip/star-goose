@@ -9,7 +9,132 @@
 #include <stdio.h>
 #include <string.h>
 
-enum { ACTORS = 48, AMMO_FULL = 48, LIVES_FULL = 3 };
+enum { ACTORS = GOOSE_ENTITY_CAPACITY };
+
+enum {
+    HANDLER_LOOP = 2,
+    HANDLER_PINGPONG = 3,
+    HANDLER_PROP = 4,
+    HANDLER_EMIT_DIRECT = 5,
+    HANDLER_EMIT_ARC = 6,
+    HANDLER_EMIT_GROUND = 7,
+    HANDLER_REFILL = 8,
+    HANDLER_BLOCK = 9,
+    HANDLER_GATE_A = 10,
+    HANDLER_GATE_B = 11,
+    HANDLER_BLOCK_B = 13,
+    HANDLER_TUNNEL_EXIT = 14,
+    HANDLER_TUNNEL_PICKUP = 15,
+    HANDLER_EXPLOSION = 16,
+    HANDLER_PLAYER_SHOT = 19,
+    HANDLER_ENEMY_SHOT = 20,
+    HANDLER_COUNTDOWN = 22,
+    HANDLER_SIDE_FOLLOW = 24,
+    HANDLER_SIDE_GROUND = 25,
+    HANDLER_MOBILE = 26,
+    HANDLER_LEVEL_EXIT = 28,
+    HANDLER_GROUND_ENEMY = 29,
+    HANDLER_ARC = 30,
+    HANDLER_ARC_BURST = 31,
+    HANDLER_COLLECTIBLE = 32,
+    DIRECT_RELOAD = 8,
+    ARC_RELOAD = 18,
+    GROUND_RELOAD = 40,
+    CULL_SPAN = 512,
+    AIM_TOO_FAR = 140,
+    SHOT_Z_HIGH = 156,
+    SHOT_Z_LOW = 100,
+    SHOT_Z_STEP = 8,
+    HIT_X = 20,
+    HIT_Y = 16,
+    HIT_Z = 16,
+    PLAYER_HIT_X = 12,
+    ENEMY_OFF_LEFT = 4,
+    ENEMY_OFF_RIGHT = 252,
+    MOBILE_HIT_X = 26,
+    MOBILE_HIT_Y = 18,
+    COLLECT_X = 18,
+    COLLECT_Y = 16,
+    HP_MARK = 0xff,
+    HP_DEPLETED = 0x80,
+    REFILL_FAR = 32,
+    NUDGE_REACH = 24,
+    REFILL_CLOSE = 8,
+    REFILL_CORE = 2,
+    REFILL_KILL = 36,
+    GROUND_OFF_LEFT = 12,
+    GROUND_OFF_RIGHT = 244,
+    GROUND_HIT = 16,
+    ARC_OFF_LEFT = 8,
+    ARC_OFF_RIGHT = 248,
+    ARC_HIT_X = 14,
+    ARC_HIT_Y = 10,
+    ARC_LIFE = 16,
+    GATE_REACH = 64,
+    GATE_OPEN = 8,
+    OBJECT_SLOTS = 32,
+    DAMAGE_KINDS = 6,
+    COLUMN_SPAN = 24,
+    COLUMN_BIAS = 4,
+    PARTS = 3,
+    LEVELS = 8,
+    PICKUP_AMMO = 6,
+    PICKUP_FUEL = 4,
+    PICKUP_SHIELD = 8,
+    STAGE_QUICK = 3,
+    STAGE_FASTER = 6,
+    NO_SECTION = 0xff,
+    ANGLE_MASK = 127,
+    ANGLE_HALF = 63,
+    SCORE_PLACES = 6,
+    COLLECTIBLES = 6,
+    HISTORY_LAG = 3,
+    MOBILE_HP_A = 50,
+    MOBILE_HP_B = 40,
+    MOBILE_HP_C = 60,
+    LAYER_TOP = 7,
+    LAYER_SHIP = 2,
+    TILE_ROWS = 64,
+    MAP_COLS = 12,
+    HEIGHT_TILES = 42,
+    BYTE_MASK = 255,
+    SPAWN_AHEAD = 15,
+    CULL_AHEAD = 160,
+    AMMO_SPEND = 16,
+    AIM_BAND = 32,
+    AIM_BEHIND = 16,
+    SHOT_STEP = 16,
+    SHOT_LIFT = 4,
+    COLLECTIBLE_KIND = 15,
+    SHIP_FIRE_FRAME = 9,
+    AIM_LAST = 4,
+    VARIATION_MASK = 15,
+    DIGIT_BASE = 10,
+    SCORE_PHASE = 3,
+    ENEMY_STEP = 8,
+    ENEMY_DIAG_X = 6,
+    ENEMY_DIAG_Y = 4,
+    ENEMY_HIT_Y = 8,
+    TOUCH_HURT = 1,
+    MOBILE_HURT = 12,
+    GATE_INSET = 12,
+    ENTRANCE_FULL = 6,
+    PULL_LIMIT = 8,
+    HEAVY_HURT = 100,
+    ARC_HURT = 10,
+    GROUND_STEP = 5,
+    GROUND_DIAG_X = 3,
+    GROUND_DIAG_Y = 2,
+    LOB_Z = 8,
+    ARC_STEP_X = 4,
+    ARC_STEP_Y = 3,
+    HISTORY = 4,
+    SIDE_OFFSET = 8,
+    SIDE_TRAIL = 6,
+    GROUND_LIFE = 5,
+    EXPLOSION_FRAMES = 5,
+    BURST_FRAMES = 6
+};
 
 typedef struct Actor {
     uint8_t flags;
@@ -40,27 +165,27 @@ typedef struct Kind {
 
 /* Handlers from the map templates. Kinds 15..20 share the collectible handler. */
 static const Kind KINDS[] = {
-    {2, 0, 0, 1, "fs_0E2B"},
-    {3, 0, 0, 1, "fs_0E52"},
-    {4, 0, 0, 0, "map_kind_02"},
-    {5, 0, 0, 1, "fs_0E73"},
-    {6, 0, 0, 1, "fs_0E9C"},
-    {7, 0, 0, 1, "fs_0EC5"},
-    {8, 0, 0, 0, "map_kind_06"},
-    {9, 0, 0, 0, "map_kind_07"},
-    {10, 0, 0, 0, "map_kind_08"},
-    {11, 0, 0, 0, "map_kind_09"},
-    {13, 0, 0, 0, "map_kind_10"},
-    {26, 0, 0x32, 1, "fs_0EEE"},
-    {26, 1, 0x28, 1, "fs_0F3F"},
-    {28, 0, 0, 0, "map_kind_13"},
-    {26, 2, 0x3c, 1, "fs_0F90"},
-    {32, 0, 0, 0, "collectible_00"},
-    {32, 1, 0, 0, "collectible_00"},
-    {32, 2, 0, 0, "collectible_00"},
-    {32, 3, 0, 0, "collectible_03"},
-    {32, 4, 0, 0, "collectible_04"},
-    {32, 5, 0, 0, "collectible_05"}
+    {HANDLER_LOOP, 0, 0, 1, "fs_0E2B"},
+    {HANDLER_PINGPONG, 0, 0, 1, "fs_0E52"},
+    {HANDLER_PROP, 0, 0, 0, "map_kind_02"},
+    {HANDLER_EMIT_DIRECT, 0, 0, 1, "fs_0E73"},
+    {HANDLER_EMIT_ARC, 0, 0, 1, "fs_0E9C"},
+    {HANDLER_EMIT_GROUND, 0, 0, 1, "fs_0EC5"},
+    {HANDLER_REFILL, 0, 0, 0, "map_kind_06"},
+    {HANDLER_BLOCK, 0, 0, 0, "map_kind_07"},
+    {HANDLER_GATE_A, 0, 0, 0, "map_kind_08"},
+    {HANDLER_GATE_B, 0, 0, 0, "map_kind_09"},
+    {HANDLER_BLOCK_B, 0, 0, 0, "map_kind_10"},
+    {HANDLER_MOBILE, 0, MOBILE_HP_A, 1, "fs_0EEE"},
+    {HANDLER_MOBILE, 1, MOBILE_HP_B, 1, "fs_0F3F"},
+    {HANDLER_LEVEL_EXIT, 0, 0, 0, "map_kind_13"},
+    {HANDLER_MOBILE, 2, MOBILE_HP_C, 1, "fs_0F90"},
+    {HANDLER_COLLECTIBLE, 0, 0, 0, "collectible_00"},
+    {HANDLER_COLLECTIBLE, 1, 0, 0, "collectible_00"},
+    {HANDLER_COLLECTIBLE, 2, 0, 0, "collectible_00"},
+    {HANDLER_COLLECTIBLE, 3, 0, 0, "collectible_03"},
+    {HANDLER_COLLECTIBLE, 4, 0, 0, "collectible_04"},
+    {HANDLER_COLLECTIBLE, 5, 0, 0, "collectible_05"}
 };
 
 /* DS:1495 and DS:14C5. Low 10 bits are the resume camera, high 2 bits are the reward. */
@@ -122,7 +247,7 @@ static unsigned pending_resume;
 static uint8_t ship_angle;
 static uint8_t tunnel_pattern_index;
 static uint8_t tunnel_pattern;
-static uint8_t tunnel_last_section = 0xff;
+static uint8_t tunnel_last_section = NO_SECTION;
 static int tunnel_exit_spawned;
 static int tunnel_min_radius = 3;
 
@@ -179,26 +304,23 @@ static void hud_tick(Game *game) {
 }
 
 static unsigned player_y(const Game *game) {
-    return (game->flight.camera_y + 112u) & 1023u;
+    return (game->flight.camera_y + PLAYER_AHEAD) & WORLD_MASK;
 }
 
 static int column_z(int tile_row, int count) {
     unsigned z = 0;
     if (tile_row < 0) tile_row = 0;
-    if (tile_row > 63) tile_row = 63;
+    if (tile_row > TILE_ROWS - 1) tile_row = TILE_ROWS - 1;
     for (int c = 0; c < count; c++) {
-        int tile = map_tiles[tile_row * 12 + c];
-        if (tile > 41) tile = 0;
-        z = (z + goose_height_delta[tile]) & 255u;
+        int tile = map_tiles[tile_row * MAP_COLS + c];
+        if (tile >= HEIGHT_TILES) tile = 0;
+        z = (z + goose_height_delta[tile]) & BYTE_MASK;
     }
     return signed_byte(z);
 }
 
-/* CS:06D6 column bits 0x0200..0x0001, CS:0902 state byte starts at 10.
- * Stream column 0 is bit 9 and is placed when that byte has fallen to 1.
- * x = 24 * grid - 4. Height sums that many tiles on row 63-stored. */
 static int map_object_x(int stream_column) {
-    return 24 * (stream_column + 1) - 4;
+    return COLUMN_SPAN * (stream_column + 1) - COLUMN_BIAS;
 }
 
 static Actor *spawn(void) {
@@ -213,12 +335,12 @@ static void clear_actors(void) {
 }
 
 static unsigned spawn_row(unsigned camera) {
-    return ((camera >> 4) - 3u) & 63u;
+    return ((camera >> 4) - 3u) & (TILE_ROWS - 1);
 }
 
 static void consume_actor(const Actor *actor) {
-    if (!actor || actor->object_index < 0 || actor->object_index >= 32) return;
-    if (level_part < 0 || level_part > 2) return;
+    if (!actor || actor->object_index < 0 || actor->object_index >= OBJECT_SLOTS) return;
+    if (level_part < 0 || level_part >= PARTS) return;
     consumed[level_part] |= 1u << actor->object_index;
 }
 
@@ -234,10 +356,10 @@ static int map_number(void) {
     int level = level_index;
     int part = level_part;
     if (level < 0) level = 0;
-    if (level > 7) level = 7;
+    if (level > LEVELS - 1) level = LEVELS - 1;
     if (part < 0) part = 0;
-    if (part > 2) part = 2;
-    return level * 3 + part;
+    if (part > PARTS - 1) part = PARTS - 1;
+    return level * PARTS + part;
 }
 
 static void remember(Game *game) {
@@ -253,8 +375,9 @@ static void place_map(Game *game, unsigned camera) {
     for (int i = 0; i < map->object_count; i++) {
         unsigned kind = map->objects[i].kind;
         if (kind >= sizeof KINDS / sizeof KINDS[0]) continue;
-        if (kind >= 15 && kind - 15 < 6 && collected[kind - 15]) continue;
-        if (level_part >= 0 && level_part < 3 && (consumed[level_part] & (1u << i))) continue;
+        if (kind >= COLLECTIBLE_KIND && kind - COLLECTIBLE_KIND < COLLECTIBLES &&
+            collected[kind - COLLECTIBLE_KIND]) continue;
+        if (level_part >= 0 && level_part < PARTS && (consumed[level_part] & (1u << i))) continue;
         const Kind *info = &KINDS[kind];
         Actor *actor = spawn();
         if (!actor) return;
@@ -268,7 +391,7 @@ static void place_map(Game *game, unsigned camera) {
         actor->state[2] = info->hp;
         actor->x = map_object_x(map->objects[i].column);
         actor->y = (unsigned)map->objects[i].stored_row << 4;
-        actor->z = (int8_t)column_z(63 - map->objects[i].stored_row, map->objects[i].column + 1);
+        actor->z = (int8_t)column_z(TILE_ROWS - 1 - map->objects[i].stored_row, map->objects[i].column + 1);
         snprintf(actor->sprite, sizeof actor->sprite, "%s", info->sprite);
         char name[24];
         if (actor->animated) snprintf(name, sizeof name, "%s_00", actor->sprite);
@@ -278,7 +401,7 @@ static void place_map(Game *game, unsigned camera) {
         actor->anchor_y = (int8_t)anchor_y;
     }
     last_spawn_row = spawn_row(camera);
-    for (unsigned n = 0; n < 15; n++) activate_row((last_spawn_row + n) & 63u);
+    for (unsigned n = 0; n < SPAWN_AHEAD; n++) activate_row((last_spawn_row + n) & (TILE_ROWS - 1));
 }
 
 static void advance_spawns(unsigned camera) {
@@ -290,18 +413,18 @@ static void advance_spawns(unsigned camera) {
 
 static int cull_after(const Actor *actor, unsigned camera) {
     int zsum = signed_byte((unsigned)actor->z + (unsigned)actor->anchor_y);
-    int ax = ((int)actor->y - zsum) & 1023;
-    int bx = (int)((camera + 160u) & 1023u);
-    if (ax < bx) ax += 1024;
-    return (ax - bx) < 0x200;
+    int ax = ((int)actor->y - zsum) & WORLD_MASK;
+    int bx = (int)((camera + CULL_AHEAD) & WORLD_MASK);
+    if (ax < bx) ax += WORLD_MASK + 1;
+    return (ax - bx) < CULL_SPAN;
 }
 
 static int cull_before(const Actor *actor, unsigned camera) {
     unsigned mixed = (unsigned)actor->height - (unsigned)(uint8_t)actor->z - (unsigned)(uint8_t)actor->anchor_y;
-    int ax = ((int)actor->y + signed_byte(mixed)) & 1023;
-    int bx = (int)(camera & 1023u);
-    if (ax < bx) ax += 1024;
-    return (ax - bx) > 0x200;
+    int ax = ((int)actor->y + signed_byte(mixed)) & WORLD_MASK;
+    int bx = (int)(camera & WORLD_MASK);
+    if (ax < bx) ax += WORLD_MASK + 1;
+    return (ax - bx) > CULL_SPAN;
 }
 
 static void sprite_name(const Actor *actor, char *name, size_t size) {
@@ -328,7 +451,7 @@ static void spawn_shot(Game *game, int x, unsigned y, int z, int frame, int heig
     *shot = (Actor){0};
     shot->object_index = -1;
     shot->flags = GOOSE_RENDER | GOOSE_UPDATE | GOOSE_PROJECTILE;
-    shot->handler = 19;
+    shot->handler = HANDLER_PLAYER_SHOT;
     shot->frame = (uint8_t)frame;
     shot->height = (uint8_t)height;
     shot->x = x;
@@ -340,19 +463,19 @@ static void spawn_shot(Game *game, int x, unsigned y, int z, int frame, int heig
 static void fire(Game *game) {
     int frame = game->flight.frame;
     if (frame < 0) frame = 0;
-    if (frame > 9) frame = 9;
+    if (frame > SHIP_FIRE_FRAME) frame = SHIP_FIRE_FRAME;
     int shot_frame = SHOT_FRAME[frame];
     unsigned y = (player_y(game) - 4u) & 1023u;
     int z = game->flight.z;
     spawn_shot(game, game->flight.x + LEFT_DX[frame], y, z + LEFT_DZ[frame], shot_frame, SHOT_HEIGHT[shot_frame]);
-    variation = (uint8_t)((variation + 1u) & 255u);
+    variation = (uint8_t)((variation + 1u) & BYTE_MASK);
     Actor *flash = spawn();
     if (flash) {
         *flash = (Actor){0};
         flash->object_index = -1;
         flash->flags = GOOSE_RENDER | GOOSE_UPDATE;
-        flash->handler = 22;
-        flash->frame = VARIATION[variation & 15u];
+        flash->handler = HANDLER_COUNTDOWN;
+        flash->frame = VARIATION[variation & VARIATION_MASK];
         flash->animated = 1;
         flash->x = game->flight.x + LEFT_DX[frame];
         flash->y = y;
@@ -365,16 +488,16 @@ static void fire(Game *game) {
         *flash = (Actor){0};
         flash->object_index = -1;
         flash->flags = GOOSE_RENDER | GOOSE_UPDATE;
-        flash->handler = 22;
-        flash->frame = VARIATION[variation & 15u];
+        flash->handler = HANDLER_COUNTDOWN;
+        flash->frame = VARIATION[variation & VARIATION_MASK];
         flash->animated = 1;
         flash->x = game->flight.x + RIGHT_DX[frame];
         flash->y = y;
         flash->z = (int8_t)signed_byte((unsigned)(z + RIGHT_DZ[frame]));
         snprintf(flash->sprite, sizeof flash->sprite, "fs_100E");
     }
-    ammo_use = (ammo_use + (variation & 15u)) & 0xffffu;
-    if (ammo_use > 16u) {
+    ammo_use = (ammo_use + (variation & VARIATION_MASK)) & 0xffffu;
+    if (ammo_use > AMMO_SPEND) {
         ammo_use = 0;
         if (game->ammo > 0) game->ammo--;
     }
@@ -388,7 +511,7 @@ static void spawn_enemy_shot(Actor *from, int direction) {
     *shot = (Actor){0};
     shot->object_index = -1;
     shot->flags = GOOSE_RENDER | GOOSE_UPDATE;
-    shot->handler = 20;
+    shot->handler = HANDLER_ENEMY_SHOT;
     shot->param = (uint8_t)direction;
     shot->x = from->x + AIM_DX[direction];
     shot->y = (from->y + (unsigned)AIM_DY[direction]) & 1023u;
@@ -399,11 +522,11 @@ static void spawn_enemy_shot(Actor *from, int direction) {
 
 static int aim(Game *game, Actor *actor) {
     int dy = (int)((int16_t)((uint16_t)player_y(game) - (uint16_t)actor->y));
-    if (dy > 0x8c) {
+    if (dy > AIM_TOO_FAR) {
         actor->frame = 2;
         return 0;
     }
-    if (dy < -16) {
+    if (dy < -AIM_BEHIND) {
         if (actor->flags & GOOSE_SIDE) {
             if (actor->frame < 4) actor->frame++;
             else {
@@ -420,10 +543,10 @@ static int aim(Game *game, Actor *actor) {
     }
     int dx = (int)((int16_t)((uint16_t)game->flight.x - (uint16_t)actor->x));
     if (dx < 0) {
-        actor->frame = (uint8_t)(dx > -32 ? 2 : 0);
-    } else if (dx < 32) {
+        actor->frame = (uint8_t)(dx > -AIM_BAND ? 2 : 0);
+    } else if (dx < AIM_BAND) {
         actor->frame = 2;
-    } else if (dx == 32) {
+    } else if (dx == AIM_BAND) {
         actor->frame = 4;
     } else {
         actor->frame = 3;
@@ -436,33 +559,33 @@ static void update_shot(Game *game, Actor *shot) {
         shot->flags = 0;
         return;
     }
-    shot->y = (shot->y - 16u) & 1023u;
-    if (shot->frame == 1 && (uint8_t)shot->z > 0x9c) shot->z = (int8_t)((uint8_t)shot->z - 8u);
-    if (shot->frame == 2 && (uint8_t)shot->z < 0x64) shot->z = (int8_t)((uint8_t)shot->z + 8u);
+    shot->y = (shot->y - SHOT_STEP) & WORLD_MASK;
+    if (shot->frame == 1 && (uint8_t)shot->z > SHOT_Z_HIGH) shot->z = (int8_t)((uint8_t)shot->z - SHOT_Z_STEP);
+    if (shot->frame == 2 && (uint8_t)shot->z < SHOT_Z_LOW) shot->z = (int8_t)((uint8_t)shot->z + SHOT_Z_STEP);
     TerrainSample ground = terrain_sample(game->flight.tiles, (unsigned)shot->x, shot->y);
     if (ground.height >= shot->z) {
         shot->flags = 0;
-        sound_trigger(6);
+        sound_trigger(SOUND_IMPACT);
         return;
     }
     for (int i = 0; i < ACTORS; i++) {
         Actor *target = &actors[i];
-        if (target == shot || target->flags == 0 || target->handler != 26) continue;
+        if (target == shot || target->flags == 0 || target->handler != HANDLER_MOBILE) continue;
         int dx = shot->x - target->x;
         int dy = (int)shot->y - (int)target->y;
         int dz = signed_byte((unsigned)shot->z) - signed_byte((unsigned)target->z);
         if (dx < 0) dx = -dx;
         if (dy < 0) dy = -dy;
         if (dz < 0) dz = -dz;
-        if (dx >= 0x14 || dy >= 0x10 || dz >= 0x10) continue;
-        if (target->state[2] == 0) target->state[2] = 0xff;
+        if (dx >= HIT_X || dy >= HIT_Y || dz >= HIT_Z) continue;
+        if (target->state[2] == 0) target->state[2] = HP_MARK;
         else target->state[2]--;
-        sound_trigger(3);
-        if (target->state[2] & 0x80) {
+        sound_trigger(SOUND_HULL_HIT);
+        if (target->state[2] & HP_DEPLETED) {
             consume_actor(target);
             target->flags = 0;
             score_add(game, 0, 1, 5, 0);
-            sound_trigger(7);
+            sound_trigger(SOUND_KILL);
         } else {
             score_add(game, 0, 0, 1, 0);
         }
@@ -476,24 +599,24 @@ static void update_enemy_shot(Game *game, Actor *shot) {
         shot->flags = 0;
         return;
     }
-    if (shot->param == 2) shot->y = (shot->y + 8u) & 1023u;
-    else if (shot->param == 0) shot->x -= 8;
+    if (shot->param == 2) shot->y = (shot->y + ENEMY_STEP) & WORLD_MASK;
+    else if (shot->param == 0) shot->x -= ENEMY_STEP;
     else if (shot->param == 1) {
-        shot->x -= 6;
-        shot->y = (shot->y + 4u) & 1023u;
+        shot->x -= ENEMY_DIAG_X;
+        shot->y = (shot->y + ENEMY_DIAG_Y) & WORLD_MASK;
     } else if (shot->param == 3) {
-        shot->x += 6;
-        shot->y = (shot->y + 4u) & 1023u;
-    } else shot->x += 8;
-    shot->y &= 1023u;
-    if (shot->x < 4 || shot->x > 0xfc) {
+        shot->x += ENEMY_DIAG_X;
+        shot->y = (shot->y + ENEMY_DIAG_Y) & WORLD_MASK;
+    } else shot->x += ENEMY_STEP;
+    shot->y &= WORLD_MASK;
+    if (shot->x < ENEMY_OFF_LEFT || shot->x > ENEMY_OFF_RIGHT) {
         shot->flags = 0;
         return;
     }
     TerrainSample ground = terrain_sample(game->flight.tiles, (unsigned)shot->x, shot->y);
     if (ground.height >= shot->z) {
         shot->flags = 0;
-        sound_trigger(6);
+        sound_trigger(SOUND_IMPACT);
         return;
     }
     int dx = shot->x - game->flight.x;
@@ -502,27 +625,27 @@ static void update_enemy_shot(Game *game, Actor *shot) {
     if (dx < 0) dx = -dx;
     if (dy < 0) dy = -dy;
     if (dz < 0) dz = -dz;
-    if (dx < 0x0c && dy < 8 && dz < 0x10) {
-        hurt(game, 1);
-        sound_trigger(4);
+    if (dx < PLAYER_HIT_X && dy < ENEMY_HIT_Y && dz < HIT_Z) {
+        hurt(game, TOUCH_HURT);
+        sound_trigger(SOUND_SHIELD_TAP);
         shot->flags = 0;
     }
 }
 
 static void update_mobile(Game *game, Actor *actor) {
-    actor->y = (actor->y + 1u) & 1023u;
+    actor->y = (actor->y + 1u) & WORLD_MASK;
     TerrainSample ground = terrain_sample(game->flight.tiles, (unsigned)actor->x, actor->y);
     actor->z = (int8_t)ground.height;
     if (ground.frame < 10) actor->frame = ground.frame;
-    if (game->flight.frame != 0 && near_player(game, actor, 0x1a, 0x12)) {
-        hurt(game, 12);
-        actor->state[2] = 0xff;
+    if (game->flight.frame != 0 && near_player(game, actor, MOBILE_HIT_X, MOBILE_HIT_Y)) {
+        hurt(game, MOBILE_HURT);
+        actor->state[2] = HP_MARK;
     }
-    if (actor->state[2] & 0x80) {
+    if (actor->state[2] & HP_DEPLETED) {
         consume_actor(actor);
         actor->flags = 0;
         score_add(game, 0, 1, 5, 0);
-        sound_trigger(7);
+        sound_trigger(SOUND_KILL);
         return;
     }
     if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
@@ -537,12 +660,12 @@ static const char *GROUND_SET[5] = {"fs_1109", "fs_115A", "fs_11AB", "fs_11FC", 
 
 static void spawn_lobbed(Actor *from, int direction, int handler) {
     if (direction < 0) direction = 0;
-    if (direction > 4) direction = 4;
+    if (direction > AIM_LAST) direction = AIM_LAST;
     static const int8_t ground_dx[5] = {-12, -4, 0, 4, 12};
     static const int8_t ground_dy[5] = {6, 7, 7, 7, 6};
     static const int8_t arc_dx[5] = {-9, -5, 0, 6, 10};
     static const int8_t arc_dy[5] = {4, 4, 1, 4, 4};
-    int arc = handler == 30;
+    int arc = handler == HANDLER_ARC;
     Actor *shot = spawn();
     if (!shot) return;
     *shot = (Actor){0};
@@ -552,8 +675,8 @@ static void spawn_lobbed(Actor *from, int direction, int handler) {
     shot->param = (uint8_t)direction;
     shot->animated = arc ? 0 : 1;
     shot->x = from->x + (arc ? arc_dx[direction] : ground_dx[direction]);
-    shot->y = (from->y + (unsigned)(arc ? arc_dy[direction] : ground_dy[direction])) & 1023u;
-    shot->z = (int8_t)signed_byte((unsigned)from->z + 8u);
+    shot->y = (from->y + (unsigned)(arc ? arc_dy[direction] : ground_dy[direction])) & WORLD_MASK;
+    shot->z = (int8_t)signed_byte((unsigned)from->z + LOB_Z);
     snprintf(shot->sprite, sizeof shot->sprite, "%s", arc ? "arc_shot" : GROUND_SET[direction]);
 }
 
@@ -566,7 +689,7 @@ static void update_emitter(Game *game, Actor *actor, int period, int shot) {
     timer = (int8_t)(timer - 1);
     if (timer < 0) {
         actor->state[3] = (uint8_t)period;
-        if (shot == 20) spawn_enemy_shot(actor, actor->frame);
+        if (shot == HANDLER_ENEMY_SHOT) spawn_enemy_shot(actor, actor->frame);
         else spawn_lobbed(actor, actor->frame, shot);
     } else {
         actor->state[3] = (uint8_t)timer;
@@ -582,25 +705,25 @@ static void update_refill(Game *game, Actor *actor) {
     }
     int dy = (int)(int16_t)((uint16_t)player_y(game) - (uint16_t)actor->y);
     if (dy < 0) {
-        if (dy < -16) actor->layer = 1;
+        if (dy < -AIM_BEHIND) actor->layer = 1;
         return;
     }
-    if (dy > 0x20) return;
-    int ax = game->flight.x - actor->x - 12;
+    if (dy > REFILL_FAR) return;
+    int ax = game->flight.x - actor->x - GATE_INSET;
     if (ax < 0) {
         ax = -ax;
-        if (ax < 0x18) game->flight.x++;
-    } else if (ax != 0 && ax < 0x18) {
+        if (ax < NUDGE_REACH) game->flight.x++;
+    } else if (ax != 0 && ax < NUDGE_REACH) {
         game->flight.x--;
     }
-    if (dy > 8) return;
-    if (ax <= 2) {
+    if (dy > REFILL_CLOSE) return;
+    if (ax <= REFILL_CORE) {
         side_charges++;
-        if (side_charges > 6) side_charges = 6;
-        else sound_trigger(8);
-    } else if (ax < 0x24) {
+        if (side_charges > SIDE_CHARGES_FULL) side_charges = SIDE_CHARGES_FULL;
+        else sound_trigger(SOUND_CHARGE);
+    } else if (ax < REFILL_KILL) {
         game->flight.shield = 0;
-        sound_trigger(6);
+        sound_trigger(SOUND_IMPACT);
     }
 }
 
@@ -613,31 +736,31 @@ static void update_ground_enemy_shot(Game *game, Actor *shot) {
         shot->flags = 0;
         return;
     }
-    if (shot->param == 2) shot->y = (shot->y + 5u) & 1023u;
-    else if (shot->param == 0) shot->x -= 5;
+    if (shot->param == 2) shot->y = (shot->y + GROUND_STEP) & WORLD_MASK;
+    else if (shot->param == 0) shot->x -= GROUND_STEP;
     else if (shot->param == 1) {
-        shot->x -= 3;
-        shot->y = (shot->y + 2u) & 1023u;
+        shot->x -= GROUND_DIAG_X;
+        shot->y = (shot->y + GROUND_DIAG_Y) & WORLD_MASK;
     } else if (shot->param == 3) {
-        shot->x += 3;
-        shot->y = (shot->y + 2u) & 1023u;
-    } else shot->x += 5;
-    shot->y &= 1023u;
-    if (shot->x < 12 || shot->x > 0xf4) {
+        shot->x += GROUND_DIAG_X;
+        shot->y = (shot->y + GROUND_DIAG_Y) & WORLD_MASK;
+    } else shot->x += GROUND_STEP;
+    shot->y &= WORLD_MASK;
+    if (shot->x < GROUND_OFF_LEFT || shot->x > GROUND_OFF_RIGHT) {
         shot->flags = 0;
         return;
     }
     TerrainSample ground = terrain_sample(game->flight.tiles, (unsigned)shot->x, shot->y);
-    shot->z = (int8_t)(ground.height + 8);
-    shot->frame = ground.frame < 10 ? ground.frame : 0;
+    shot->z = (int8_t)(ground.height + LOB_Z);
+    shot->frame = ground.frame < SHIP_FIRE_FRAME + 1 ? ground.frame : 0;
     if (!game->flight.alive) return;
     int dx = shot->x - game->flight.x;
     if (dx < 0) dx = -dx;
-    int dy = wrapped_delta(shot->y, player_y(game)) - 8;
+    int dy = wrapped_delta(shot->y, player_y(game)) - LOB_Z;
     if (dy < 0) dy = -dy;
-    if (dx >= 0x10 || dy >= 0x10) return;
-    sound_trigger(5);
-    hurt(game, 100);
+    if (dx >= GROUND_HIT || dy >= GROUND_HIT) return;
+    sound_trigger(SOUND_HEAVY_HIT);
+    hurt(game, HEAVY_HURT);
     spawn_explosion(shot->x, shot->y, shot->z);
     shot->flags = 0;
 }
@@ -647,23 +770,23 @@ static void update_arcing(Game *game, Actor *shot) {
         shot->flags = 0;
         return;
     }
-    if (shot->param == 2) shot->y = (shot->y + 3u) & 1023u;
-    else if (shot->param == 0) shot->x -= 4;
+    if (shot->param == 2) shot->y = (shot->y + ARC_STEP_Y) & WORLD_MASK;
+    else if (shot->param == 0) shot->x -= ARC_STEP_X;
     else if (shot->param == 1) {
-        shot->x -= 4;
-        shot->y = (shot->y + 3u) & 1023u;
+        shot->x -= ARC_STEP_X;
+        shot->y = (shot->y + ARC_STEP_Y) & WORLD_MASK;
     } else if (shot->param == 3) {
-        shot->x += 4;
-        shot->y = (shot->y + 3u) & 1023u;
-    } else shot->x += 4;
-    shot->y &= 1023u;
-    if (shot->x < 8 || shot->x > 0xf8) {
+        shot->x += ARC_STEP_X;
+        shot->y = (shot->y + ARC_STEP_Y) & WORLD_MASK;
+    } else shot->x += ARC_STEP_X;
+    shot->y &= WORLD_MASK;
+    if (shot->x < ARC_OFF_LEFT || shot->x > ARC_OFF_RIGHT) {
         shot->flags = 0;
         return;
     }
     shot->state[3]++;
-    if (shot->state[3] >= 16) {
-        shot->handler = 31;
+    if (shot->state[3] >= ARC_LIFE) {
+        shot->handler = HANDLER_ARC_BURST;
         shot->animated = 1;
         shot->frame = 0;
         shot->state[3] = 0;
@@ -678,47 +801,47 @@ static void update_arcing(Game *game, Actor *shot) {
     if (dx < 0) dx = -dx;
     if (dy < 0) dy = -dy;
     if (dz < 0) dz = -dz;
-    if (dx >= 0x0e || dy >= 0x0a || dz >= 0x10) return;
-    hurt(game, 10);
-    sound_trigger(5);
+    if (dx >= ARC_HIT_X || dy >= ARC_HIT_Y || dz >= HIT_Z) return;
+    hurt(game, ARC_HURT);
+    sound_trigger(SOUND_HEAVY_HIT);
 }
 
 static void nudge_x(Game *game, int dx) {
     if (dx < 0) {
-        if (-dx <= 0x18) game->flight.x++;
-    } else if (dx > 0 && dx <= 0x18) {
+        if (-dx <= NUDGE_REACH) game->flight.x++;
+    } else if (dx > 0 && dx <= NUDGE_REACH) {
         game->flight.x--;
     }
 }
 
 static void update_gate(Game *game, Actor *actor, int entrance_b) {
-    int dx = game->flight.x - actor->x - 12;
+    int dx = game->flight.x - actor->x - GATE_INSET;
     if (dx < 0) dx = -dx;
     int dy = (int)player_y(game) - (int)actor->y;
     if (dy < 0) dy = -dy;
     int open = actor->frame >> 1;
-    if (dx + dy <= 0x40) {
-        if (open != 6) actor->frame++;
+    if (dx + dy <= GATE_REACH) {
+        if (open != ENTRANCE_FULL) actor->frame++;
     } else if (open != 0) {
         actor->frame--;
     }
     if (open >= 1 && game->flight.frame != 0) {
-        int pull = game->flight.x - actor->x - 12;
+        int pull = game->flight.x - actor->x - GATE_INSET;
         if (pull < 0) pull = -pull;
-        nudge_x(game, game->flight.x - actor->x - 12);
-        if (pull <= 8 && dy <= 8) {
+        nudge_x(game, game->flight.x - actor->x - GATE_INSET);
+        if (pull <= PULL_LIMIT && dy <= PULL_LIMIT) {
             resume_x = game->flight.x;
             pending_object = actor->object_index;
             pending_part = level_part;
-            unsigned index = (unsigned)(level_index * 3 + level_part);
-            if (index > 23) index = 0;
+            unsigned index = (unsigned)(level_index * PARTS + level_part);
+            if (index >= LEVELS * PARTS) index = 0;
             uint16_t dest = entrance_b ? DEST_B[index] : DEST_A[index];
-            pending_resume = dest & 1023u;
-            pending_reward = (uint8_t)((dest >> 8) & 0xc0);
+            pending_resume = dest & WORLD_MASK;
+            pending_reward = (uint8_t)((dest >> 8) & REWARD_COLOR_MASK);
             if (entrance_b) {
                 reload_pending = 1;
                 level_part++;
-                if (level_part > 2) level_part = 0;
+                if (level_part >= PARTS) level_part = 0;
             }
             tunnel_pending = 1;
         }
@@ -729,30 +852,30 @@ static void update_gate(Game *game, Actor *actor, int entrance_b) {
 static void update_exit(Game *game, Actor *actor) {
     /* CS:18C7: the exit stays shut until every collectible flag is set. */
     int ready = 1;
-    for (int i = 0; i < 6; i++) ready &= collected[i] != 0;
+    for (int i = 0; i < COLLECTIBLES; i++) ready &= collected[i] != 0;
     if (!ready) {
         if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
         return;
     }
-    int dx = game->flight.x - actor->x - 12;
+    int dx = game->flight.x - actor->x - GATE_INSET;
     if (dx < 0) dx = -dx;
-    int dy = (int)player_y(game) - 8 - (int)actor->y;
+    int dy = (int)player_y(game) - PULL_LIMIT - (int)actor->y;
     if (dy < 0) dy = -dy;
     int open = actor->frame >> 1;
-    if (dx + dy <= 0x40) {
-        if (open != 8) actor->frame++;
+    if (dx + dy <= GATE_REACH) {
+        if (open != GATE_OPEN) actor->frame++;
     } else if (open != 0) {
         actor->frame--;
     }
     if (open >= 2) {
-        int pull = game->flight.x - actor->x - 12;
+        int pull = game->flight.x - actor->x - GATE_INSET;
         if (pull < 0) pull = -pull;
-        nudge_x(game, game->flight.x - actor->x - 12);
-        if (open == 8 && pull <= 8 && dy <= 8) {
+        nudge_x(game, game->flight.x - actor->x - GATE_INSET);
+        if (open == GATE_OPEN && pull <= PULL_LIMIT && dy <= PULL_LIMIT) {
             if (game->flight.frame == 0) {
                 pending_object = actor->object_index;
                 pending_part = level_part;
-                pending_reward = 0xf0;
+                pending_reward = REWARD_ADVANCE;
                 pending_resume = resume_y;
                 tunnel_pending = 1;
             } else {
@@ -790,12 +913,12 @@ static void push_history(const Game *game) {
 
 static void position_side(Actor *actor) {
     int side = (actor->flags & GOOSE_SIDE) != 0;
-    unsigned frame = hist_frame[3];
-    int zoff = frame < 10 ? SIDE_Z[frame] : 0;
-    int z = (hist_z[3] + 6u) & 255u;
-    actor->x = hist_x[3] + (side ? 8 : -8);
-    actor->y = (hist_y[3] + 6u) & 1023u;
-    actor->frame = frame < 10 ? (uint8_t)frame : 9;
+    unsigned frame = hist_frame[HISTORY_LAG];
+    int zoff = frame <= SHIP_FIRE_FRAME ? SIDE_Z[frame] : 0;
+    int z = (hist_z[HISTORY_LAG] + SIDE_TRAIL) & BYTE_MASK;
+    actor->x = hist_x[HISTORY_LAG] + (side ? SIDE_OFFSET : -SIDE_OFFSET);
+    actor->y = (hist_y[HISTORY_LAG] + SIDE_TRAIL) & WORLD_MASK;
+    actor->frame = frame <= SHIP_FIRE_FRAME ? (uint8_t)frame : SHIP_FIRE_FRAME;
     actor->z = (int8_t)signed_byte((unsigned)(side ? z - zoff : z + zoff));
 }
 
@@ -806,13 +929,13 @@ static int launch_side(int side) {
     actor->object_index = -1;
     actor->flags = GOOSE_RENDER | GOOSE_UPDATE | GOOSE_PROJECTILE;
     if (side) actor->flags |= GOOSE_SIDE;
-    actor->handler = 24;
+    actor->handler = HANDLER_SIDE_FOLLOW;
     actor->animated = 1;
     actor->state[2] = 5;
     snprintf(actor->sprite, sizeof actor->sprite, "fs_0DDA");
     position_side(actor);
     side_charges--;
-    sound_trigger(1);
+    sound_trigger(SOUND_SIDE_LAUNCH);
     return 1;
 }
 
@@ -823,7 +946,7 @@ static void device_button(uint8_t *state, int held, int side) {
             if (side_charges > 0 && launch_side(side)) *state = 1;
         } else if (*state == 2) {
             *state = 3;
-            sound_trigger(2);
+            sound_trigger(SOUND_SIDE_RELEASE);
         }
     } else if (*state == 1) {
         *state = 2;
@@ -845,7 +968,7 @@ static void update_side_follow(Game *game, Actor *actor) {
     }
     position_side(actor);
     uint8_t state = (actor->flags & GOOSE_SIDE) ? right_device : left_device;
-    if (state == 3) actor->handler = 25;
+    if (state == 3) actor->handler = HANDLER_SIDE_GROUND;
 }
 
 static void update_ground_shot(Game *game, Actor *actor) {
@@ -853,29 +976,29 @@ static void update_ground_shot(Game *game, Actor *actor) {
         actor->flags = 0;
         return;
     }
-    actor->y = (actor->y - 6u) & 1023u;
+    actor->y = (actor->y - SIDE_TRAIL) & WORLD_MASK;
     TerrainSample ground = terrain_sample(game->flight.tiles, (unsigned)actor->x, actor->y);
-    actor->z = (int8_t)(ground.height + 4);
+    actor->z = (int8_t)(ground.height + SHOT_LIFT);
     actor->frame = ground.frame;
     unsigned row = ground.row;
     if (actor->frame == 0) {
-        actor->y = (actor->y + 4u) & 1023u;
+        actor->y = (actor->y + SHOT_LIFT) & WORLD_MASK;
         actor->state[2]--;
-        if (actor->state[2] & 0x80) {
+        if (actor->state[2] & HP_DEPLETED) {
             actor->flags = 0;
             return;
         }
     }
     for (int i = 0; i < ACTORS; i++) {
         Actor *target = &actors[i];
-        if (target->flags == 0 || target->object_index < 0 || target->kind >= 6) continue;
+        if (target->flags == 0 || target->object_index < 0 || target->kind >= DAMAGE_KINDS) continue;
         if ((target->y >> 4) != row) continue;
         int dx = actor->x - target->x;
         if (dx < 0) dx = -dx;
         if (dx > GROUND_HALF[target->kind]) continue;
         consume_actor(target);
         target->flags = 0;
-        sound_trigger(6);
+        sound_trigger(SOUND_IMPACT);
         actor->flags = 0;
         return;
     }
@@ -892,10 +1015,10 @@ static unsigned map_row_mask(unsigned row) {
     unsigned mask = 0;
     for (int i = 0; i < ACTORS; i++) {
         const Actor *actor = &actors[i];
-        if (actor->object_index < 0 || actor->object_index >= 32) continue;
-        if (level_part >= 0 && level_part < 3 && (consumed[level_part] & (1u << actor->object_index))) continue;
+        if (actor->object_index < 0 || actor->object_index >= OBJECT_SLOTS) continue;
+        if (level_part >= 0 && level_part < PARTS && (consumed[level_part] & (1u << actor->object_index))) continue;
         if ((actor->y >> 4) != row || actor->kind >= 21) continue;
-        int grid = (actor->x + 4) / 24;
+        int grid = (actor->x + COLUMN_BIAS) / COLUMN_SPAN;
         if (grid < 1 || grid > 10) continue;
         mask |= ((unsigned)actor->kind << 10) | (1u << (9 - (grid - 1)));
     }
@@ -907,7 +1030,7 @@ static int query_player_row(const Game *game, unsigned row, int *column) {
     unsigned mask = map_row_mask(row);
     if (mask == 0) return 0;
     unsigned kind = mask >> 10;
-    if (kind >= 6 || MAP_DAMAGE[kind] == 0) return 0;
+    if (kind >= DAMAGE_KINDS || MAP_DAMAGE[kind] == 0) return 0;
     int x = MAP_RIGHT[kind];
     int half = MAP_HALF[kind];
     int at = 10;
@@ -919,7 +1042,7 @@ static int query_player_row(const Game *game, unsigned row, int *column) {
             }
         }
         mask >>= 1;
-        x -= 24;
+        x -= COLUMN_SPAN;
         at--;
     }
     return 0;
@@ -931,7 +1054,7 @@ static void spawn_explosion(int x, unsigned y, int z) {
     *boom = (Actor){0};
     boom->object_index = -1;
     boom->flags = GOOSE_RENDER | GOOSE_UPDATE;
-    boom->handler = 16;
+    boom->handler = HANDLER_EXPLOSION;
     boom->animated = 1;
     boom->x = x;
     boom->y = y;
@@ -941,8 +1064,8 @@ static void spawn_explosion(int x, unsigned y, int z) {
 
 static void apply_map_hit(Game *game, int damage, int column, unsigned row) {
     hurt(game, damage);
-    sound_trigger(6);
-    int expect_x = 24 * column - 4;
+    sound_trigger(SOUND_IMPACT);
+    int expect_x = COLUMN_SPAN * column - COLUMN_BIAS;
     for (int i = 0; i < ACTORS; i++) {
         Actor *actor = &actors[i];
         if (actor->flags == 0 || actor->object_index < 0) continue;
@@ -958,79 +1081,79 @@ static void apply_map_hit(Game *game, int damage, int column, unsigned row) {
 /* CS:1192 checks this row, then the next row, and a hit is applied before weapons. */
 static void collide_player_map(Game *game) {
     if (!game->flight.alive || game->flight.tiles == 0) return;
-    unsigned row = (player_y(game) >> 4) & 63u;
+    unsigned row = (player_y(game) >> 4) & (TILE_ROWS - 1);
     int column = 0;
     int damage = query_player_row(game, row, &column);
     unsigned hit_row = row;
     if (damage == 0) {
-        hit_row = (row + 1u) & 63u;
+        hit_row = (row + 1u) & (TILE_ROWS - 1);
         damage = query_player_row(game, hit_row, &column);
     }
     if (damage == 0) return;
     apply_map_hit(game, damage, column, hit_row);
     if (game->flight.shield <= 0) {
         game->flight.alive = 0;
-        sound_trigger(0x0c);
+        sound_trigger(SOUND_DEATH);
     }
 }
 
 static void update_actor(Game *game, Actor *actor) {
     if (actor->flags == 0) return;
-    if (actor->handler == 19) update_shot(game, actor);
-    else if (actor->handler == 16) {
+    if (actor->handler == HANDLER_PLAYER_SHOT) update_shot(game, actor);
+    else if (actor->handler == HANDLER_EXPLOSION) {
         actor->state[3]++;
         unsigned frame = (actor->state[3] >> 2) & 7u;
-        if (frame >= 5) actor->flags = 0;
+        if (frame >= EXPLOSION_FRAMES) actor->flags = 0;
         else {
             actor->frame = (uint8_t)frame;
             if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
         }
-    } else if (actor->handler == 24) update_side_follow(game, actor);
-    else if (actor->handler == 25) update_ground_shot(game, actor);
-    else if (actor->handler == 20) update_enemy_shot(game, actor);
-    else if (actor->handler == 22) {
+    } else if (actor->handler == HANDLER_SIDE_FOLLOW) update_side_follow(game, actor);
+    else if (actor->handler == HANDLER_SIDE_GROUND) update_ground_shot(game, actor);
+    else if (actor->handler == HANDLER_ENEMY_SHOT) update_enemy_shot(game, actor);
+    else if (actor->handler == HANDLER_COUNTDOWN) {
         if (actor->frame == 0) actor->flags = 0;
         else actor->frame--;
-    } else if (actor->handler == 2) {
+    } else if (actor->handler == HANDLER_LOOP) {
         actor->state[3]++;
         actor->frame = (uint8_t)((actor->state[3] >> 1) & 3u);
         if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
-    } else if (actor->handler == 3) {
+    } else if (actor->handler == HANDLER_PINGPONG) {
         actor->state[3]++;
         unsigned step = (actor->state[3] >> 1) & 7u;
-        if (step >= 6) {
+        if (step >= sizeof PINGPONG / sizeof PINGPONG[0]) {
             step = 0;
             actor->state[3] = 0;
         }
         actor->frame = PINGPONG[step];
         if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
-    } else if (actor->handler == 5) update_emitter(game, actor, 8, 20);
-    else if (actor->handler == 6) update_emitter(game, actor, 0x12, 30);
-    else if (actor->handler == 7) update_emitter(game, actor, 0x28, 29);
-    else if (actor->handler == 8) update_refill(game, actor);
-    else if (actor->handler == 29) update_ground_enemy_shot(game, actor);
-    else if (actor->handler == 30) update_arcing(game, actor);
-    else if (actor->handler == 31) {
+    } else if (actor->handler == HANDLER_EMIT_DIRECT) update_emitter(game, actor, DIRECT_RELOAD, HANDLER_ENEMY_SHOT);
+    else if (actor->handler == HANDLER_EMIT_ARC) update_emitter(game, actor, ARC_RELOAD, HANDLER_ARC);
+    else if (actor->handler == HANDLER_EMIT_GROUND) update_emitter(game, actor, GROUND_RELOAD, HANDLER_GROUND_ENEMY);
+    else if (actor->handler == HANDLER_REFILL) update_refill(game, actor);
+    else if (actor->handler == HANDLER_GROUND_ENEMY) update_ground_enemy_shot(game, actor);
+    else if (actor->handler == HANDLER_ARC) update_arcing(game, actor);
+    else if (actor->handler == HANDLER_ARC_BURST) {
         actor->state[3]++;
         unsigned frame = (actor->state[3] >> 2) & 7u;
-        if (frame >= 6) actor->flags = 0;
+        if (frame >= BURST_FRAMES) actor->flags = 0;
         else {
             actor->frame = (uint8_t)frame;
             if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
         }
     }
-    else if (actor->handler == 26) update_mobile(game, actor);
-    else if (actor->handler == 10) update_gate(game, actor, 0);
-    else if (actor->handler == 11) update_gate(game, actor, 1);
-    else if (actor->handler == 28) update_exit(game, actor);
-    else if (actor->handler == 32) {
+    else if (actor->handler == HANDLER_MOBILE) update_mobile(game, actor);
+    else if (actor->handler == HANDLER_GATE_A) update_gate(game, actor, 0);
+    else if (actor->handler == HANDLER_GATE_B) update_gate(game, actor, 1);
+    else if (actor->handler == HANDLER_LEVEL_EXIT) update_exit(game, actor);
+    else if (actor->handler == HANDLER_COLLECTIBLE) {
         if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
-        else if (game->flight.frame != 0 && near_player(game, actor, 0x12, 0x10)) {
-            if (actor->param < 6) collected[actor->param] = 1;
+        else if (game->flight.frame != 0 && near_player(game, actor, COLLECT_X, COLLECT_Y)) {
+            if (actor->param < COLLECTIBLES) collected[actor->param] = 1;
             consume_actor(actor);
             actor->flags = 0;
             score_add(game, 0, 1, 5, 0);
-            sound_trigger(0x0a);
+            sound_trigger(SOUND_COLLECT);
         }
     } else if (cull_after(actor, game->flight.camera_y)) {
         actor->flags = 0;
@@ -1067,7 +1190,7 @@ static const uint8_t TUNNEL_FRAME_SECTOR[28] = {
 static void select_tunnel_pattern(void) {
     tunnel_pattern = (uint8_t)(tunnel_pattern_index & 3u);
     tunnel_pattern_index++;
-    tunnel_last_section = 0xff;
+    tunnel_last_section = NO_SECTION;
     tunnel_exit_spawned = 0;
     tunnel_min_radius = 3;
 }
@@ -1080,17 +1203,17 @@ static void gain_capped(int *value, int amount, int cap) {
 }
 
 static void place_tunnel_pickup(Actor *actor, int radius) {
-    int x = 128;
-    int y = 106;
+    int x = TUNNEL_CENTER_X;
+    int y = TUNNEL_CENTER_Y;
     switch (actor->param) {
-    case 1: y = 0x6a - radius; break;
-    case 2: y = 0x6a - radius; x = 0x80 + radius; break;
-    case 3: x = 0x80 + radius; break;
-    case 4: x = 0x80 + radius; y = 0x6a + radius; break;
-    case 5: y = 0x6a + radius; break;
-    case 6: y = 0x6a + radius; x = 0x80 - radius; break;
-    case 7: x = 0x80 - radius; break;
-    case 8: x = 0x80 - radius; y = 0x6a - radius; break;
+    case 1: y = TUNNEL_CENTER_Y - radius; break;
+    case 2: y = TUNNEL_CENTER_Y - radius; x = TUNNEL_CENTER_X + radius; break;
+    case 3: x = TUNNEL_CENTER_X + radius; break;
+    case 4: x = TUNNEL_CENTER_X + radius; y = TUNNEL_CENTER_Y + radius; break;
+    case 5: y = TUNNEL_CENTER_Y + radius; break;
+    case 6: y = TUNNEL_CENTER_Y + radius; x = TUNNEL_CENTER_X - radius; break;
+    case 7: x = TUNNEL_CENTER_X - radius; break;
+    case 8: x = TUNNEL_CENTER_X - radius; y = TUNNEL_CENTER_Y - radius; break;
     default: break;
     }
     actor->x = x;
@@ -1103,12 +1226,12 @@ static void spawn_tunnel_pickup(const Game *game, uint8_t direction) {
     *actor = (Actor){0};
     actor->object_index = -1;
     actor->flags = GOOSE_RENDER | GOOSE_UPDATE;
-    actor->handler = 15;
+    actor->handler = HANDLER_TUNNEL_PICKUP;
     actor->param = direction;
     actor->layer = 6;
     actor->animated = 1;
-    actor->x = 128;
-    actor->y = 106;
+    actor->x = TUNNEL_CENTER_X;
+    actor->y = TUNNEL_CENTER_Y;
     actor->state[0] = (uint8_t)game->tunnel_distance;
     actor->state[1] = (uint8_t)((unsigned)game->tunnel_distance >> 8);
     snprintf(actor->sprite, sizeof actor->sprite, "fs_1AC9");
@@ -1120,20 +1243,20 @@ static void spawn_tunnel_exit(void) {
     *actor = (Actor){0};
     actor->object_index = -1;
     actor->flags = GOOSE_RENDER | GOOSE_UPDATE;
-    actor->handler = 14;
-    actor->layer = 7;
+    actor->handler = HANDLER_TUNNEL_EXIT;
+    actor->layer = LAYER_TOP;
     actor->animated = 1;
-    actor->x = 128;
-    actor->y = 106;
+    actor->x = TUNNEL_CENTER_X;
+    actor->y = TUNNEL_CENTER_Y;
     snprintf(actor->sprite, sizeof actor->sprite, "fs_1929");
 }
 
 /* CS:3059. Green adds ammo, red fuel, blue shield, and the exit color adds 2500. */
 static void collect_tunnel_pickup(Game *game, Actor *actor) {
     actor->flags = 0;
-    if (game->tunnel_reward == 0x40) gain_capped(&game->ammo, 6, AMMO_FULL);
-    else if (game->tunnel_reward == 0x80) gain_capped(&game->flight.fuel, 4, 44);
-    else if (game->tunnel_reward == 0xc0) gain_capped(&game->flight.shield, 8, 56);
+    if (game->tunnel_reward == REWARD_AMMO) gain_capped(&game->ammo, PICKUP_AMMO, AMMO_FULL);
+    else if (game->tunnel_reward == REWARD_FUEL) gain_capped(&game->flight.fuel, PICKUP_FUEL, FUEL_FULL);
+    else if (game->tunnel_reward == REWARD_SHIELD) gain_capped(&game->flight.shield, PICKUP_SHIELD, SHIELD_FULL);
     else score_add(game, 2, 5, 0, 0);
 }
 
@@ -1141,30 +1264,30 @@ static void update_tunnel_pickup(Game *game, Actor *actor) {
     unsigned spawned = (unsigned)actor->state[0] | ((unsigned)actor->state[1] << 8);
     unsigned age = ((unsigned)game->tunnel_distance - spawned) & 0xffffu;
     age >>= 3;
-    if (age > 0x2du) {
+    if (age > PICKUP_AGE_LIMIT) {
         actor->flags = 0;
         return;
     }
     place_tunnel_pickup(actor, TUNNEL_PICKUP_RADIUS[age]);
     actor->frame = (uint8_t)(age >> 1);
     actor->layer = TUNNEL_PICKUP_LAYER[actor->frame];
-    if (actor->layer != 2 || game->tunnel_frame >= 28) return;
+    if (actor->layer != LAYER_SHIP || game->tunnel_frame >= 28) return;
     if (TUNNEL_FRAME_SECTOR[game->tunnel_frame] != actor->param) return;
-    sound_trigger(9);
+    sound_trigger(SOUND_TUNNEL_PICKUP);
     collect_tunnel_pickup(game, actor);
 }
 
 static void update_tunnel_exit(const Game *game, Actor *actor) {
-    unsigned remaining = game->tunnel_distance >= 0x380 ? 0u : (unsigned)(0x380 - game->tunnel_distance);
+    unsigned remaining = game->tunnel_distance >= TUNNEL_LENGTH ? 0u : (unsigned)(TUNNEL_LENGTH - game->tunnel_distance);
     unsigned index = (remaining >> 3) & 31u;
     tunnel_min_radius = TUNNEL_EXIT_RADIUS[index];
     actor->frame = TUNNEL_EXIT_FRAME[index];
 }
 
 static void advance_tunnel_objects(Game *game) {
-    if (game->tunnel_distance >= 0x380) return;
-    int remaining = 0x380 - game->tunnel_distance;
-    if (remaining < 0x100) {
+    if (game->tunnel_distance >= TUNNEL_LENGTH) return;
+    int remaining = TUNNEL_LENGTH - game->tunnel_distance;
+    if (remaining < TUNNEL_EXIT_NEAR) {
         if (!tunnel_exit_spawned) {
             spawn_tunnel_exit();
             tunnel_exit_spawned = 1;
@@ -1179,8 +1302,8 @@ static void advance_tunnel_objects(Game *game) {
 }
 
 static void enter_tunnel(Game *game) {
-    sound_trigger(0x0b);
-    if (pending_object >= 0 && pending_part >= 0 && pending_part < 3) {
+    sound_trigger(SOUND_TUNNEL);
+    if (pending_object >= 0 && pending_part >= 0 && pending_part < PARTS) {
         consumed[pending_part] |= 1u << pending_object;
     }
     game->mode = MODE_TUNNEL;
@@ -1189,7 +1312,7 @@ static void enter_tunnel(Game *game) {
     resume_y = pending_resume;
     angular = 0;
     ship_angle = 0;
-    game->flight.camera_y = 0x1a;
+    game->flight.camera_y = TUNNEL_CAMERA;
     tunnel_player_position(ship_angle, &game->tunnel_x, &game->tunnel_y);
     game->tunnel_frame = tunnel_player_frame(ship_angle);
     clear_actors();
@@ -1200,7 +1323,7 @@ static void enter_tunnel(Game *game) {
 }
 
 static void leave_tunnel(Game *game) {
-    sound_trigger(0x0b);
+    sound_trigger(SOUND_TUNNEL);
     game->mode = MODE_SURFACE;
     game->tunnel_distance = 0;
     game->flight.velocity = 0;
@@ -1209,23 +1332,23 @@ static void leave_tunnel(Game *game) {
     game->flight.alive = 1;
     left_device = 0;
     right_device = 0;
-    if (game->tunnel_reward == 0xf0) {
+    if (game->tunnel_reward == REWARD_ADVANCE) {
         stage_counter++;
-        int base = 16;
-        if (stage_counter >= 6) base = 0x30;
-        else if (stage_counter >= 3) base = 0x20;
+        int base = BASE_SCROLL;
+        if (stage_counter >= STAGE_FASTER) base = SCROLL_STAGE6;
+        else if (stage_counter >= STAGE_QUICK) base = SCROLL_STAGE3;
         level_index++;
-        if (level_index > 7) level_index = 1;
+        if (level_index > LEVELS - 1) level_index = 1;
         memset(collected, 0, sizeof collected);
         memset(consumed, 0, sizeof consumed);
         game->flight.base_scroll_speed = base;
         game->flight.scroll_speed = base;
-        game->flight.camera_y = 0x350;
-        game->flight.x = 128;
+        game->flight.camera_y = START_CAMERA;
+        game->flight.x = START_X;
         game->flight.fuel_distance = 0;
         reload_pending = 0;
     } else {
-        game->flight.camera_y = resume_y & 1023u;
+        game->flight.camera_y = resume_y & WORLD_MASK;
         game->flight.x = resume_x;
         reload_pending = 0;
     }
@@ -1238,13 +1361,13 @@ static void tunnel_tick(Game *game, unsigned controls) {
     int step = ((game->flight.scroll_speed + 7) >> 3) + 2;
     game->tunnel_distance += step;
     unsigned fuel = (game->flight.fuel_distance + (unsigned)step) & 0xffffu;
-    if (fuel > 0x2e8u) {
+    if (fuel > TUNNEL_FUEL_LIMIT) {
         fuel = 0;
         game->flight.fuel_delta = -1;
     }
     game->flight.fuel_distance = fuel;
     surface_apply_fuel(&game->flight);
-    if (game->tunnel_distance >= 0x380) {
+    if (game->tunnel_distance >= TUNNEL_LENGTH) {
         leave_tunnel(game);
         return;
     }
@@ -1253,10 +1376,10 @@ static void tunnel_tick(Game *game, unsigned controls) {
     int speed = game->flight.scroll_speed >> 3;
     if (controls & CONTROL_LEFT) force = -speed - 3;
     else if (controls & CONTROL_RIGHT) force = speed + 3;
-    uint8_t ang = ship_angle & 0x7fu;
+    uint8_t ang = ship_angle & ANGLE_MASK;
     int passive;
-    if (ang > 0x3f) {
-        uint8_t folded = (uint8_t)((uint8_t)(-ang) + 0x7fu);
+    if (ang > ANGLE_HALF) {
+        uint8_t folded = (uint8_t)((uint8_t)(-ang) + ANGLE_MASK);
         passive = -goose_tunnel_angle_force(folded);
     } else {
         passive = goose_tunnel_angle_force(ang);
@@ -1276,8 +1399,8 @@ static void tunnel_tick(Game *game, unsigned controls) {
     game->tunnel_frame = tunnel_player_frame(ship_angle);
     for (int i = 0; i < ACTORS; i++) {
         if (actors[i].flags == 0) continue;
-        if (actors[i].handler == 14) update_tunnel_exit(game, &actors[i]);
-        else if (actors[i].handler == 15) update_tunnel_pickup(game, &actors[i]);
+        if (actors[i].handler == HANDLER_TUNNEL_EXIT) update_tunnel_exit(game, &actors[i]);
+        else if (actors[i].handler == HANDLER_TUNNEL_PICKUP) update_tunnel_pickup(game, &actors[i]);
     }
 }
 
@@ -1295,7 +1418,7 @@ static void begin_level(Game *game) {
     level_index = 0;
     level_part = 0;
     stage_counter = 1;
-    side_charges = 6;
+    side_charges = SIDE_CHARGES_FULL;
     left_device = 0;
     right_device = 0;
     tunnel_pattern_index = 0;
@@ -1303,7 +1426,7 @@ static void begin_level(Game *game) {
     pending_object = -1;
     memset(collected, 0, sizeof collected);
     memset(consumed, 0, sizeof consumed);
-    game->flight.base_scroll_speed = 16;
+    game->flight.base_scroll_speed = BASE_SCROLL;
     resume_y = 0;
     place_map(game, game->flight.camera_y);
     reset_history(game);
@@ -1313,17 +1436,17 @@ static void begin_level(Game *game) {
 static void respawn(Game *game) {
     death_hold = 0;
     game->flight.alive = 1;
-    game->flight.fuel = 44;
-    game->flight.shield = 56;
+    game->flight.fuel = FUEL_FULL;
+    game->flight.shield = SHIELD_FULL;
     game->ammo = AMMO_FULL;
-    game->flight.x = 128;
+    game->flight.x = START_X;
     game->flight.velocity = 0;
-    game->flight.camera_y = 0x350;
+    game->flight.camera_y = START_CAMERA;
     game->flight.scroll_speed = game->flight.base_scroll_speed;
     game->flight.fuel_distance = 0;
     game->flight.frame = 1;
     game->flight.zero_frame_age = 0;
-    side_charges = 6;
+    side_charges = SIDE_CHARGES_FULL;
     left_device = 0;
     right_device = 0;
     if (level_part != 0) level_part = 0;
@@ -1338,7 +1461,7 @@ void game_boot(Game *game) {
     game->lives = LIVES_FULL;
     memset(score_digits, 0, sizeof score_digits);
     hud_frame = 0;
-    side_charges = 6;
+    side_charges = SIDE_CHARGES_FULL;
     sound_reset();
     sound_music_start(0);
     surface_start(&game->flight);
@@ -1375,7 +1498,7 @@ void game_tick(Game *game, unsigned controls) {
     }
     int was_alive = game->flight.alive;
     surface_tick(&game->flight, controls);
-    if (was_alive && !game->flight.alive) sound_trigger(0x0c);
+    if (was_alive && !game->flight.alive) sound_trigger(SOUND_DEATH);
     push_history(game);
     collide_player_map(game);
     update_devices(game, controls);
@@ -1393,7 +1516,7 @@ static void draw_tunnel_layer(int layer) {
         if (actors[i].flags == 0 || actors[i].layer != (uint8_t)layer) continue;
         char name[24];
         sprite_name(&actors[i], name, sizeof name);
-        pictures_sprite(name, actors[i].x, (int)actors[i].y, 0, 0x1a);
+        pictures_sprite(name, actors[i].x, (int)actors[i].y, 0, TUNNEL_CAMERA);
     }
 }
 
@@ -1408,7 +1531,7 @@ void game_draw(Game *game) {
         for (int layer = 7; layer >= 3; layer--) draw_tunnel_layer(layer);
         char name[24];
         snprintf(name, sizeof name, "fs_1594_%02u", game->tunnel_frame);
-        pictures_sprite(name, game->tunnel_x, game->tunnel_y, 0, 0x1a);
+        pictures_sprite(name, game->tunnel_x, game->tunnel_y, 0, TUNNEL_CAMERA);
         draw_tunnel_layer(2);
         draw_tunnel_layer(1);
     } else {

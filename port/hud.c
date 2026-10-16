@@ -1,10 +1,33 @@
 #include "hud.h"
 #include "pictures.h"
+#include "surface.h"
 
-/* Video byte offset to the pixel at the left of that EGA byte. Stride is 40. */
+enum {
+    EGA_STRIDE = 40,
+    BYTE_PX = 8,
+    BANK_SHIP = 2,
+    BANK_TILES = 4,
+    CHROME = 0x403c,
+    CHROME_AT = 0x1e11,
+    FUEL_CELLS = 0x48f6,
+    FUEL_AT = 0x1b88,
+    AMMO_CELLS = 0x2ce6,
+    AMMO_AT = 0x1cc8,
+    SHIELD_CELLS = 0x4496,
+    SHIELD_AT = 0x1e08,
+    LIFE_ICON = 0x43e6,
+    CHARGE_ICON = 0x43ee,
+    TAKEN_MARK = 0x2f78,
+    GAUGE_H = 7,
+    ICON_W = 16,
+    LIFE_H = 15,
+    MARK_H = 8,
+    DIGIT_H = 9
+};
+
 static void ega_origin(unsigned offset, int *x, int *y) {
-    *y = (int)(offset / 40u);
-    *x = (int)(offset % 40u) * 8;
+    *y = (int)(offset / EGA_STRIDE);
+    *x = (int)(offset % EGA_STRIDE) * BYTE_PX;
 }
 
 static void blit(int bank, unsigned sprite, unsigned dest, int width, int height, int live) {
@@ -16,30 +39,30 @@ static void blit(int bank, unsigned sprite, unsigned dest, int width, int height
 void hud_draw(int fuel, int ammo, int shield, int lives, int charges,
               const uint8_t collected[6], const uint8_t digits[6]) {
     /* CS:21DC chrome, CS:250B/2553/259B gauges. Width is the full cell count. */
-    blit(2, 0x403c, 0x1e11, 56, 7, -1);
+    blit(BANK_SHIP, CHROME, CHROME_AT, SHIELD_FULL, GAUGE_H, -1);
     if (fuel < 0) fuel = 0;
     if (ammo < 0) ammo = 0;
     if (shield < 0) shield = 0;
-    blit(2, 0x48f6, 0x1b88, 44, 7, fuel);
-    blit(2, 0x2ce6, 0x1cc8, 48, 7, ammo);
-    blit(2, 0x4496, 0x1e08, 56, 7, shield);
+    blit(BANK_SHIP, FUEL_CELLS, FUEL_AT, FUEL_FULL, GAUGE_H, fuel);
+    blit(BANK_SHIP, AMMO_CELLS, AMMO_AT, AMMO_FULL, GAUGE_H, ammo);
+    blit(BANK_SHIP, SHIELD_CELLS, SHIELD_AT, SHIELD_FULL, GAUGE_H, shield);
 
     /* CS:22E1 lives, three icons, 24 pixels apart. */
     static const unsigned life_at[3] = {0x1b90, 0x1b93, 0x1b96};
-    if (lives > 3) lives = 3;
-    for (int i = 0; i < lives; i++) blit(2, 0x43e6, life_at[i], 16, 15, -1);
+    if (lives > LIVES_FULL) lives = LIVES_FULL;
+    for (int i = 0; i < lives; i++) blit(BANK_SHIP, LIFE_ICON, life_at[i], ICON_W, LIFE_H, -1);
 
     /* CS:23D4 six side-device charges. */
     static const unsigned charge_at[6] = {0x1b99, 0x1b9b, 0x1b9d, 0x1b9f, 0x1ba1, 0x1ba3};
-    if (charges > 6) charges = 6;
-    for (int i = 0; i < charges; i++) blit(2, 0x43ee, charge_at[i], 16, 15, -1);
+    if (charges > SIDE_CHARGES_FULL) charges = SIDE_CHARGES_FULL;
+    for (int i = 0; i < charges; i++) blit(BANK_SHIP, CHARGE_ICON, charge_at[i], ICON_W, LIFE_H, -1);
 
     /* CS:2A7F empty collectible marks. CS:2B59 replaces a taken one with 0x2F78. */
     static const unsigned collect_sprite[6] = {0x1178, 0x1678, 0x1b78, 0x2078, 0x2578, 0x2a78};
     static const unsigned collect_at[6] = {0x1b82, 0x1cc2, 0x1e02, 0x1b85, 0x1cc5, 0x1e05};
     for (int i = 0; i < 6; i++) {
-        unsigned sprite = collected && collected[i] ? 0x2f78u : collect_sprite[i];
-        blit(4, sprite, collect_at[i], 16, 8, -1);
+        unsigned sprite = collected && collected[i] ? TAKEN_MARK : collect_sprite[i];
+        blit(BANK_TILES, sprite, collect_at[i], ICON_W, MARK_H, -1);
     }
 
     /* CS:155F digit sprites, CS:1573 destinations, CS:2714 skips leading zeros. */
@@ -53,7 +76,7 @@ void hud_draw(int fuel, int ammo, int shield, int lives, int charges,
         unsigned digit = digits ? digits[i] : 0;
         if (leading && digit == 0) continue;
         leading = 0;
-        if (digit < 10 && place < 6) blit(2, digit_sprite[digit], digit_at[place], 16, 9, -1);
+        if (digit < 10 && place < 6) blit(BANK_SHIP, digit_sprite[digit], digit_at[place], ICON_W, DIGIT_H, -1);
         place++;
     }
 }

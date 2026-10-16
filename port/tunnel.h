@@ -3,7 +3,21 @@
 
 #include <stdint.h>
 
-enum { TUNNEL_BYTES = 256 * 32 };
+enum {
+    TUNNEL_BYTES = 256 * 32,
+    TUNNEL_LENGTH = 896,
+    TUNNEL_FUEL_LIMIT = 744,
+    TUNNEL_EXIT_NEAR = 256,
+    TUNNEL_CAMERA = 26,
+    TUNNEL_CENTER_X = 128,
+    TUNNEL_CENTER_Y = 106,
+    PICKUP_AGE_LIMIT = 45,
+    REWARD_AMMO = 0x40,
+    REWARD_FUEL = 0x80,
+    REWARD_SHIELD = 0xc0,
+    REWARD_ADVANCE = 0xf0,
+    REWARD_COLOR_MASK = 0xc0
+};
 
 /* 1bpp scratch, stride 32, bit 7 is the leftmost pixel. */
 void tunnel_build_bitmap(uint8_t *bits, unsigned distance, int min_radius);

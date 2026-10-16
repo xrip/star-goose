@@ -13,6 +13,29 @@ enum {
     CONTROL_FIRE = 0x80
 };
 
+enum {
+    X_MIN = 20,
+    X_MAX = 236,
+    VELOCITY_MIN = -24,
+    VELOCITY_MAX = 24,
+    TURN_SNAP = 4,
+    SCROLL_MAX = 64,
+    BASE_SCROLL = 16,
+    SCROLL_STAGE3 = 32,
+    SCROLL_STAGE6 = 48,
+    FUEL_FULL = 44,
+    SHIELD_FULL = 56,
+    AMMO_FULL = 48,
+    LIVES_FULL = 3,
+    SIDE_CHARGES_FULL = 6,
+    FUEL_DISTANCE_LIMIT = 139,
+    WORLD_MASK = 1023,
+    PLAYER_AHEAD = 112,
+    START_X = 128,
+    START_CAMERA = 0x350,
+    VOID_FRAMES = 4
+};
+
 /* Surface flight. Weapons and the tunnel live in the session around this. */
 typedef struct Surface {
     int x;

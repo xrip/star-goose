@@ -2,24 +2,6 @@
 #include "terrain.h"
 #include "goose_model.h"
 
-enum {
-    X_MIN = 20,
-    X_MAX = 236,
-    VELOCITY_MIN = -24,
-    VELOCITY_MAX = 24,
-    TURN_SNAP = 4,
-    SCROLL_MAX = 64,
-    BASE_SCROLL = 16,
-    FUEL_FULL = 44,
-    SHIELD_FULL = 56,
-    FUEL_DISTANCE_LIMIT = 139,
-    WORLD_MASK = 1023,
-    PLAYER_AHEAD = 112,
-    START_X = 128,
-    START_CAMERA = 0x350,
-    VOID_FRAMES = 4
-};
-
 static void sync_player(Surface *game) {
     unsigned y = (game->camera_y + PLAYER_AHEAD) & WORLD_MASK;
     TerrainSample ground = terrain_sample(game->tiles, (unsigned)game->x, y);

@@ -45,9 +45,25 @@ static const uint8_t PLAYER_FRAME[128] = {
     0x14, 0x14, 0x14, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
+enum {
+    CENTER = 128,
+    CENTER_LEFT = 127,
+    EDGE = 255,
+    SPOKE_NEAR = 79,
+    SPOKE_FAR = 176,
+    RING_SHIFT = 64,
+    PHASE_MASK = 63,
+    EDGE_PHASE_LIMIT = 12,
+    Y_SCALE_NUM = 10,
+    Y_SCALE_BIAS = 5,
+    Y_SCALE_DEN = 12,
+    BIT7 = 0x80
+};
+enum { COLOR_BLUE = 1, COLOR_GREEN = 2, COLOR_CYAN = 3, COLOR_RED = 4 };
+
 static int scale_y(int y) {
     if (y == 0) return 0;
-    return (y * 10 + 5) / 12;
+    return (y * Y_SCALE_NUM + Y_SCALE_BIAS) / Y_SCALE_DEN;
 }
 
 static void plot(uint8_t *bits, int di, unsigned mask) {
@@ -75,7 +91,7 @@ static void line(uint8_t *bits, int x1, int y1, int x2, int y2) {
         ystep = -32;
     }
     int di = y1 * 32 + (x1 >> 3);
-    unsigned mask = 0x80u >> (x1 & 7);
+    unsigned mask = BIT7 >> (x1 & 7);
     plot(bits, di, mask);
     if (dx == 0) {
         for (int i = 0; i < dy; i++) {
@@ -88,7 +104,7 @@ static void line(uint8_t *bits, int x1, int y1, int x2, int y2) {
         for (int i = 0; i < dx; i++) {
             mask >>= 1;
             if (mask == 0) {
-                mask = 0x80;
+                mask = BIT7;
                 di++;
             }
             plot(bits, di, mask);
@@ -100,7 +116,7 @@ static void line(uint8_t *bits, int x1, int y1, int x2, int y2) {
         for (int i = 0; i < dx; i++) {
             mask >>= 1;
             if (mask == 0) {
-                mask = 0x80;
+                mask = BIT7;
                 di++;
             }
             acc += dy;
@@ -120,7 +136,7 @@ static void line(uint8_t *bits, int x1, int y1, int x2, int y2) {
             acc -= dy;
             mask >>= 1;
             if (mask == 0) {
-                mask = 0x80;
+                mask = BIT7;
                 di++;
             }
         }
@@ -130,14 +146,14 @@ static void line(uint8_t *bits, int x1, int y1, int x2, int y2) {
 
 static void rings(uint8_t *bits, int radius, int along, int min_radius) {
     for (;;) {
-        line(bits, 0x7f - radius, 0x7f - along, 0x80 + radius, 0x7f - along);
-        line(bits, 0x80 + radius, 0x7f - along, 0x80 + along, 0x7f - radius);
-        line(bits, 0x80 + along, 0x7f - radius, 0x80 + along, 0x80 + radius);
-        line(bits, 0x80 + radius, 0x80 + along, 0x80 + along, 0x80 + radius);
-        line(bits, 0x7f - radius, 0x80 + along, 0x80 + radius, 0x80 + along);
-        line(bits, 0x7f - along, 0x80 + radius, 0x7f - radius, 0x80 + along);
-        line(bits, 0x7f - along, 0x7f - radius, 0x7f - along, 0x80 + radius);
-        line(bits, 0x7f - along, 0x7f - radius, 0x7f - radius, 0x7f - along);
+        line(bits, CENTER_LEFT - radius, CENTER_LEFT - along, CENTER + radius, CENTER_LEFT - along);
+        line(bits, CENTER + radius, CENTER_LEFT - along, CENTER + along, CENTER_LEFT - radius);
+        line(bits, CENTER + along, CENTER_LEFT - radius, CENTER + along, CENTER + radius);
+        line(bits, CENTER + radius, CENTER + along, CENTER + along, CENTER + radius);
+        line(bits, CENTER_LEFT - radius, CENTER + along, CENTER + radius, CENTER + along);
+        line(bits, CENTER_LEFT - along, CENTER + radius, CENTER_LEFT - radius, CENTER + along);
+        line(bits, CENTER_LEFT - along, CENTER_LEFT - radius, CENTER_LEFT - along, CENTER + radius);
+        line(bits, CENTER_LEFT - along, CENTER_LEFT - radius, CENTER_LEFT - radius, CENTER_LEFT - along);
         if ((along >> 1) <= min_radius) break;
         along >>= 1;
         radius >>= 1;
@@ -146,26 +162,26 @@ static void rings(uint8_t *bits, int radius, int along, int min_radius) {
 
 void tunnel_build_bitmap(uint8_t *bits, unsigned distance, int min_radius) {
     memset(bits, 0, TUNNEL_BYTES);
-    line(bits, 0x4f, 0xff, 0xb0, 0x00);
-    line(bits, 0x4f, 0x00, 0xb0, 0xff);
-    line(bits, 0x00, 0x4f, 0xff, 0xb0);
-    line(bits, 0x00, 0xb0, 0xff, 0x4f);
-    unsigned phase = distance & 63u;
-    rings(bits, RADIUS[phase], (int)phase + 0x40, min_radius);
-    if (phase > 12) return;
+    line(bits, SPOKE_NEAR, EDGE, SPOKE_FAR, 0);
+    line(bits, SPOKE_NEAR, 0, SPOKE_FAR, EDGE);
+    line(bits, 0, SPOKE_NEAR, EDGE, SPOKE_FAR);
+    line(bits, 0, SPOKE_FAR, EDGE, SPOKE_NEAR);
+    unsigned phase = distance & PHASE_MASK;
+    rings(bits, RADIUS[phase], (int)phase + RING_SHIFT, min_radius);
+    if (phase > EDGE_PHASE_LIMIT) return;
     int x = EDGE_X[phase];
     int y = EDGE_Y[phase];
-    line(bits, x + 0x80, 0x00, 0xff, 0x7f - y);
-    line(bits, 0x7f - x, 0x00, 0x00, 0x7f - y);
-    line(bits, x + 0x80, 0xff, 0xff, y + 0x80);
-    line(bits, 0x7f - x, 0xff, 0x00, y + 0x80);
+    line(bits, x + CENTER, 0, EDGE, CENTER_LEFT - y);
+    line(bits, CENTER_LEFT - x, 0, 0, CENTER_LEFT - y);
+    line(bits, x + CENTER, EDGE, EDGE, y + CENTER);
+    line(bits, CENTER_LEFT - x, EDGE, 0, y + CENTER);
 }
 
 int tunnel_line_color(uint8_t reward_kind) {
-    if (reward_kind == 0x40) return 2;
-    if (reward_kind == 0x80) return 4;
-    if (reward_kind == 0xc0) return 1;
-    return 3;
+    if (reward_kind == REWARD_AMMO) return COLOR_GREEN;
+    if (reward_kind == REWARD_FUEL) return COLOR_RED;
+    if (reward_kind == REWARD_SHIELD) return COLOR_BLUE;
+    return COLOR_CYAN;
 }
 
 uint8_t tunnel_player_frame(uint8_t angle) {
@@ -175,6 +191,6 @@ uint8_t tunnel_player_frame(uint8_t angle) {
 void tunnel_player_position(uint8_t angle, int *x, int *y) {
     int cx = (int8_t)CIRCLE_X[angle & 127u];
     int cy = (int8_t)CIRCLE_Y[angle & 127u];
-    *x = cx * 2 + 0x80;
-    *y = scale_y(cy * 2 + 0x80);
+    *x = cx * 2 + CENTER;
+    *y = scale_y(cy * 2 + CENTER);
 }

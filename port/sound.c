@@ -3,7 +3,24 @@
 #include <stdint.h>
 #include <string.h>
 
-enum { SAMPLE_RATE = 44100, PIT_CLOCK = 1193182, TIMER_DIVISOR = 0x4D0E, STREAM_SAMPLES = 4096 };
+enum {
+    SAMPLE_RATE = 44100,
+    PIT_CLOCK = 1193182,
+    TIMER_DIVISOR = 19726,
+    STREAM_SAMPLES = 4096,
+    CHARGE_PITCH_BASE = 8000,
+    CHARGE_PITCH_STEP = 1024,
+    ANGLE_MASK = 127,
+    ANGLE_HALF = 63,
+    ANGLE_FLIP = 64,
+    ANGLE_PITCH_BASE = 400,
+    MUSIC_END = 0xff,
+    MUSIC_REST = 0xfe,
+    NOTE_BIAS = 12,
+    TITLE_SONG = 160,
+    MUSIC_HOLD = 14,
+    MUSIC_GAP = 7
+};
 
 typedef struct SoundDesc {
     int8_t modulation;
@@ -97,23 +114,23 @@ static void sound_stop(void) {
 }
 
 static void start_descriptor(unsigned id) {
-    if (id < 1 || id > 15) return;
+    if (id < 1 || id > SOUND_NOTE) return;
     const SoundDesc *desc = &DESCRIPTORS[id - 1];
-    ticks_left = id == 15 ? music_duration : desc->duration;
+    ticks_left = id == SOUND_NOTE ? music_duration : desc->duration;
     divisor_step = desc->step;
-    if (id == 8) {
-        divisor = (uint16_t)(0x1f40 - charges * 1024);
-    } else if (id == 9) {
-        unsigned folded = (unsigned)angle & 0x7fu;
-        if (folded > 0x3f) folded -= 0x40;
-        else folded = 0x3f - folded;
-        divisor = (uint16_t)(0x190 + (folded << 2));
-    } else if (id == 15) {
+    if (id == SOUND_CHARGE) {
+        divisor = (uint16_t)(CHARGE_PITCH_BASE - charges * CHARGE_PITCH_STEP);
+    } else if (id == SOUND_TUNNEL_PICKUP) {
+        unsigned folded = (unsigned)angle & ANGLE_MASK;
+        if (folded > ANGLE_HALF) folded -= ANGLE_FLIP;
+        else folded = ANGLE_HALF - folded;
+        divisor = (uint16_t)(ANGLE_PITCH_BASE + (folded << 2));
+    } else if (id == SOUND_NOTE) {
         divisor = music_divisor;
     } else {
         divisor = desc->divisor;
     }
-    modulation_id = (uint8_t)(id == 15 ? music_modulation : desc->modulation);
+    modulation_id = (uint8_t)(id == SOUND_NOTE ? music_modulation : desc->modulation);
     modulation_phase = 0;
     output_divisor = divisor;
     speaker_on = 1;
@@ -126,22 +143,22 @@ static void play_note(unsigned note) {
     note--;
     if (note >= 52) return;
     music_divisor = NOTE_DIVISORS[note];
-    active_id = 15;
-    start_descriptor(15);
+    active_id = SOUND_NOTE;
+    start_descriptor(SOUND_NOTE);
 }
 
 static void music_tick(void) {
     music_divider--;
     if ((int8_t)music_divider >= 0) return;
-    music_divider = 7;
-    music_duration = 0x0e;
+    music_divider = MUSIC_GAP;
+    music_duration = MUSIC_HOLD;
     music_modulation = 4;
     if (music_origin + music_cursor >= sizeof MUSIC) {
         music_active = 0;
         return;
     }
     unsigned command = MUSIC[music_origin + music_cursor];
-    if (command == 0xff) {
+    if (command == MUSIC_END) {
         music_active = 0;
         return;
     }
@@ -150,14 +167,14 @@ static void music_tick(void) {
         if (active_id == 0) {
             music_modulation = 0;
             music_duration = 6;
-            note = (unsigned)FILL_NOTES[music_cursor & 31] - 0x0c;
+            note = (unsigned)FILL_NOTES[music_cursor & 31] - NOTE_BIAS;
         } else {
             note = 0;
         }
-    } else if (command == 0xfe) {
+    } else if (command == MUSIC_REST) {
         note = 0;
     } else {
-        note = command + 0x0c;
+        note = command + NOTE_BIAS;
     }
     play_note(note);
     music_cursor++;
@@ -206,7 +223,7 @@ void sound_context(int next_charges, int next_angle) {
 }
 
 void sound_trigger(unsigned id) {
-    if (music_active || !enabled || id < 1 || id > 15) return;
+    if (music_active || !enabled || id < 1 || id > SOUND_NOTE) return;
     if (active_id == 0) {
         active_id = (uint8_t)id;
         start_descriptor(id);
@@ -219,12 +236,11 @@ void sound_trigger(unsigned id) {
     if (id > priority_id) priority_id = (uint8_t)id;
 }
 
-/* CS:39B8. No pending name uses the sequence at 0x8DEC, 160 bytes into the blob. */
 void sound_music_start(int name_pending) {
     music_divider = 0;
     music_cursor = 0;
     music_active = 1;
-    music_origin = name_pending ? 0u : 160u;
+    music_origin = name_pending ? 0u : TITLE_SONG;
 }
 
 void sound_reset(void) {
