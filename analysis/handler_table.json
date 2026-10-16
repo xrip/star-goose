@@ -1,0 +1,177 @@
+[
+  {
+    "id": 1,
+    "cs_offset": 4360,
+    "symbol": "update_player"
+  },
+  {
+    "id": 2,
+    "cs_offset": 5996,
+    "symbol": "update_looping_anim4"
+  },
+  {
+    "id": 3,
+    "cs_offset": 6019,
+    "symbol": "update_pingpong_animation"
+  },
+  {
+    "id": 4,
+    "cs_offset": 4294,
+    "symbol": "cull_entity_after_view"
+  },
+  {
+    "id": 5,
+    "cs_offset": 6060,
+    "symbol": "update_aimed_emitter_a"
+  },
+  {
+    "id": 6,
+    "cs_offset": 6102,
+    "symbol": "update_aimed_emitter_b"
+  },
+  {
+    "id": 7,
+    "cs_offset": 6313,
+    "symbol": "update_aimed_emitter_c"
+  },
+  {
+    "id": 8,
+    "cs_offset": 6814,
+    "symbol": "update_refill_gate"
+  },
+  {
+    "id": 9,
+    "cs_offset": 4294,
+    "symbol": "cull_entity_after_view"
+  },
+  {
+    "id": 10,
+    "cs_offset": 6547,
+    "symbol": "update_tunnel_entrance_a"
+  },
+  {
+    "id": 11,
+    "cs_offset": 6594,
+    "symbol": "update_tunnel_entrance_b"
+  },
+  {
+    "id": 12,
+    "cs_offset": 11778,
+    "symbol": "update_tunnel_player"
+  },
+  {
+    "id": 13,
+    "cs_offset": 4294,
+    "symbol": "cull_entity_after_view"
+  },
+  {
+    "id": 14,
+    "cs_offset": 12264,
+    "symbol": "update_tunnel_exit_marker"
+  },
+  {
+    "id": 15,
+    "cs_offset": 12298,
+    "symbol": "update_tunnel_pickup"
+  },
+  {
+    "id": 16,
+    "cs_offset": 5886,
+    "symbol": "update_five_frame_explosion"
+  },
+  {
+    "id": 17,
+    "cs_offset": 4811,
+    "symbol": "update_player_death"
+  },
+  {
+    "id": 18,
+    "cs_offset": 4294,
+    "symbol": "cull_entity_after_view"
+  },
+  {
+    "id": 19,
+    "cs_offset": 4843,
+    "symbol": "update_player_projectile"
+  },
+  {
+    "id": 20,
+    "cs_offset": 5628,
+    "symbol": "update_enemy_projectile"
+  },
+  {
+    "id": 21,
+    "cs_offset": 5855,
+    "symbol": "update_four_frame_impact"
+  },
+  {
+    "id": 22,
+    "cs_offset": 5846,
+    "symbol": "update_countdown_effect"
+  },
+  {
+    "id": 23,
+    "cs_offset": 5952,
+    "symbol": "update_side_impact"
+  },
+  {
+    "id": 24,
+    "cs_offset": 4996,
+    "symbol": "update_side_device_follow"
+  },
+  {
+    "id": 25,
+    "cs_offset": 5032,
+    "symbol": "update_ground_projectile"
+  },
+  {
+    "id": 26,
+    "cs_offset": 5360,
+    "symbol": "update_mobile_enemy"
+  },
+  {
+    "id": 27,
+    "cs_offset": 4339,
+    "symbol": "update_accelerating_effect"
+  },
+  {
+    "id": 28,
+    "cs_offset": 6343,
+    "symbol": "update_level_exit_gate"
+  },
+  {
+    "id": 29,
+    "cs_offset": 5161,
+    "symbol": "update_ground_enemy_shot"
+  },
+  {
+    "id": 30,
+    "cs_offset": 6132,
+    "symbol": "update_arcing_projectile"
+  },
+  {
+    "id": 31,
+    "cs_offset": 5919,
+    "symbol": "update_six_frame_effect"
+  },
+  {
+    "id": 32,
+    "cs_offset": 6921,
+    "symbol": "update_collectible"
+  },
+  {
+    "id": 33,
+    "cs_offset": 6986,
+    "symbol": "update_drifting_effect"
+  },
+  {
+    "id": 34,
+    "cs_offset": 12112,
+    "symbol": "update_tunnel_side_device"
+  },
+  {
+    "id": 35,
+    "cs_offset": 4775,
+    "symbol": "update_player_forced_stop"
+  }
+]

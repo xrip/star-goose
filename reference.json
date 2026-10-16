@@ -1,0 +1,38 @@
+{
+  "input_archive": "goose.zip",
+  "exe": {
+    "name": "GOOSE.EXE",
+    "size": 53684,
+    "sha256": "631ffed20bb29e564b455d9185220d30dc1c35964bd9f7aeb421cad4567c4a0b"
+  },
+  "assets": {
+    "BIRD1.X": {
+      "size": 32000,
+      "sha256": "7d52a91214dfe7071364b1c0d458844e7ba8053060faa3cfb7c13e8e53ec8449"
+    },
+    "BIRD2.X": {
+      "size": 32000,
+      "sha256": "c80398ebecaa4c5ff8f249bacab1533025363b6f278e7a9acd8989a3c88025df"
+    },
+    "BLOX.X": {
+      "size": 32000,
+      "sha256": "8b297518801abf6f4ea20ede8d4ff8251282758c4e93c6261d5891388a96ff0e"
+    },
+    "HISCORES": {
+      "size": 140,
+      "sha256": "fbe0fedd08703b736f0a87a6ec3c56ad1307d7600363cd85cf0d55f13d6a7e17"
+    },
+    "INTRO.X": {
+      "size": 32000,
+      "sha256": "db50391261b437806cb3755fd5e3006679cf3dd0df1e83f2f1a2130c1d35bc62"
+    },
+    "NEWBIRD.X": {
+      "size": 32000,
+      "sha256": "c1f7338db77e51eada16399f229a953087a5cc6e897f1d3616e5d619038b033d"
+    },
+    "PODZ1.X": {
+      "size": 32000,
+      "sha256": "87a9bf83b6f8f01085c0925b09e97e88784001a1a405961f32f1434ba2454a5c"
+    }
+  }
+}

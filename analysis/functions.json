@@ -1,0 +1,3947 @@
+[
+  {
+    "cs_offset": 16,
+    "file_offset": 528,
+    "name": "entry",
+    "purpose": "Настраивает DS и восемь сегментов буферов; проверяет память, загружает ресурсы и запускает внешний цикл игры.",
+    "inputs": "MZ entry, не обычный near CALL.",
+    "effects": "Не возвращается; последовательность инициализации и повторного старта сохранена.",
+    "source_file": "src/code/01_boot_and_attract.asm",
+    "direct_calls": [
+      "load_assets",
+      "video_init_mode0d",
+      "load_highscores",
+      "critical_error_install",
+      "keyboard_install",
+      "mouse_reset",
+      "timer_install",
+      "sound_init",
+      "start_game_cycle",
+      "game_loop",
+      "mark_attract_seen"
+    ],
+    "returns_in_physical_span": [],
+    "original_symbol": "entry",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 150,
+    "file_offset": 662,
+    "name": "exit_to_dos",
+    "purpose": "Останавливает звук, возвращает INT 1Ch/09h, включает текстовый режим и завершает процесс.",
+    "inputs": "Вызывается переходом, не обязательно CALL.",
+    "effects": "Невозвратная процедура; PIT и INT 24h здесь явно не восстанавливаются.",
+    "source_file": "src/code/01_boot_and_attract.asm",
+    "direct_calls": [
+      "sound_stop",
+      "timer_restore_vector",
+      "keyboard_restore"
+    ],
+    "returns_in_physical_span": [],
+    "original_symbol": "exit_to_dos",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 85
+  },
+  {
+    "cs_offset": 169,
+    "file_offset": 681,
+    "name": "start_game_cycle",
+    "purpose": "Показывает заставку/таблицу рекордов, сбрасывает состояние новой игры, готовит мир и HUD.",
+    "inputs": "DS = сегмент игры.",
+    "effects": "Не обнуляет level_index; нельзя добавлять такой сброс при буквальном переносе.",
+    "source_file": "src/code/01_boot_and_attract.asm",
+    "direct_calls": [
+      "run_attract_sequence",
+      "start_level_state",
+      "init_playfield_pages",
+      "init_hud"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "start_game_cycle",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 103
+  },
+  {
+    "cs_offset": 207,
+    "file_offset": 719,
+    "name": "game_loop",
+    "purpose": "Один игровой кадр: ввод → обновление → поверхность или туннель → сущности → HUD → показ.",
+    "inputs": "DS = сегмент игры.",
+    "effects": "Повторяет кадры до game_loop_end_flag. Порядок вызовов — часть поведения.",
+    "source_file": "src/code/01_boot_and_attract.asm",
+    "direct_calls": [
+      "poll_controls",
+      "update_entities",
+      "draw_scrolling_background",
+      "render_entities",
+      "build_tunnel_bitmap",
+      "present_tunnel_bitmap",
+      "update_hud",
+      "present_frame"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "game_loop",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 126
+  },
+  {
+    "cs_offset": 253,
+    "file_offset": 765,
+    "name": "mark_attract_seen",
+    "purpose": "Помечает, что первая игровая сессия уже закончилась.",
+    "inputs": "Нет аргументов.",
+    "effects": "attract_seen = 1.",
+    "source_file": "src/code/01_boot_and_attract.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "mark_attract_seen",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 160
+  },
+  {
+    "cs_offset": 259,
+    "file_offset": 771,
+    "name": "run_attract_sequence",
+    "purpose": "Выполняет сценарий заставки: каждые 8 итераций читает команду, создаёт надпись/сущность или запускает ввод имени.",
+    "inputs": "DS = сегмент игры.",
+    "effects": "0 = пауза; FF = конец; FE = ввод имени/ожидание; бит 7 = пара последовательных кадров.",
+    "source_file": "src/code/01_boot_and_attract.asm",
+    "direct_calls": [
+      "insert_current_highscore",
+      "render_highscore_table",
+      "music_start",
+      "prepare_attract_background",
+      "reset_attract_entities",
+      "poll_controls",
+      "update_entities",
+      "restore_attract_background",
+      "render_entities",
+      "present_frame",
+      "edit_highscore_name",
+      "wait_attract_input",
+      "spawn_attract_item"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "run_attract_sequence",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 173
+  },
+  {
+    "cs_offset": 413,
+    "file_offset": 925,
+    "name": "spawn_attract_item",
+    "purpose": "Выбирает кадр шаблона заставки, применяет его параметры и помещает копию в пул.",
+    "inputs": "AL = номер кадра; шаблон DS:0109.",
+    "effects": "SI = новый слот либо 0; состояние шаблона изменяется.",
+    "source_file": "src/code/01_boot_and_attract.asm",
+    "direct_calls": [
+      "apply_sprite_frame",
+      "allocate_entity_copy"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_019d",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 251
+  },
+  {
+    "cs_offset": 429,
+    "file_offset": 941,
+    "name": "wait_attract_input",
+    "purpose": "До 8000 раз опрашивает управление; досрочно выходит по FIRE.",
+    "inputs": "Нет аргументов.",
+    "effects": "Это задержка числом опросов, не таймер в миллисекундах.",
+    "source_file": "src/code/01_boot_and_attract.asm",
+    "direct_calls": [
+      "poll_controls"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_01ad",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 268
+  },
+  {
+    "cs_offset": 448,
+    "file_offset": 960,
+    "name": "poll_controls",
+    "purpose": "Собирает маску управления, обрабатывает паузу, переназначение, выход и переключение звука, затем мышь.",
+    "inputs": "Таблица клавиш и состояние мыши.",
+    "effects": "control_bits; LEFT имеет приоритет над RIGHT, UP над DOWN. Движение мыши учитывается только без клавиатурного направления.",
+    "source_file": "src/code/02_controls.asm",
+    "direct_calls": [
+      "redefine_keys",
+      "draw_quit_dialog",
+      "wait_keys_released",
+      "sound_trigger"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "poll_controls",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 827,
+    "file_offset": 1339,
+    "name": "redefine_keys",
+    "purpose": "Запрашивает 8 различных клавиш в порядке FIRE, LEFT, RIGHT, UP, DOWN, N, M, QUIT.",
+    "inputs": "Блокирующий интерфейс, DS = сегмент игры.",
+    "effects": "Записывает scan-code в таблицу настроек; дубли отклоняются.",
+    "source_file": "src/code/02_controls.asm",
+    "direct_calls": [
+      "draw_redefine_dialog",
+      "draw_control_prompt",
+      "wait_scancode",
+      "wait_keys_released"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "redefine_keys",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 190
+  },
+  {
+    "cs_offset": 1090,
+    "file_offset": 1602,
+    "name": "keyboard_install",
+    "purpose": "Задаёт исходные scan-code, очищает 128 состояний и устанавливает свой INT 09h.",
+    "inputs": "DS = сегмент игры.",
+    "effects": "Сохраняет старый вектор; использует REP STOSW без локального CLD.",
+    "source_file": "src/code/03_dos_interrupts.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "keyboard_install",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 1189,
+    "file_offset": 1701,
+    "name": "keyboard_restore",
+    "purpose": "Возвращает сохранённый INT 09h через DOS.",
+    "inputs": "Сохранённые offset/segment.",
+    "effects": "DS восстанавливается после временной подстановки сегмента обработчика.",
+    "source_file": "src/code/03_dos_interrupts.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "keyboard_restore",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 57
+  },
+  {
+    "cs_offset": 1207,
+    "file_offset": 1719,
+    "name": "keyboard_irq1",
+    "purpose": "Читает scan-code, подтверждает IRQ и записывает make/break как 1/0.",
+    "inputs": "Аппаратный вход INT 09h.",
+    "effects": "IRET; AX/BX/DS сохранены. Расширенные префиксы не декодируются в отдельные клавиши.",
+    "source_file": "src/code/03_dos_interrupts.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "iret"
+    ],
+    "original_symbol": "keyboard_irq1",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 77
+  },
+  {
+    "cs_offset": 1267,
+    "file_offset": 1779,
+    "name": "wait_scancode",
+    "purpose": "Ищет нажатую клавишу, кроме F1–F4 и обоих Shift; повторяет сканирование до находки.",
+    "inputs": "Нет аргументов.",
+    "effects": "AX = scan-code. Сам по себе не ждёт отпускания предыдущей клавиши.",
+    "source_file": "src/code/03_dos_interrupts.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "wait_scancode",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 124
+  },
+  {
+    "cs_offset": 1321,
+    "file_offset": 1833,
+    "name": "wait_keys_released",
+    "purpose": "Повторяет проход по 128 байтам, пока все клавиши не отпущены.",
+    "inputs": "DS = сегмент игры; ожидается DF = 0.",
+    "effects": "Блокирующий busy loop.",
+    "source_file": "src/code/03_dos_interrupts.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "wait_keys_released",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 162
+  },
+  {
+    "cs_offset": 1345,
+    "file_offset": 1857,
+    "name": "poll_key_character",
+    "purpose": "До 20000 проходов ищет новый scan-code и переводит его через таблицу символов.",
+    "inputs": "last_key_pointer подавляет повтор того же нажатия.",
+    "effects": "AL = символ либо 0. Это ограниченное ожидание, а не мгновенный poll.",
+    "source_file": "src/code/03_dos_interrupts.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "poll_key_character",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 186
+  },
+  {
+    "cs_offset": 1416,
+    "file_offset": 1928,
+    "name": "mouse_reset",
+    "purpose": "Сбрасывает драйвер мыши INT 33h и сохраняет признак его наличия.",
+    "inputs": "Нет аргументов.",
+    "effects": "mouse_present = AL результата AX=0/INT 33h.",
+    "source_file": "src/code/03_dos_interrupts.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "mouse_reset",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 234
+  },
+  {
+    "cs_offset": 1425,
+    "file_offset": 1937,
+    "name": "timer_install",
+    "purpose": "Сохраняет и заменяет INT 1Ch; программирует PIT0 делителем 4D0Eh.",
+    "inputs": "DS = сегмент игры.",
+    "effects": "Звук обновляется из обработчика, а не из главного игрового цикла.",
+    "source_file": "src/code/03_dos_interrupts.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "timer_install",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 249
+  },
+  {
+    "cs_offset": 1468,
+    "file_offset": 1980,
+    "name": "timer_restore_vector",
+    "purpose": "Возвращает только вектор INT 1Ch.",
+    "inputs": "Сохранённые offset/segment.",
+    "effects": "Делитель PIT в этой процедуре не восстанавливается.",
+    "source_file": "src/code/03_dos_interrupts.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "timer_restore_vector",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 282
+  },
+  {
+    "cs_offset": 1486,
+    "file_offset": 1998,
+    "name": "timer_int1c",
+    "purpose": "Увеличивает 8-битный счётчик тиков и обновляет звуковой автомат.",
+    "inputs": "Вход прерывания; свой DS устанавливается явно.",
+    "effects": "IRET; tick переполняется по модулю 256. Общие регистры и DS сохранены, ES явно не сохраняется.",
+    "source_file": "src/code/03_dos_interrupts.asm",
+    "direct_calls": [
+      "sound_tick"
+    ],
+    "returns_in_physical_span": [
+      "iret"
+    ],
+    "original_symbol": "timer_int1c",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 302
+  },
+  {
+    "cs_offset": 1516,
+    "file_offset": 2028,
+    "name": "critical_error_install",
+    "purpose": "Устанавливает минимальный INT 24h.",
+    "inputs": "DS = сегмент игры.",
+    "effects": "Старый вектор здесь не сохраняется.",
+    "source_file": "src/code/03_dos_interrupts.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "critical_error_install",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 337
+  },
+  {
+    "cs_offset": 1532,
+    "file_offset": 2044,
+    "name": "critical_error_int24",
+    "purpose": "Возвращает AL=0 обработчику критической ошибки DOS.",
+    "inputs": "Вход прерывания.",
+    "effects": "IRET; не обычный RET и не логическая функция игры.",
+    "source_file": "src/code/03_dos_interrupts.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "iret"
+    ],
+    "original_symbol": "critical_error_int24",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 357
+  },
+  {
+    "cs_offset": 1536,
+    "file_offset": 2048,
+    "name": "load_assets",
+    "purpose": "Загружает BIRD1, BIRD2, BLOX, NEWBIRD, PODZ1 и INTRO в отдельные буферы.",
+    "inputs": "Сегменты буферов уже назначены entry.",
+    "effects": "Шесть чтений по 32000 байт. Формат использования не одинаков у всех .X.",
+    "source_file": "src/code/04_resource_io.asm",
+    "direct_calls": [
+      "load_32000_bytes"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "load_assets",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 1591,
+    "file_offset": 2103,
+    "name": "load_32000_bytes",
+    "purpose": "Обёртка чтения полного ресурса в segment:0000.",
+    "inputs": "AX = сегмент назначения; DS:DX = имя.",
+    "effects": "DI=0, CX=32000; затем файловый reader.",
+    "source_file": "src/code/04_resource_io.asm",
+    "direct_calls": [
+      "dos_open_read_close"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "load_32000_bytes",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 47
+  },
+  {
+    "cs_offset": 1604,
+    "file_offset": 2116,
+    "name": "load_file_to_ds",
+    "purpose": "Выбирает текущий DS как сегмент назначения и читает файл.",
+    "inputs": "DS:DX = имя; DI = адрес назначения; CX = длина.",
+    "effects": "Используется для HISCORES.",
+    "source_file": "src/code/04_resource_io.asm",
+    "direct_calls": [
+      "dos_open_read_close"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "load_file_to_ds",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 63
+  },
+  {
+    "cs_offset": 1613,
+    "file_offset": 2125,
+    "name": "dos_open_read_close",
+    "purpose": "Открывает файл, читает блок и закрывает handle.",
+    "inputs": "DS:DX = имя; DI = offset; CX = count; file_destination_segment = сегмент.",
+    "effects": "Ошибка open возвращается; результат read не проверяется до close. Не считать AX надёжным числом прочитанных байтов.",
+    "source_file": "src/code/04_resource_io.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "dos_open_read_close",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 78
+  },
+  {
+    "cs_offset": 1652,
+    "file_offset": 2164,
+    "name": "dos_create_write_close",
+    "purpose": "Создаёт/обнуляет файл и записывает блок.",
+    "inputs": "DS:DX = имя; DS:DI = данные; CX = длина.",
+    "effects": "При ошибке write выходит без close; сохранено, а не исправлено.",
+    "source_file": "src/code/04_resource_io.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "dos_create_write_close",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 110
+  },
+  {
+    "cs_offset": 1690,
+    "file_offset": 2202,
+    "name": "prepare_level_maps",
+    "purpose": "Декодирует поток тайлов 12×64 и 64 маски размещения; рисует карту в кольцевой фон A800h.",
+    "inputs": "level_index, level_part; RLE-таблицы в DS.",
+    "effects": "RLE: нижние 6 бит = tile, верхние 2 = длина минус 1. Ровно 768 выходных байтов.",
+    "source_file": "src/code/05_world_map.asm",
+    "direct_calls": [
+      "prepare_next_map_tile",
+      "render_entity_to_a800"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "prepare_level_maps",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 1967,
+    "file_offset": 2479,
+    "name": "prepare_next_map_tile",
+    "purpose": "Берёт следующий tile, обновляет высотный профиль строки и параметры шаблона отрисовки.",
+    "inputs": "map_tile_cursor, map_row_y, map_running_height.",
+    "effects": "Изменяет шаблон DS:0274; bank=2 или 4, sprite offset берётся из таблицы.",
+    "source_file": "src/code/05_world_map.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_07af",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 156
+  },
+  {
+    "cs_offset": 2045,
+    "file_offset": 2557,
+    "name": "sample_terrain",
+    "purpose": "Ищет строку/колонку тайла, читает его микропрофиль 8×8 и суммирует перепады предыдущих тайлов.",
+    "inputs": "Стек: [BP+4]=world_y, [BP+6]=x.",
+    "effects": "AX = знаковая высота; BX = variant из одной из двух таблиц; CX = world_y/16. RET 4.",
+    "source_file": "src/code/05_world_map.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret 0x4"
+    ],
+    "original_symbol": "sub_07fd",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 196
+  },
+  {
+    "cs_offset": 2234,
+    "file_offset": 2746,
+    "name": "spawn_map_row",
+    "purpose": "Создаёт сущности для установленных битов одной строки; учитывает маски уже изменённых объектов.",
+    "inputs": "Стек: [BP+4]=строка 0..63.",
+    "effects": "Поиск первых свободных слотов; для уже использованных объектов применяется иной шаблон состояния. RET 2.",
+    "source_file": "src/code/05_world_map.asm",
+    "direct_calls": [
+      "place_entity_on_map",
+      "test_map_object_available",
+      "allocate_entity_copy",
+      "apply_entity_replacement"
+    ],
+    "returns_in_physical_span": [
+      "ret 0x2"
+    ],
+    "original_symbol": "sub_08ba",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 297
+  },
+  {
+    "cs_offset": 2378,
+    "file_offset": 2890,
+    "name": "place_entity_on_map",
+    "purpose": "Вычисляет x/y/высоту шаблона по его колонке и строке в сетке.",
+    "inputs": "DS:SI = запись сущности; state_13=колонка, state_14=строка.",
+    "effects": "x=24*column-4; y=16*row; высота — сумма перепадов предшествующих тайлов.",
+    "source_file": "src/code/05_world_map.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_094a",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 380
+  },
+  {
+    "cs_offset": 2468,
+    "file_offset": 2980,
+    "name": "reset_map_object_masks",
+    "purpose": "Заполняет FFh маски ещё доступных объектов для трёх частей уровня.",
+    "inputs": "Нет аргументов.",
+    "effects": "192 слова = 3×64 строк; ES=DS, DF=0.",
+    "source_file": "src/code/05_world_map.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_09a4",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 434
+  },
+  {
+    "cs_offset": 2485,
+    "file_offset": 2997,
+    "name": "consume_map_object",
+    "purpose": "Меняет сущность по replacement-таблице и сбрасывает её бит в маске строки.",
+    "inputs": "[BP+4]=row; [BP+6]=column; [BP+8]=entity offset.",
+    "effects": "Выбирает банк масок по level_part; RET 6.",
+    "source_file": "src/code/05_world_map.asm",
+    "direct_calls": [
+      "apply_entity_replacement"
+    ],
+    "returns_in_physical_span": [
+      "ret 0x6"
+    ],
+    "original_symbol": "sub_09b5",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 453
+  },
+  {
+    "cs_offset": 2537,
+    "file_offset": 3049,
+    "name": "test_map_object_available",
+    "purpose": "Проверяет бит объекта в выбранной части уровня.",
+    "inputs": "[BP+4]=row; [BP+6]=column.",
+    "effects": "AX = исходный бит, не нормализованный bool; RET 4.",
+    "source_file": "src/code/05_world_map.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret 0x4"
+    ],
+    "original_symbol": "sub_09e9",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 486
+  },
+  {
+    "cs_offset": 2587,
+    "file_offset": 3099,
+    "name": "apply_entity_replacement",
+    "purpose": "Копирует подмножество полей из шаблона, выбранного по handler_id.",
+    "inputs": "DS:SI = сущность.",
+    "effects": "Меняет flags, размеры/якорь, sprite offset и handler_id; координаты сохраняет.",
+    "source_file": "src/code/05_world_map.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_0a1b",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 519
+  },
+  {
+    "cs_offset": 2641,
+    "file_offset": 3153,
+    "name": "query_player_map_collision",
+    "purpose": "Ищет препятствие текущей строки около x игрока по маскам и ширинам из таблиц.",
+    "inputs": "player_map_row, player_x, level_part.",
+    "effects": "AX=код/величина столкновения либо 0; BX=колонка при попадании.",
+    "source_file": "src/code/05_world_map.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_0a51",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 550
+  },
+  {
+    "cs_offset": 2773,
+    "file_offset": 3285,
+    "name": "query_map_collision_at",
+    "purpose": "Проверяет препятствие строки для переданного x, с уменьшением полуширины на 14.",
+    "inputs": "[BP+4]=row; [BP+6]=x.",
+    "effects": "AX=0/1, BX=колонка при попадании; RET 4.",
+    "source_file": "src/code/05_world_map.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret 0x4"
+    ],
+    "original_symbol": "sub_0ad5",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 617
+  },
+  {
+    "cs_offset": 2904,
+    "file_offset": 3416,
+    "name": "allocate_entity_copy",
+    "purpose": "Ищет первый слот с очищенным битом RENDER и копирует в него ровно 23 байта.",
+    "inputs": "DS:SI = шаблон записи.",
+    "effects": "SI=адрес копии либо 0. ES=сегмент игры; DI и CX изменяются. Не проверяет flags==0.",
+    "source_file": "src/code/06_entity_pool.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "allocate_entity_copy",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 2940,
+    "file_offset": 3452,
+    "name": "clear_entities",
+    "purpose": "Очищает только flags каждой записи до sentinel.",
+    "inputs": "DS = сегмент игры.",
+    "effects": "Остальные 22 байта слота остаются прежними; не заменять memset всего массива без проверки.",
+    "source_file": "src/code/06_entity_pool.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "clear_entities",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 52
+  },
+  {
+    "cs_offset": 2958,
+    "file_offset": 3470,
+    "name": "render_entities",
+    "purpose": "Семь проходов по пулу: рисует активные записи слоя 7,6,...,1.",
+    "inputs": "DS = сегмент игры.",
+    "effects": "Слой 0 не рисуется; порядок внутри слоя — порядок слотов. Stride=40, clipping включён.",
+    "source_file": "src/code/06_entity_pool.asm",
+    "direct_calls": [
+      "prepare_sprite_blit"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "render_entities",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 75
+  },
+  {
+    "cs_offset": 3013,
+    "file_offset": 3525,
+    "name": "render_entity_to_a800",
+    "purpose": "Рисует одну запись в карту-фон A800h, а не в экранную страницу.",
+    "inputs": "DS:SI = сущность/шаблон.",
+    "effects": "Stride=32, экранное отсечение отключено.",
+    "source_file": "src/code/06_entity_pool.asm",
+    "direct_calls": [
+      "prepare_sprite_blit"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "render_entity_to_a800",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 114
+  },
+  {
+    "cs_offset": 3036,
+    "file_offset": 3548,
+    "name": "prepare_sprite_blit",
+    "purpose": "Из записи вычисляет верхний левый угол, размеры, банк изображения и прозрачный цвет.",
+    "inputs": "DS:SI = сущность.",
+    "effects": "x'=x-signed(anchor_x); y'=y-signed8(z+anchor_y). Передаёт четыре слова через стек.",
+    "source_file": "src/code/06_entity_pool.asm",
+    "direct_calls": [
+      "blit_sprite"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "prepare_sprite_blit",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 131
+  },
+  {
+    "cs_offset": 3108,
+    "file_offset": 3620,
+    "name": "blit_sprite",
+    "purpose": "Отсекает и выводит packed-4bpp sprite через EGA write mode 2; сохраняет прозрачный цвет.",
+    "inputs": "[BP+4]=height, +6=width, +8=y, +10=x; BX=segment; SI=source offset.",
+    "effects": "RET 8; DS восстанавливается. Горизонтальная граница сдвигает x целиком, не обрезает источник; ширина обрабатывается парами пикселей.",
+    "source_file": "src/code/07_sprite_blitter.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret",
+      "ret 0x8"
+    ],
+    "original_symbol": "blit_sprite",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 3480,
+    "file_offset": 3992,
+    "name": "reset_attract_entities",
+    "purpose": "Сбрасывает камеру и флаг смерти, очищает пул для заставки.",
+    "inputs": "Нет аргументов.",
+    "effects": "camera_y=26; не загружает новый уровень.",
+    "source_file": "src/code/08_game_lifecycle.asm",
+    "direct_calls": [
+      "clear_entities"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_0d98",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 3495,
+    "file_offset": 4007,
+    "name": "start_level_state",
+    "purpose": "Сбрасывает маски объектов, готовит карту и состояние игрока.",
+    "inputs": "level_index/part уже выбраны.",
+    "effects": "Обнуляет запросы восстановления/боковых устройств.",
+    "source_file": "src/code/08_game_lifecycle.asm",
+    "direct_calls": [
+      "reset_map_object_masks",
+      "prepare_level_maps",
+      "reset_player_motion"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_0da7",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 30
+  },
+  {
+    "cs_offset": 3520,
+    "file_offset": 4032,
+    "name": "advance_level",
+    "purpose": "Увеличивает номер пройденного этапа и базовую скорость, циклически переключает level_index 1..7.",
+    "inputs": "DS = сегмент игры.",
+    "effects": "Сброс масок, новая карта, игрок, шесть collectible-индикаторов.",
+    "source_file": "src/code/08_game_lifecycle.asm",
+    "direct_calls": [
+      "reset_map_object_masks",
+      "prepare_level_maps",
+      "reset_player_motion",
+      "reset_collectible_hud"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_0dc0",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 48
+  },
+  {
+    "cs_offset": 3591,
+    "file_offset": 4103,
+    "name": "handle_player_respawn",
+    "purpose": "Завершает игру при нуле жизней; иначе расходует жизнь и восстанавливает игрока.",
+    "inputs": "player_respawn_pending != 0.",
+    "effects": "При возврате к part 0 заново готовит карту и HUD-ресурсы.",
+    "source_file": "src/code/08_game_lifecycle.asm",
+    "direct_calls": [
+      "remove_life",
+      "prepare_level_maps",
+      "reset_hud_resources",
+      "reset_player_motion"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_0e07",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 85
+  },
+  {
+    "cs_offset": 3645,
+    "file_offset": 4157,
+    "name": "reset_player_motion",
+    "purpose": "Задаёт камеру из таблицы старта, скорость и исходные счётчики игрока.",
+    "inputs": "level_index, base_scroll_speed.",
+    "effects": "Затем заново формирует пул видимой области.",
+    "source_file": "src/code/08_game_lifecycle.asm",
+    "direct_calls": [
+      "rebuild_surface_entities"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_0e3d",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 115
+  },
+  {
+    "cs_offset": 3716,
+    "file_offset": 4228,
+    "name": "rebuild_surface_entities",
+    "purpose": "Пересоздаёт игрока и 15 строк объектов, затем боковые устройства и специальные состояния.",
+    "inputs": "camera_y, respawn/side flags.",
+    "effects": "Пул очищается; игрок занимает первый слот. Некоторые маршруты возвращаются раньше общей инициализации.",
+    "source_file": "src/code/08_game_lifecycle.asm",
+    "direct_calls": [
+      "prepare_level_maps",
+      "clear_entities",
+      "allocate_entity_copy",
+      "sync_player_to_terrain",
+      "spawn_map_row",
+      "apply_sprite_frame",
+      "reset_player_history",
+      "position_side_device"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_0e84",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 144
+  },
+  {
+    "cs_offset": 3900,
+    "file_offset": 4412,
+    "name": "enter_tunnel_mode",
+    "purpose": "Инициализирует туннель, дистанцию, угловую динамику и новый пул сущностей.",
+    "inputs": "tunnel mode выбран вызывающей стороной.",
+    "effects": "Использует другие шаблоны игрока и боковых устройств.",
+    "source_file": "src/code/08_game_lifecycle.asm",
+    "direct_calls": [
+      "select_tunnel_pattern",
+      "clear_entities",
+      "allocate_entity_copy",
+      "reset_tunnel_angle_history",
+      "update_tunnel_side_device"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_0f3c",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 228
+  },
+  {
+    "cs_offset": 3997,
+    "file_offset": 4509,
+    "name": "reset_player_history",
+    "purpose": "Заполняет четыре сохранённых позиции/кадра/высоты текущими значениями игрока.",
+    "inputs": "Глобальная запись player.",
+    "effects": "История используется боковыми устройствами с задержкой.",
+    "source_file": "src/code/08_game_lifecycle.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_0f9d",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 269
+  },
+  {
+    "cs_offset": 4058,
+    "file_offset": 4570,
+    "name": "update_entities",
+    "purpose": "Обходит пул по 23 байта и вызывает handler_id-1 для записей с UPDATE; обрабатывает смерть и смену режима.",
+    "inputs": "DS = сегмент игры.",
+    "effects": "SI сохраняется вокруг handler. После смены режима обход начинается заново; handler_id=0 пропускается.",
+    "source_file": "src/code/09_entity_dispatch.asm",
+    "direct_calls": [
+      "handle_player_respawn",
+      "sound_trigger",
+      "enter_tunnel_mode",
+      "advance_level",
+      "rebuild_surface_entities",
+      "WORD PTR cs:[bx+CS_entity_handlers]"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "update_entities",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 4256,
+    "file_offset": 4768,
+    "name": "cull_entity_before_camera",
+    "purpose": "Удаляет сущность, если нижний край попал в невидимую половину кольца относительно камеры.",
+    "inputs": "DS:SI = сущность.",
+    "effects": "Работает с кольцом 1024 и порогом 512, а не с простым signed y<0.",
+    "source_file": "src/code/09_entity_dispatch.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_10a0",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 136
+  },
+  {
+    "cs_offset": 4294,
+    "file_offset": 4806,
+    "name": "cull_entity_after_view",
+    "purpose": "Удаляет сущность по верхнему краю относительно camera_y+160 в кольце 1024.",
+    "inputs": "DS:SI = сущность.",
+    "effects": "Общий обработчик ID 4,9,13,18; это не четыре разных алгоритма.",
+    "source_file": "src/code/09_entity_dispatch.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_10c6",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 166
+  },
+  {
+    "cs_offset": 4339,
+    "file_offset": 4851,
+    "name": "update_accelerating_effect",
+    "purpose": "Увеличивает state_16 и двигает y назад на min(counter,8), затем проверяет видимость.",
+    "inputs": "DS:SI = сущность; handler ID 27.",
+    "effects": "Счётчик байтовый, проверка unsigned; его wrap не заменять бесконечным saturating счётчиком.",
+    "source_file": "src/code/09_entity_dispatch.asm",
+    "direct_calls": [
+      "cull_entity_before_camera"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_10f3",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 198
+  },
+  {
+    "cs_offset": 4360,
+    "file_offset": 4872,
+    "name": "update_player",
+    "purpose": "Обновляет скорость, камеру, горизонтальную инерцию, рельеф, столкновения и оружие игрока.",
+    "inputs": "Глобальная запись player; маска управления.",
+    "effects": "Инерция ограничена [-24,24]; dx=(v+3) SAR 2; x ограничен [20,236]. Боковые действия — автоматы 0/1/2/3.",
+    "source_file": "src/code/10_player_surface.asm",
+    "direct_calls": [
+      "update_scroll_speed",
+      "advance_surface_scroll",
+      "sync_player_to_terrain",
+      "push_player_history",
+      "query_player_map_collision",
+      "apply_player_map_hit",
+      "begin_player_death",
+      "fire_player_weapons",
+      "position_side_device",
+      "allocate_entity_copy",
+      "sound_trigger"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "update_player",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 4775,
+    "file_offset": 5287,
+    "name": "update_player_forced_stop",
+    "purpose": "Уменьшает скорость на 3, при отрицательном результате запускает смерть; удерживает кадр 10.",
+    "inputs": "Глобальная запись игрока; handler ID 35.",
+    "effects": "Не обычная физика игрока; отдельное состояние после перехода.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "begin_player_death",
+      "advance_surface_scroll",
+      "sync_player_to_terrain",
+      "apply_sprite_frame"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_12a7",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 4811,
+    "file_offset": 5323,
+    "name": "update_player_death",
+    "purpose": "Замедляет прокрутку, обновляет положение и по достижении 40 тиков запрашивает respawn.",
+    "inputs": "Глобальные счётчики; handler ID 17.",
+    "effects": "Смерть не означает немедленное удаление первого слота.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "advance_surface_scroll",
+      "sync_player_to_terrain"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_12cb",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 41
+  },
+  {
+    "cs_offset": 4843,
+    "file_offset": 5355,
+    "name": "update_player_projectile",
+    "purpose": "Двигает выстрел по y на -16, меняет высоту, проверяет рельеф и объект строки.",
+    "inputs": "DS:SI = сущность; handler ID 19.",
+    "effects": "Может изменить цель, счёт, звук и заменить выстрел эффектом.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "cull_entity_before_camera",
+      "sample_terrain",
+      "replace_with_impact",
+      "query_map_collision_at",
+      "find_map_entity",
+      "destroy_map_entity",
+      "sound_trigger",
+      "score_add_10",
+      "replace_with_side_impact"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_12eb",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 66
+  },
+  {
+    "cs_offset": 4996,
+    "file_offset": 5508,
+    "name": "update_side_device_follow",
+    "purpose": "Следует истории игрока; при состоянии кнопки 3 переключается на автономный handler 25.",
+    "inputs": "DS:SI = сущность; handler ID 24.",
+    "effects": "Бит 20h выбирает левое/правое устройство; при смерти игрока отключается.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "position_side_device"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1384",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 157
+  },
+  {
+    "cs_offset": 5032,
+    "file_offset": 5544,
+    "name": "update_ground_projectile",
+    "purpose": "Продвигает объект на -6 по y, привязывает к рельефу, проверяет препятствия и срок жизни.",
+    "inputs": "DS:SI = сущность; handler ID 25.",
+    "effects": "В состоянии frame=0 корректирует y обратно на +4 и уменьшает state_15.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "cull_entity_before_camera",
+      "sample_terrain",
+      "apply_sprite_frame",
+      "spawn_explosion_for_entity",
+      "query_map_collision_at",
+      "find_map_entity",
+      "destroy_map_entity",
+      "sound_trigger"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_13a8",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 187
+  },
+  {
+    "cs_offset": 5161,
+    "file_offset": 5673,
+    "name": "update_ground_enemy_shot",
+    "purpose": "Двигает наземный выстрел в одном из 5 направлений и проверяет близость игрока.",
+    "inputs": "DS:SI = сущность; handler ID 29.",
+    "effects": "Направление в param; y modulo 1024; попадание даёт shield_delta -=100.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "cull_entity_after_view",
+      "sample_terrain",
+      "apply_sprite_frame",
+      "sound_trigger",
+      "spawn_explosion_for_entity"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1429",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 259
+  },
+  {
+    "cs_offset": 5360,
+    "file_offset": 5872,
+    "name": "update_mobile_enemy",
+    "purpose": "Двигает сущность на +1 по y, привязывает к рельефу, проверяет игрока и его снаряды, стреляет.",
+    "inputs": "DS:SI = сущность; handler ID 26.",
+    "effects": "state_15 — знаковый счётчик попаданий; bit40h других сущностей определяет кандидатов столкновения.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "sample_terrain",
+      "apply_sprite_frame",
+      "sound_trigger",
+      "spawn_explosion_for_entity",
+      "score_add_150",
+      "replace_with_impact",
+      "score_add_10",
+      "fire_mobile_enemy_pattern",
+      "cull_entity_after_view"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_14f0",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 358
+  },
+  {
+    "cs_offset": 5628,
+    "file_offset": 6140,
+    "name": "update_enemy_projectile",
+    "purpose": "Движение в пяти направлениях, коррекция высоты, столкновение с рельефом и игроком.",
+    "inputs": "DS:SI = сущность; handler ID 20.",
+    "effects": "При попадании shield_delta -=1; направления используют разные dx/dy, не тригонометрию.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "cull_entity_after_view",
+      "sample_terrain",
+      "replace_with_impact",
+      "sound_trigger"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_15fc",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 492
+  },
+  {
+    "cs_offset": 5846,
+    "file_offset": 6358,
+    "name": "update_countdown_effect",
+    "purpose": "Декрементирует frame/state и удаляет объект при установленном SF.",
+    "inputs": "DS:SI = сущность; handler ID 22.",
+    "effects": "Знаковый 8-битный результат после DEC; не unsigned frame<0.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_16d6",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 607
+  },
+  {
+    "cs_offset": 5855,
+    "file_offset": 6367,
+    "name": "update_four_frame_impact",
+    "purpose": "Проигрывает четыре sprite-offset из таблицы; затем очищает flags.",
+    "inputs": "DS:SI = сущность; handler ID 21.",
+    "effects": "Сравнивает старое frame, инкремент сделан до проверки.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "cull_entity_after_view"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_16df",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 623
+  },
+  {
+    "cs_offset": 5886,
+    "file_offset": 6398,
+    "name": "update_five_frame_explosion",
+    "purpose": "Выбирает frame=(++age>>2)&7; кадры 0..4, затем удаление.",
+    "inputs": "DS:SI = сущность; handler ID 16.",
+    "effects": "Применяет descriptor DS:12B5 и culling.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "apply_sprite_frame",
+      "cull_entity_after_view"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_16fe",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 648
+  },
+  {
+    "cs_offset": 5919,
+    "file_offset": 6431,
+    "name": "update_six_frame_effect",
+    "purpose": "Выбирает frame=(++age>>2)&7; кадры 0..5, затем удаление.",
+    "inputs": "DS:SI = сущность; handler ID 31.",
+    "effects": "Применяет descriptor DS:12F5 и culling.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "apply_sprite_frame",
+      "cull_entity_after_view"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_171f",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 674
+  },
+  {
+    "cs_offset": 5952,
+    "file_offset": 6464,
+    "name": "update_side_impact",
+    "purpose": "Четырёхкадровый эффект; по окончании освобождает соответствующий бит side_impact_mask.",
+    "inputs": "DS:SI = сущность; handler ID 23.",
+    "effects": "Бит стороны 20h; mask использует 01h/80h.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "apply_sprite_frame"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1740",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 700
+  },
+  {
+    "cs_offset": 5996,
+    "file_offset": 6508,
+    "name": "update_looping_anim4",
+    "purpose": "Циклическая анимация frame=(++age>>1)&3 и culling.",
+    "inputs": "DS:SI = сущность; handler ID 2.",
+    "effects": "Descriptor DS:0E2B; игровое имя объекта не установлено.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "apply_sprite_frame",
+      "cull_entity_after_view"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_176c",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 731
+  },
+  {
+    "cs_offset": 6019,
+    "file_offset": 6531,
+    "name": "update_pingpong_animation",
+    "purpose": "Анимация через шестизначную таблицу кадров; после фазы 5 сбрасывает счётчик.",
+    "inputs": "DS:SI = сущность; handler ID 3.",
+    "effects": "Descriptor DS:0E52; визуальная роль отдельно не подтверждена.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "apply_sprite_frame",
+      "cull_entity_after_view"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1783",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 751
+  },
+  {
+    "cs_offset": 6060,
+    "file_offset": 6572,
+    "name": "update_aimed_emitter_a",
+    "purpose": "Выбирает направление на игрока и вызывает emitter; перезарядка через знаковый DEC с периодом сброса 8.",
+    "inputs": "DS:SI = сущность; handler ID 5.",
+    "effects": "spawn_projectile_gate включает настоящий снаряд только на выбранных кадрах; эффекты создаются чаще.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "aim_entity_at_player",
+      "spawn_aimed_shot",
+      "apply_sprite_frame",
+      "cull_entity_after_view"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_17ac",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 779
+  },
+  {
+    "cs_offset": 6102,
+    "file_offset": 6614,
+    "name": "update_aimed_emitter_b",
+    "purpose": "Целится в игрока; по окончании счётчика создаёт навесной снаряд и ставит счётчик 18.",
+    "inputs": "DS:SI = сущность; handler ID 6.",
+    "effects": "Descriptor DS:0E9C; общий aiming возвращает CX=0 вне зоны стрельбы.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "aim_entity_at_player",
+      "spawn_arcing_projectile",
+      "apply_sprite_frame",
+      "cull_entity_after_view"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_17d6",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 807
+  },
+  {
+    "cs_offset": 6132,
+    "file_offset": 6644,
+    "name": "update_arcing_projectile",
+    "purpose": "Движение в 5 направлениях и изменение высоты по 16-байтовой таблице; затем эффект.",
+    "inputs": "DS:SI = сущность; handler ID 30.",
+    "effects": "Проверяет 3D-близость к игроку; shield_delta -=10.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "cull_entity_after_view",
+      "replace_with_arc_effect",
+      "sound_trigger"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_17f4",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 830
+  },
+  {
+    "cs_offset": 6313,
+    "file_offset": 6825,
+    "name": "update_aimed_emitter_c",
+    "purpose": "Целится и порождает наземный снаряд при истечении счётчика, затем сброс 40.",
+    "inputs": "DS:SI = сущность; handler ID 7.",
+    "effects": "Descriptor DS:0EC5; нельзя объединять период с другими emitter без параметров.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "aim_entity_at_player",
+      "spawn_ground_enemy_shot",
+      "apply_sprite_frame",
+      "cull_entity_after_view"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_18a9",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 925
+  },
+  {
+    "cs_offset": 6343,
+    "file_offset": 6855,
+    "name": "update_level_exit_gate",
+    "purpose": "Открывает ворота лишь после всех 6 collectibles, подтягивает игрока к центру и запускает переход.",
+    "inputs": "DS:SI = сущность; handler ID 28.",
+    "effects": "Открытие по Manhattan distance, затем отдельные пороги x/y; не круговой радиус.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "cull_entity_after_view",
+      "begin_level_exit"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_18c7",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 948
+  },
+  {
+    "cs_offset": 6511,
+    "file_offset": 7023,
+    "name": "begin_level_exit",
+    "purpose": "Если frame игрока=0, задаёт переход F0h/туннель; иначе сначала переводит игрока в frame=0.",
+    "inputs": "DS:SI = ворота.",
+    "effects": "Смена режима отсрочена до выравнивания состояния игрока.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "apply_sprite_frame"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_196f",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 1033
+  },
+  {
+    "cs_offset": 6547,
+    "file_offset": 7059,
+    "name": "update_tunnel_entrance_a",
+    "purpose": "Общий вход в туннель плюс выбор destination/тип награды из таблицы A.",
+    "inputs": "DS:SI = сущность; handler ID 10.",
+    "effects": "Табличное слово: нижние 10 бит=destination_y, старшие два бита=вид награды.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "update_tunnel_gate_common"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1993",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 1059
+  },
+  {
+    "cs_offset": 6594,
+    "file_offset": 7106,
+    "name": "update_tunnel_entrance_b",
+    "purpose": "Вход в туннель по таблице B; помечает перезагрузку карты и циклически меняет part 0..2.",
+    "inputs": "DS:SI = сущность; handler ID 11.",
+    "effects": "Выбор таблицы делается до увеличения level_part.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "update_tunnel_gate_common"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_19c2",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 1089
+  },
+  {
+    "cs_offset": 6660,
+    "file_offset": 7172,
+    "name": "update_tunnel_gate_common",
+    "purpose": "Открывает/закрывает створку по близости, скрывает открытый кадр, центрирует игрока и ставит tunnel_mode.",
+    "inputs": "DS:SI = сущность.",
+    "effects": "Сохраняет player_x для выхода; общая процедура у двух обработчиков входа.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "cull_entity_after_view"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1a04",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 1127
+  },
+  {
+    "cs_offset": 6814,
+    "file_offset": 7326,
+    "name": "update_refill_gate",
+    "purpose": "Центрирует игрока у объекта: узкая центральная зона добавляет side_charge_delta, соседняя обнуляет shield.",
+    "inputs": "DS:SI = сущность; handler ID 8.",
+    "effects": "Предполагаемая роль — пополнение; точные проверки x/y в коде важнее названия.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "cull_entity_after_view",
+      "sound_trigger"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1a9e",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 1208
+  },
+  {
+    "cs_offset": 6921,
+    "file_offset": 7433,
+    "name": "update_collectible",
+    "purpose": "При близости игрока очищает flags, засчитывает collectible[param] и запускает звук.",
+    "inputs": "DS:SI = сущность; handler ID 32.",
+    "effects": "Игрок в состоянии смерти не собирает объект.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "cull_entity_after_view",
+      "collect_item_and_update_hud",
+      "sound_trigger"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1b09",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 1271
+  },
+  {
+    "cs_offset": 6986,
+    "file_offset": 7498,
+    "name": "update_drifting_effect",
+    "purpose": "Сдвигает y на -2 с маской 03FFh и проверяет видимость.",
+    "inputs": "DS:SI = сущность; handler ID 33.",
+    "effects": "Визуальное название эффекта не установлено.",
+    "source_file": "src/code/11_entity_behaviors.asm",
+    "direct_calls": [
+      "cull_entity_before_camera"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1b4a",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 1314
+  },
+  {
+    "cs_offset": 6999,
+    "file_offset": 7511,
+    "name": "sync_player_to_terrain",
+    "purpose": "Держит игрока на camera_y+112, запрашивает рельеф и применяет sprite descriptor.",
+    "inputs": "Глобальные player_x/camera_y.",
+    "effects": "Записывает player_y, z, map_row, frame; SI возвращается на первую запись.",
+    "source_file": "src/code/12_player_world_state.asm",
+    "direct_calls": [
+      "sample_terrain",
+      "apply_sprite_frame"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1b57",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 7040,
+    "file_offset": 7552,
+    "name": "update_scroll_speed",
+    "purpose": "Кнопки UP/DOWN меняют скорость; при отсутствии топлива принудительно выбирается DOWN.",
+    "inputs": "scroll_speed, base_scroll_speed, fuel_units, controls.",
+    "effects": "UP: +1 до 64; DOWN: -2 не ниже base_scroll_speed.",
+    "source_file": "src/code/12_player_world_state.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1b80",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 43
+  },
+  {
+    "cs_offset": 7097,
+    "file_offset": 7609,
+    "name": "advance_surface_scroll",
+    "purpose": "Обновляет счётчик расхода топлива, camera_y modulo1024 и подгружает новую строку объектов.",
+    "inputs": "scroll_speed.",
+    "effects": "Шаг=((speed+15)>>3)>>1; порядок округления и порог 139 сохранены.",
+    "source_file": "src/code/12_player_world_state.asm",
+    "direct_calls": [
+      "spawn_map_row"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1bb9",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 83
+  },
+  {
+    "cs_offset": 7178,
+    "file_offset": 7690,
+    "name": "find_map_entity",
+    "purpose": "Ищет запись с флагом MAP_OBJECT и совпадающими row/column.",
+    "inputs": "[BP+4]=row; [BP+6]=column.",
+    "effects": "SI=найденная запись или адрес sentinel, не NULL. RET 4.",
+    "source_file": "src/code/12_player_world_state.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret 0x4"
+    ],
+    "original_symbol": "sub_1c0a",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 129
+  },
+  {
+    "cs_offset": 7219,
+    "file_offset": 7731,
+    "name": "begin_player_death",
+    "purpose": "Создаёт взрыв, переключает игрока на handler17, скрывает слой и сбрасывает death_age.",
+    "inputs": "Нет аргументов.",
+    "effects": "Повторный вызов при handler17 ничего не делает.",
+    "source_file": "src/code/12_player_world_state.asm",
+    "direct_calls": [
+      "sound_trigger",
+      "spawn_explosion_for_entity"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1c33",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 161
+  },
+  {
+    "cs_offset": 7254,
+    "file_offset": 7766,
+    "name": "apply_player_map_hit",
+    "purpose": "Записывает отрицательный урон и преобразует найденный объект карты в разрушенное состояние.",
+    "inputs": "AX=damage/code; BX=column; player_map_row.",
+    "effects": "shield_delta присваивается, не уменьшается на AX; вызываемые процедуры меняют SI.",
+    "source_file": "src/code/12_player_world_state.asm",
+    "direct_calls": [
+      "sound_trigger",
+      "find_map_entity",
+      "destroy_map_entity"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1c56",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 185
+  },
+  {
+    "cs_offset": 7288,
+    "file_offset": 7800,
+    "name": "push_player_history",
+    "purpose": "Сдвигает четыре сохранённых x/y/frame/z и вставляет текущего игрока.",
+    "inputs": "Глобальная запись player.",
+    "effects": "Это четыре параллельных массива, не четыре последовательные Entity.",
+    "source_file": "src/code/12_player_world_state.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1c78",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 214
+  },
+  {
+    "cs_offset": 7385,
+    "file_offset": 7897,
+    "name": "position_side_device",
+    "purpose": "Берёт самую старую из 4 позиций, смещает на ±8 по x и +6 по y/z, применяет descriptor.",
+    "inputs": "DS:SI = боковое устройство; flags20h = сторона.",
+    "effects": "Учитывает рельефный наклон по таблице.",
+    "source_file": "src/code/12_player_world_state.asm",
+    "direct_calls": [
+      "apply_sprite_frame"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1cd9",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 258
+  },
+  {
+    "cs_offset": 7454,
+    "file_offset": 7966,
+    "name": "fire_player_weapons",
+    "purpose": "Создаёт пару эффектов стволов и пару выстрелов; использует циклическую таблицу вариаций.",
+    "inputs": "Глобальная запись player.",
+    "effects": "Расход ammo накапливается отдельно; сохранять наблюдаемую зависимость от BX после вызовов.",
+    "source_file": "src/code/13_weapons_and_frames.asm",
+    "direct_calls": [
+      "allocate_entity_copy",
+      "apply_sprite_frame"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1d1e",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 7663,
+    "file_offset": 8175,
+    "name": "fire_mobile_enemy_pattern",
+    "purpose": "Выбирает 1,2 или 3 точки выстрела по param и frame врага.",
+    "inputs": "DS:SI = emitter.",
+    "effects": "Сам вызывает spawn_enemy_shot_at_offset с разными dx/dy/dz.",
+    "source_file": "src/code/13_weapons_and_frames.asm",
+    "direct_calls": [
+      "spawn_enemy_shot_at_offset"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1def",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 97
+  },
+  {
+    "cs_offset": 7805,
+    "file_offset": 8317,
+    "name": "spawn_enemy_shot_at_offset",
+    "purpose": "Создаёт эффект и, при gate, снаряд с заданным смещением от emitter.",
+    "inputs": "DS:SI=emitter; AX=dx; BX=dy; CL=dz.",
+    "effects": "Сохраняет SI. Если новый слот расположен раньше emitter, сразу вызывает его update.",
+    "source_file": "src/code/13_weapons_and_frames.asm",
+    "direct_calls": [
+      "apply_sprite_frame",
+      "allocate_entity_copy",
+      "update_countdown_effect",
+      "update_enemy_projectile"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1e7d",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 160
+  },
+  {
+    "cs_offset": 7947,
+    "file_offset": 8459,
+    "name": "spawn_aimed_shot",
+    "purpose": "Создаёт эффект/снаряд в выбранном направлении, беря смещения и размеры из таблиц.",
+    "inputs": "DS:SI = emitter; frame = направление.",
+    "effects": "Тот же компенсирующий update для слота раньше текущего.",
+    "source_file": "src/code/13_weapons_and_frames.asm",
+    "direct_calls": [
+      "apply_sprite_frame",
+      "allocate_entity_copy",
+      "update_countdown_effect",
+      "update_enemy_projectile"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1f0b",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 230
+  },
+  {
+    "cs_offset": 8122,
+    "file_offset": 8634,
+    "name": "spawn_ground_enemy_shot",
+    "purpose": "Порождает handler29 из шаблона DS:10E8 и таблиц смещений.",
+    "inputs": "DS:SI = emitter.",
+    "effects": "SI сохраняется; новый ранний слот получает один немедленный update.",
+    "source_file": "src/code/13_weapons_and_frames.asm",
+    "direct_calls": [
+      "apply_sprite_frame",
+      "allocate_entity_copy",
+      "update_ground_enemy_shot"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_1fba",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 312
+  },
+  {
+    "cs_offset": 8197,
+    "file_offset": 8709,
+    "name": "spawn_arcing_projectile",
+    "purpose": "Порождает handler30 из шаблона DS:1446 и таблиц смещений.",
+    "inputs": "DS:SI = emitter.",
+    "effects": "SI сохраняется; новый ранний слот получает один немедленный update.",
+    "source_file": "src/code/13_weapons_and_frames.asm",
+    "direct_calls": [
+      "allocate_entity_copy",
+      "update_arcing_projectile"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2005",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 355
+  },
+  {
+    "cs_offset": 8263,
+    "file_offset": 8775,
+    "name": "replace_with_side_impact",
+    "purpose": "Заменяет выстрел эффектом, если соответствующий side_impact_mask свободен; иначе удаляет.",
+    "inputs": "DS:SI = выстрел.",
+    "effects": "Отдельные биты 01h/80h ограничивают одновременные эффекты двух сторон.",
+    "source_file": "src/code/13_weapons_and_frames.asm",
+    "direct_calls": [
+      "apply_entity_state_template",
+      "sound_trigger"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2047",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 395
+  },
+  {
+    "cs_offset": 8338,
+    "file_offset": 8850,
+    "name": "replace_with_impact",
+    "purpose": "Применяет шаблон эффекта DS:1427 к текущей записи.",
+    "inputs": "DS:SI = сущность.",
+    "effects": "Координаты не копируются; изменяются только поля replacement-процедуры.",
+    "source_file": "src/code/13_weapons_and_frames.asm",
+    "direct_calls": [
+      "apply_entity_state_template"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2092",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 437
+  },
+  {
+    "cs_offset": 8345,
+    "file_offset": 8857,
+    "name": "replace_with_arc_effect",
+    "purpose": "Применяет шаблон DS:12DE к текущей записи.",
+    "inputs": "DS:SI = сущность.",
+    "effects": "Общий механизм apply_entity_state_template.",
+    "source_file": "src/code/13_weapons_and_frames.asm",
+    "direct_calls": [
+      "apply_entity_state_template"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2099",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 451
+  },
+  {
+    "cs_offset": 8352,
+    "file_offset": 8864,
+    "name": "apply_entity_state_template",
+    "purpose": "Копирует flags, layer, age, frame, размеры, якорь, sprite и handler из DI в SI.",
+    "inputs": "DS:SI = объект; DS:DI = шаблон.",
+    "effects": "НЕ копирует param, x/y/z, bank, transparent и state13..15.",
+    "source_file": "src/code/13_weapons_and_frames.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_20a0",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 465
+  },
+  {
+    "cs_offset": 8411,
+    "file_offset": 8923,
+    "name": "destroy_map_entity",
+    "purpose": "Начисляет 150 очков, создаёт взрыв и помечает объект карты использованным.",
+    "inputs": "DS:SI = сущность карты.",
+    "effects": "Исходная запись преобразуется, а не обязательно сразу очищается.",
+    "source_file": "src/code/13_weapons_and_frames.asm",
+    "direct_calls": [
+      "score_add_150",
+      "spawn_explosion_for_entity",
+      "consume_map_object"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_20db",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 497
+  },
+  {
+    "cs_offset": 8432,
+    "file_offset": 8944,
+    "name": "spawn_explosion_for_entity",
+    "purpose": "Создаёт explosion из координат текущей записи, при bit10h корректирует якорь.",
+    "inputs": "DS:SI = сущность.",
+    "effects": "Сохраняет SI; шаблон DS:129E изменяется перед копированием.",
+    "source_file": "src/code/13_weapons_and_frames.asm",
+    "direct_calls": [
+      "allocate_entity_copy"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_20f0",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 518
+  },
+  {
+    "cs_offset": 8481,
+    "file_offset": 8993,
+    "name": "apply_sprite_frame",
+    "purpose": "Читает count и SoA-массивы width/height/anchor_x/anchor_y, затем пары bank/offset.",
+    "inputs": "DS:SI = Entity; DS:BX = descriptor; Entity.frame = индекс.",
+    "effects": "Обновляет поля 09..10h, не flags/координаты/transparent; границы frame здесь не проверяются.",
+    "source_file": "src/code/13_weapons_and_frames.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2121",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 547
+  },
+  {
+    "cs_offset": 8539,
+    "file_offset": 9051,
+    "name": "aim_entity_at_player",
+    "purpose": "Выбирает одно из 5 направлений, либо качает направление вне зоны прицеливания.",
+    "inputs": "DS:SI = emitter; положение player.",
+    "effects": "CX=1 разрешает стрельбу, CX=0 запрещает; frame = направление 0..4.",
+    "source_file": "src/code/13_weapons_and_frames.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_215b",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 586
+  },
+  {
+    "cs_offset": 8668,
+    "file_offset": 9180,
+    "name": "init_hud",
+    "purpose": "Рисует общие элементы HUD, ресурсы, счёт, collectibles и жизни.",
+    "inputs": "DS = сегмент игры.",
+    "effects": "Рисование HUD идёт сразу в обе видеостраницы.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "blit_hud_sprite_both_pages",
+      "reset_hud_resources",
+      "reset_score",
+      "reset_collectible_hud",
+      "init_lives"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_21dc",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 8704,
+    "file_offset": 9216,
+    "name": "reset_hud_resources",
+    "purpose": "Восстанавливает три шкалы и 6 зарядов боковых устройств.",
+    "inputs": "Нет аргументов.",
+    "effects": "Не является полным reset всей игры.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "init_fuel_gauge",
+      "init_ammo_gauge",
+      "init_shield_gauge",
+      "init_side_charges"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2200",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 44
+  },
+  {
+    "cs_offset": 8717,
+    "file_offset": 9229,
+    "name": "update_hud",
+    "purpose": "Каждый четвёртый кадр начисляет очки за этап; применяет отложенные изменения шкал и зарядов.",
+    "inputs": "Накопленные *_delta.",
+    "effects": "Fuel/ammo при отрицательной delta уменьшаются ровно на 1, shield/charge — на модуль delta.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "score_add_digits",
+      "draw_current_score",
+      "decrease_fuel",
+      "increase_fuel",
+      "decrease_ammo",
+      "increase_ammo",
+      "decrease_shield",
+      "increase_shield",
+      "remove_side_charge",
+      "add_side_charge"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_220d",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 60
+  },
+  {
+    "cs_offset": 8881,
+    "file_offset": 9393,
+    "name": "init_lives",
+    "purpose": "Задаёт 3 жизни и рисует три значка.",
+    "inputs": "Нет аргументов.",
+    "effects": "life_count=3.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "draw_life_1",
+      "draw_life_2",
+      "draw_life_3"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_22b1",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 161
+  },
+  {
+    "cs_offset": 8897,
+    "file_offset": 9409,
+    "name": "add_life",
+    "purpose": "Увеличивает число жизней с максимумом 3 и дорисовывает значок.",
+    "inputs": "Нет аргументов.",
+    "effects": "Переходы в draw_life_* — хвостовые, без нового return address.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_22c1",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 177
+  },
+  {
+    "cs_offset": 8929,
+    "file_offset": 9441,
+    "name": "draw_life_1",
+    "purpose": "Рисует первый значок жизни в обеих страницах.",
+    "inputs": "Нет аргументов.",
+    "effects": "Хвостовая цель add_life и отдельная CALL-процедура.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "blit_hud_sprite_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_22e1",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 201
+  },
+  {
+    "cs_offset": 8953,
+    "file_offset": 9465,
+    "name": "draw_life_2",
+    "purpose": "Рисует второй значок жизни в обеих страницах.",
+    "inputs": "Нет аргументов.",
+    "effects": "Хвостовая цель add_life.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "blit_hud_sprite_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_22f9",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 224
+  },
+  {
+    "cs_offset": 8977,
+    "file_offset": 9489,
+    "name": "draw_life_3",
+    "purpose": "Рисует третий значок жизни в обеих страницах.",
+    "inputs": "Нет аргументов.",
+    "effects": "Хвостовая цель add_life.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "blit_hud_sprite_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2311",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 247
+  },
+  {
+    "cs_offset": 9001,
+    "file_offset": 9513,
+    "name": "remove_life",
+    "purpose": "Уменьшает life_count и стирает соответствующий значок.",
+    "inputs": "Нет аргументов.",
+    "effects": "Сам не насыщает снизу; предшествующая проверка сделана в handle_player_respawn.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "fill_hud_rect_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2329",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 270
+  },
+  {
+    "cs_offset": 9084,
+    "file_offset": 9596,
+    "name": "init_side_charges",
+    "purpose": "Устанавливает 6 зарядов и рисует все шесть индикаторов.",
+    "inputs": "Нет аргументов.",
+    "effects": "side_charge_delta=0.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "draw_charge_1",
+      "draw_charge_2",
+      "draw_charge_3",
+      "draw_charge_4",
+      "draw_charge_5",
+      "draw_charge_6"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_237c",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 323
+  },
+  {
+    "cs_offset": 9115,
+    "file_offset": 9627,
+    "name": "add_side_charge",
+    "purpose": "Добавляет заряд до 6, проигрывает звук и рисует соответствующий индикатор.",
+    "inputs": "Нет аргументов.",
+    "effects": "Вызовы и хвостовые переходы используют одни и те же draw_charge_*.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "sound_trigger"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_239b",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 343
+  },
+  {
+    "cs_offset": 9172,
+    "file_offset": 9684,
+    "name": "draw_charge_1",
+    "purpose": "Рисует индикатор заряда 1 в обеих страницах.",
+    "inputs": "Нет аргументов.",
+    "effects": "Фиксированные адреса HUD — не адреса DS.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "blit_hud_sprite_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_23d4",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 378
+  },
+  {
+    "cs_offset": 9196,
+    "file_offset": 9708,
+    "name": "draw_charge_2",
+    "purpose": "Рисует индикатор заряда 2 в обеих страницах.",
+    "inputs": "Нет аргументов.",
+    "effects": "Фиксированные адреса HUD — не адреса DS.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "blit_hud_sprite_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_23ec",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 401
+  },
+  {
+    "cs_offset": 9220,
+    "file_offset": 9732,
+    "name": "draw_charge_3",
+    "purpose": "Рисует индикатор заряда 3 в обеих страницах.",
+    "inputs": "Нет аргументов.",
+    "effects": "Фиксированные адреса HUD — не адреса DS.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "blit_hud_sprite_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2404",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 424
+  },
+  {
+    "cs_offset": 9244,
+    "file_offset": 9756,
+    "name": "draw_charge_4",
+    "purpose": "Рисует индикатор заряда 4 в обеих страницах.",
+    "inputs": "Нет аргументов.",
+    "effects": "Фиксированные адреса HUD — не адреса DS.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "blit_hud_sprite_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_241c",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 447
+  },
+  {
+    "cs_offset": 9268,
+    "file_offset": 9780,
+    "name": "draw_charge_5",
+    "purpose": "Рисует индикатор заряда 5 в обеих страницах.",
+    "inputs": "Нет аргументов.",
+    "effects": "Фиксированные адреса HUD — не адреса DS.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "blit_hud_sprite_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2434",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 470
+  },
+  {
+    "cs_offset": 9292,
+    "file_offset": 9804,
+    "name": "draw_charge_6",
+    "purpose": "Рисует индикатор заряда 6 в обеих страницах.",
+    "inputs": "Нет аргументов.",
+    "effects": "Фиксированные адреса HUD — не адреса DS.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "blit_hud_sprite_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_244c",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 493
+  },
+  {
+    "cs_offset": 9316,
+    "file_offset": 9828,
+    "name": "remove_side_charge",
+    "purpose": "Уменьшает число зарядов до минимума 0 и стирает прежний крайний индикатор.",
+    "inputs": "Нет аргументов.",
+    "effects": "Выбор значка сделан по значению ДО декремента.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "fill_hud_rect_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2464",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 516
+  },
+  {
+    "cs_offset": 9483,
+    "file_offset": 9995,
+    "name": "init_fuel_gauge",
+    "purpose": "Инициализирует шкалу, расходуемую движением (вероятно топливо), значением 44.",
+    "inputs": "Нет аргументов.",
+    "effects": "fuel_delta=0; имя fuel выведено по использованию, не по авторским символам.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "blit_hud_sprite_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_250b",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 612
+  },
+  {
+    "cs_offset": 9519,
+    "file_offset": 10031,
+    "name": "decrease_fuel",
+    "purpose": "Уменьшает fuel_units, если результат неотрицателен.",
+    "inputs": "Нет аргументов.",
+    "effects": "Хвостовой переход в store_fuel_gauge; отрицательная ветка возвращает без записи.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_252f",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 637
+  },
+  {
+    "cs_offset": 9526,
+    "file_offset": 10038,
+    "name": "store_fuel_gauge",
+    "purpose": "Записывает fuel_units и обновляет столбец шкалы.",
+    "inputs": "AX = новое/текущее значение шкалы.",
+    "effects": "Общий хвост decrease_fuel; add_fuel вызывает его отдельно.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "toggle_hud_gauge_column"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2536",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 652
+  },
+  {
+    "cs_offset": 9538,
+    "file_offset": 10050,
+    "name": "increase_fuel",
+    "purpose": "При значении<44 обновляет столбец и увеличивает fuel_units.",
+    "inputs": "Нет аргументов.",
+    "effects": "Отрисовка использует старое значение, инкремент сделан после неё.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "store_fuel_gauge"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2542",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 669
+  },
+  {
+    "cs_offset": 9555,
+    "file_offset": 10067,
+    "name": "init_ammo_gauge",
+    "purpose": "Инициализирует шкалу, расходуемую стрельбой, значением 48.",
+    "inputs": "Нет аргументов.",
+    "effects": "ammo_delta=0.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "blit_hud_sprite_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2553",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 688
+  },
+  {
+    "cs_offset": 9591,
+    "file_offset": 10103,
+    "name": "decrease_ammo",
+    "purpose": "Уменьшает ammo_units без ухода ниже нуля.",
+    "inputs": "Нет аргументов.",
+    "effects": "Хвостовой переход в store_ammo_gauge.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2577",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 713
+  },
+  {
+    "cs_offset": 9598,
+    "file_offset": 10110,
+    "name": "store_ammo_gauge",
+    "purpose": "Записывает ammo_units и обновляет столбец шкалы.",
+    "inputs": "AX = значение.",
+    "effects": "Общий хвост, также самостоятельная CALL-цель.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "toggle_hud_gauge_column"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_257e",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 728
+  },
+  {
+    "cs_offset": 9610,
+    "file_offset": 10122,
+    "name": "increase_ammo",
+    "purpose": "При значении<48 обновляет столбец и увеличивает ammo_units.",
+    "inputs": "Нет аргументов.",
+    "effects": "Отрисовка до инкремента.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "store_ammo_gauge"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_258a",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 745
+  },
+  {
+    "cs_offset": 9627,
+    "file_offset": 10139,
+    "name": "init_shield_gauge",
+    "purpose": "Инициализирует шкалу прочности значением 56.",
+    "inputs": "Нет аргументов.",
+    "effects": "shield_delta=0; имя shield условное по применению урона.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "blit_hud_sprite_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_259b",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 764
+  },
+  {
+    "cs_offset": 9663,
+    "file_offset": 10175,
+    "name": "decrease_shield",
+    "purpose": "Уменьшает прочность без ухода ниже нуля.",
+    "inputs": "Нет аргументов.",
+    "effects": "Хвостовой переход в store_shield_gauge.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_25bf",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 789
+  },
+  {
+    "cs_offset": 9670,
+    "file_offset": 10182,
+    "name": "store_shield_gauge",
+    "purpose": "Записывает shield_units и обновляет столбец шкалы.",
+    "inputs": "AX = значение.",
+    "effects": "Общий хвост, также CALL-цель.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "toggle_hud_gauge_column"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_25c6",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 804
+  },
+  {
+    "cs_offset": 9682,
+    "file_offset": 10194,
+    "name": "increase_shield",
+    "purpose": "При значении<56 обновляет столбец и увеличивает прочность.",
+    "inputs": "Нет аргументов.",
+    "effects": "Отрисовка до инкремента.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [
+      "store_shield_gauge"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_25d2",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 821
+  },
+  {
+    "cs_offset": 9699,
+    "file_offset": 10211,
+    "name": "toggle_hud_gauge_column",
+    "purpose": "Меняет выбранный бит столбца высотой 7 строк в обеих видеостраницах с графической логической операцией.",
+    "inputs": "[BP+4]=video offset; [BP+6]=column pixel.",
+    "effects": "RET 4; это не простая запись цвета в packed-массив, действует состояние EGA.",
+    "source_file": "src/code/14_hud.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret 0x4"
+    ],
+    "original_symbol": "sub_25e3",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 840
+  },
+  {
+    "cs_offset": 9802,
+    "file_offset": 10314,
+    "name": "reset_score",
+    "purpose": "Очищает шесть десятичных цифр текущего счёта и вызывает отрисовку.",
+    "inputs": "Нет аргументов.",
+    "effects": "Цифры хранятся отдельно, не ASCII и не packed BCD.",
+    "source_file": "src/code/15_score.asm",
+    "direct_calls": [
+      "draw_current_score"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_264a",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 9826,
+    "file_offset": 10338,
+    "name": "score_add_10",
+    "purpose": "Добавляет 10 через четыре десятичных разряда.",
+    "inputs": "Нет аргументов.",
+    "effects": "Стековая обёртка score_add_digits.",
+    "source_file": "src/code/15_score.asm",
+    "direct_calls": [
+      "score_add_digits"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2662",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 37
+  },
+  {
+    "cs_offset": 9846,
+    "file_offset": 10358,
+    "name": "score_add_150",
+    "purpose": "Добавляет 150 через четыре десятичных разряда.",
+    "inputs": "Нет аргументов.",
+    "effects": "Используется при уничтожении/сборе объектов.",
+    "source_file": "src/code/15_score.asm",
+    "direct_calls": [
+      "score_add_digits"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2676",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 58
+  },
+  {
+    "cs_offset": 9866,
+    "file_offset": 10378,
+    "name": "score_add_2500",
+    "purpose": "Добавляет 2500 через четыре десятичных разряда.",
+    "inputs": "Нет аргументов.",
+    "effects": "Используется как один из туннельных бонусов.",
+    "source_file": "src/code/15_score.asm",
+    "direct_calls": [
+      "score_add_digits"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_268a",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 79
+  },
+  {
+    "cs_offset": 9886,
+    "file_offset": 10398,
+    "name": "score_add_digits",
+    "purpose": "Добавляет units/tens/hundreds/thousands с переносами в массив из 6 цифр.",
+    "inputs": "[BP+4]=units, +6=tens, +8=hundreds, +10=thousands; читаются младшие байты.",
+    "effects": "RET 8. Каждый разряд вычитает 10 максимум один раз; перенос 100000 даёт жизнь. Не нормализовать большие входы иначе.",
+    "source_file": "src/code/15_score.asm",
+    "direct_calls": [
+      "add_life"
+    ],
+    "returns_in_physical_span": [
+      "ret 0x8"
+    ],
+    "original_symbol": "sub_269e",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 100
+  },
+  {
+    "cs_offset": 10004,
+    "file_offset": 10516,
+    "name": "draw_current_score",
+    "purpose": "Рисует значащие цифры текущего счёта без ведущих нулей.",
+    "inputs": "score_digits[6].",
+    "effects": "Позиция вывода сдвигается только при реально нарисованной цифре.",
+    "source_file": "src/code/15_score.asm",
+    "direct_calls": [
+      "blit_hud_sprite_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2714",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 165
+  },
+  {
+    "cs_offset": 10082,
+    "file_offset": 10594,
+    "name": "load_highscores",
+    "purpose": "Готовит начальные имена/цифры/порядок и читает 140 байт HISCORES.",
+    "inputs": "Нет аргументов.",
+    "effects": "7 имён×12 + 7 результатов×6 + 7 scratch + 7 order =140.",
+    "source_file": "src/code/16_highscores.asm",
+    "direct_calls": [
+      "load_file_to_ds"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "load_highscores",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 10143,
+    "file_offset": 10655,
+    "name": "insert_current_highscore",
+    "purpose": "Сортирует 7 результатов, проверяет попадание текущего в шесть лучших, заменяет последний слот и готовит ввод имени.",
+    "inputs": "score slot0 = текущий; order[7].",
+    "effects": "При отсутствии рекорда очищает pending_name_entry.",
+    "source_file": "src/code/16_highscores.asm",
+    "direct_calls": [
+      "sort_highscore_order",
+      "render_highscore_table"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_279f",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 54
+  },
+  {
+    "cs_offset": 10249,
+    "file_offset": 10761,
+    "name": "sort_highscore_order",
+    "purpose": "Выбором максимума сортирует 7 индексов по результату; использует FFh как вычеркнутый элемент.",
+    "inputs": "order[7], score_digits[7][6].",
+    "effects": "Имена и результаты физически не переставляет.",
+    "source_file": "src/code/16_highscores.asm",
+    "direct_calls": [
+      "compare_highscore_candidates"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2809",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 114
+  },
+  {
+    "cs_offset": 10354,
+    "file_offset": 10866,
+    "name": "compare_highscore_candidates",
+    "purpose": "Лексикографически сравнивает по 6 десятичных цифр два результата.",
+    "inputs": "DS:SI и DS:BX указывают на байты индексов.",
+    "effects": "AL=1, если кандидат BX строго больше SI; при равенстве 0. SI/DI сохранены, AX изменён.",
+    "source_file": "src/code/16_highscores.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2872",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 176
+  },
+  {
+    "cs_offset": 10458,
+    "file_offset": 10970,
+    "name": "render_highscore_table",
+    "purpose": "Рисует имена и результаты шести победителей в packed-буфер PODZ1.",
+    "inputs": "order[0..5], таблица layout DS:01B1.",
+    "effects": "Не выводит непосредственно на EGA.",
+    "source_file": "src/code/16_highscores.asm",
+    "direct_calls": [
+      "draw_highscore_name",
+      "draw_highscore_digits"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_28da",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 239
+  },
+  {
+    "cs_offset": 10503,
+    "file_offset": 11015,
+    "name": "draw_highscore_digits",
+    "purpose": "Рисует 6 цифр выбранного результата в текстовую область, заменяя ведущие нули пустым glyph.",
+    "inputs": "DS:SI = указатель на индекс; AX=destination offset.",
+    "effects": "Destination хранится в text_draw_offset; исходные glyph берутся из BIRD2.",
+    "source_file": "src/code/16_highscores.asm",
+    "direct_calls": [
+      "copy_text_glyph"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2907",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 275
+  },
+  {
+    "cs_offset": 10585,
+    "file_offset": 11097,
+    "name": "draw_highscore_name",
+    "purpose": "Выбирает 12-байтовое имя по индексу и проваливается в draw_name_12_chars.",
+    "inputs": "DS:SI = указатель на индекс; AX=destination offset.",
+    "effects": "Общая функция с дополнительным входом 296F; между ними нет RET.",
+    "source_file": "src/code/16_highscores.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [],
+    "original_symbol": "sub_2959",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 327
+  },
+  {
+    "cs_offset": 10607,
+    "file_offset": 11119,
+    "name": "draw_name_12_chars",
+    "purpose": "Рисует 12 символов: A–Z, пробел, точка, подчёркивание по особым glyph.",
+    "inputs": "DS:SI = 12 байт имени; text_draw_offset.",
+    "effects": "Дополнительный вход общей процедуры; вызывается также напрямую.",
+    "source_file": "src/code/16_highscores.asm",
+    "direct_calls": [
+      "copy_text_glyph"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_296f",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 350
+  },
+  {
+    "cs_offset": 10670,
+    "file_offset": 11182,
+    "name": "copy_text_glyph",
+    "purpose": "Копирует glyph 12×11 пикселей из BIRD2 в PODZ1 (6 байт на строку, stride160).",
+    "inputs": "[BP+4]=x offset bytes; [BP+6]=glyph source offset.",
+    "effects": "RET 4; DS сохраняется, ES становится сегментом PODZ1; ожидается DF=0.",
+    "source_file": "src/code/16_highscores.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret 0x4"
+    ],
+    "original_symbol": "sub_29ae",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 399
+  },
+  {
+    "cs_offset": 10715,
+    "file_offset": 11227,
+    "name": "edit_highscore_name",
+    "purpose": "Вводит до 12 символов с backspace, перерисовывает заставку и сохраняет HISCORES.",
+    "inputs": "pending name pointer/rank.",
+    "effects": "Нулевой результат poll_key_character завершает ввод; нет отдельного бесконечного ожидания Enter.",
+    "source_file": "src/code/16_highscores.asm",
+    "direct_calls": [
+      "poll_key_character",
+      "redraw_edited_name",
+      "restore_attract_background",
+      "render_entities",
+      "present_frame",
+      "dos_create_write_close"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_29db",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 431
+  },
+  {
+    "cs_offset": 10852,
+    "file_offset": 11364,
+    "name": "redraw_edited_name",
+    "purpose": "Перерисовывает только имя выбранной строки рекордов.",
+    "inputs": "name pointer, pending rank.",
+    "effects": "Вызывает дополнительный вход draw_name_12_chars.",
+    "source_file": "src/code/16_highscores.asm",
+    "direct_calls": [
+      "draw_name_12_chars"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2a64",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 494
+  },
+  {
+    "cs_offset": 10879,
+    "file_offset": 11391,
+    "name": "reset_collectible_hud",
+    "purpose": "Обнуляет 6 collectible flags и рисует исходные значки.",
+    "inputs": "Нет аргументов.",
+    "effects": "Массив flags одновременно проверяется выходными воротами.",
+    "source_file": "src/code/16_highscores.asm",
+    "direct_calls": [
+      "blit_hud_sprite_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2a7f",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 515
+  },
+  {
+    "cs_offset": 11048,
+    "file_offset": 11560,
+    "name": "collect_item_and_update_hud",
+    "purpose": "Начисляет 150 очков, выставляет collectible[AL] и меняет его значок.",
+    "inputs": "AL=0..5; значения вне диапазона всё равно сначала начисляют очки.",
+    "effects": "Не добавлять раннюю проверку индекса перед начислением при буквальном переносе.",
+    "source_file": "src/code/16_highscores.asm",
+    "direct_calls": [
+      "score_add_digits",
+      "blit_hud_sprite_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2b28",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 599
+  },
+  {
+    "cs_offset": 11271,
+    "file_offset": 11783,
+    "name": "draw_redefine_dialog",
+    "purpose": "Рисует подложку и заголовок переназначения клавиш.",
+    "inputs": "Нет аргументов.",
+    "effects": "Фиксированные прямоугольники/ресурсы в обеих страницах.",
+    "source_file": "src/code/17_ui_primitives.asm",
+    "direct_calls": [
+      "fill_hud_rect_both_pages",
+      "blit_hud_sprite_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2c07",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 11333,
+    "file_offset": 11845,
+    "name": "draw_quit_dialog",
+    "purpose": "Рисует диалог подтверждения выхода.",
+    "inputs": "Нет аргументов.",
+    "effects": "Опрос Y/N находится в poll_controls, не здесь.",
+    "source_file": "src/code/17_ui_primitives.asm",
+    "direct_calls": [
+      "fill_hud_rect_both_pages",
+      "blit_hud_sprite_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2c45",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 56
+  },
+  {
+    "cs_offset": 11418,
+    "file_offset": 11930,
+    "name": "draw_control_prompt",
+    "purpose": "Очищает строку и рисует запрос очередной клавиши; боковые действия состоят из двух частей.",
+    "inputs": "AL = control index 0..7.",
+    "effects": "Может проваливаться в draw_control_prompt_piece; общий хвост.",
+    "source_file": "src/code/17_ui_primitives.asm",
+    "direct_calls": [
+      "fill_hud_rect_both_pages",
+      "draw_control_prompt_piece"
+    ],
+    "returns_in_physical_span": [],
+    "original_symbol": "sub_2c9a",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 108
+  },
+  {
+    "cs_offset": 11463,
+    "file_offset": 11975,
+    "name": "draw_control_prompt_piece",
+    "purpose": "По индексу берёт bank/source/destination/width/height из пяти таблиц и рисует фрагмент.",
+    "inputs": "AL = индекс.",
+    "effects": "Также самостоятельная CALL-цель и хвост предыдущей процедуры.",
+    "source_file": "src/code/17_ui_primitives.asm",
+    "direct_calls": [
+      "blit_hud_sprite_both_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2cc7",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 144
+  },
+  {
+    "cs_offset": 11498,
+    "file_offset": 12010,
+    "name": "blit_hud_sprite_both_pages",
+    "purpose": "Выводит packed-4bpp ресурс с прозрачным цветом 2 сразу в A000 и A200 страницы.",
+    "inputs": "[BP+4]=bank offset, +6=height, +8=width, +10=dest byte offset, +12=source offset.",
+    "effects": "RET 10; width обрабатывается парами. Source stride160, destination stride40.",
+    "source_file": "src/code/17_ui_primitives.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret 0xa"
+    ],
+    "original_symbol": "sub_2cea",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 170
+  },
+  {
+    "cs_offset": 11674,
+    "file_offset": 12186,
+    "name": "fill_hud_rect_both_pages",
+    "purpose": "Заливает прямоугольник через EGA set/reset одновременно в обеих страницах.",
+    "inputs": "[BP+4]=color, +6=height, +8=width BYTES, +10=destination byte offset.",
+    "effects": "RET 8; ширина в байтах плоскости, не в пикселях.",
+    "source_file": "src/code/17_ui_primitives.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret 0x8"
+    ],
+    "original_symbol": "sub_2d9a",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 279
+  },
+  {
+    "cs_offset": 11740,
+    "file_offset": 12252,
+    "name": "select_tunnel_pattern",
+    "purpose": "Циклически выбирает один из четырёх потоков туннельных объектов и сбрасывает номер предыдущей секции.",
+    "inputs": "tunnel_pattern_index.",
+    "effects": "Индекс растёт байтово, таблица индексируется по младшим двум битам.",
+    "source_file": "src/code/18_tunnel_gameplay.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2ddc",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 11766,
+    "file_offset": 12278,
+    "name": "reset_tunnel_angle_history",
+    "purpose": "Обнуляет историю трёх углов для боковых устройств.",
+    "inputs": "Нет аргументов.",
+    "effects": "Не обнуляет всю физику туннеля.",
+    "source_file": "src/code/18_tunnel_gameplay.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2df6",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 36
+  },
+  {
+    "cs_offset": 11778,
+    "file_offset": 12290,
+    "name": "update_tunnel_player",
+    "purpose": "Обновляет скорость/дистанцию, угловую инерцию, позицию по lookup-таблицам и боковые действия.",
+    "inputs": "DS:SI = игрок туннеля; handler ID12.",
+    "effects": "Инерция ограничена ±64, угол modulo128, координаты рассчитаны целочисленно.",
+    "source_file": "src/code/18_tunnel_gameplay.asm",
+    "direct_calls": [
+      "update_scroll_speed",
+      "advance_tunnel_distance",
+      "tunnel_angle_force",
+      "apply_sprite_frame",
+      "sound_trigger"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2e02",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 52
+  },
+  {
+    "cs_offset": 12112,
+    "file_offset": 12624,
+    "name": "update_tunnel_side_device",
+    "purpose": "Следует задержанному углу; при выпуске/отключении исчезает и собирает все handler15 в пуле.",
+    "inputs": "DS:SI = устройство; handler ID34.",
+    "effects": "SI на пути сбора перебирает пул; dispatcher обязан сохранять свой SI.",
+    "source_file": "src/code/18_tunnel_gameplay.asm",
+    "direct_calls": [
+      "collect_tunnel_pickup",
+      "apply_sprite_frame"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2f50",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 210
+  },
+  {
+    "cs_offset": 12264,
+    "file_offset": 12776,
+    "name": "update_tunnel_exit_marker",
+    "purpose": "Выбирает размер кольца и кадр выходного маркера по оставшейся дистанции.",
+    "inputs": "DS:SI = сущность; handler ID14.",
+    "effects": "Две таблицы по 32 элемента, индекс=(remaining>>3)&31.",
+    "source_file": "src/code/18_tunnel_gameplay.asm",
+    "direct_calls": [
+      "apply_sprite_frame"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_2fe8",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 292
+  },
+  {
+    "cs_offset": 12298,
+    "file_offset": 12810,
+    "name": "update_tunnel_pickup",
+    "purpose": "По дистанции от появления вычисляет масштаб/позицию объекта; при совпадении сектора игрока собирает.",
+    "inputs": "DS:SI = сущность; handler ID15.",
+    "effects": "state13..14 используются как WORD spawn_distance, не независимые row/column.",
+    "source_file": "src/code/18_tunnel_gameplay.asm",
+    "direct_calls": [
+      "position_tunnel_pickup",
+      "apply_sprite_frame",
+      "sound_trigger",
+      "collect_tunnel_pickup"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_300a",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 315
+  },
+  {
+    "cs_offset": 12377,
+    "file_offset": 12889,
+    "name": "collect_tunnel_pickup",
+    "purpose": "Удаляет объект и начисляет награду в зависимости от tunnel_reward_kind.",
+    "inputs": "DS:SI = сущность.",
+    "effects": "40h:+6 ammo, 80h:+4 fuel, C0h:+8 shield, иначе +2500 очков.",
+    "source_file": "src/code/18_tunnel_gameplay.asm",
+    "direct_calls": [
+      "score_add_2500"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_3059",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 362
+  },
+  {
+    "cs_offset": 12420,
+    "file_offset": 12932,
+    "name": "tunnel_angle_force",
+    "purpose": "Нелинейная добавка угловой скорости: после вычитания 5 проверяет SF, ограничивает до56, делит на2, возвращает -(x+3).",
+    "inputs": "AL = нормализованный угол 0..63 у текущих caller.",
+    "effects": "AX = signed сила. Входы за пределами фактического домена требуют сохранения 8-битного wrap.",
+    "source_file": "src/code/18_tunnel_gameplay.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_3084",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 393
+  },
+  {
+    "cs_offset": 12445,
+    "file_offset": 12957,
+    "name": "advance_tunnel_distance",
+    "purpose": "Продвигает дистанцию, расходует топливо, создаёт объекты по секциям и возвращает на поверхность после 896.",
+    "inputs": "scroll_speed; pattern stream.",
+    "effects": "Каждые 64 единицы новая секция; выходной маркер появляется в последних 256 единицах.",
+    "source_file": "src/code/18_tunnel_gameplay.asm",
+    "direct_calls": [
+      "allocate_entity_copy"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_309d",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 421
+  },
+  {
+    "cs_offset": 12592,
+    "file_offset": 13104,
+    "name": "position_tunnel_pickup",
+    "purpose": "Берёт радиус по дистанции и выбирает один из 8 лучей вокруг центра.",
+    "inputs": "AX = индекс масштаба 0..45; DS:SI = pickup, param=1..8.",
+    "effects": "Оси: центр x=128, y=106; диагонали не нормализованы через sqrt(2).",
+    "source_file": "src/code/18_tunnel_gameplay.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_3130",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 492
+  },
+  {
+    "cs_offset": 12638,
+    "file_offset": 13150,
+    "name": "tunnel_set_north",
+    "purpose": "y=106-radius; также содержит диагональный хвост north-east.",
+    "inputs": "DS:SI = pickup; CX = radius.",
+    "effects": "Дополнительные входы внутри позиционирования, не изолировать хвосты как независимый C-код.",
+    "source_file": "src/code/18_tunnel_gameplay.asm",
+    "direct_calls": [
+      "tunnel_set_north",
+      "tunnel_set_east"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_315e",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 525
+  },
+  {
+    "cs_offset": 12656,
+    "file_offset": 13168,
+    "name": "tunnel_set_east",
+    "purpose": "x=128+radius; далее расположен хвост south-east.",
+    "inputs": "DS:SI = pickup; CX = radius.",
+    "effects": "CX изменяется при записи; диагональные caller сохраняют исходный CX.",
+    "source_file": "src/code/18_tunnel_gameplay.asm",
+    "direct_calls": [
+      "tunnel_set_east",
+      "tunnel_set_south"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_3170",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 546
+  },
+  {
+    "cs_offset": 12673,
+    "file_offset": 13185,
+    "name": "tunnel_set_south",
+    "purpose": "y=106+radius; далее расположен хвост south-west.",
+    "inputs": "DS:SI = pickup; CX = radius.",
+    "effects": "Общий набор позиционных помощников.",
+    "source_file": "src/code/18_tunnel_gameplay.asm",
+    "direct_calls": [
+      "tunnel_set_south",
+      "tunnel_set_west"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_3181",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 566
+  },
+  {
+    "cs_offset": 12689,
+    "file_offset": 13201,
+    "name": "tunnel_set_west",
+    "purpose": "x=128-radius; далее расположен хвост north-west.",
+    "inputs": "DS:SI = pickup; CX = radius.",
+    "effects": "Общий набор позиционных помощников.",
+    "source_file": "src/code/18_tunnel_gameplay.asm",
+    "direct_calls": [
+      "tunnel_set_west",
+      "tunnel_set_north"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_3191",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 586
+  },
+  {
+    "cs_offset": 12708,
+    "file_offset": 13220,
+    "name": "present_tunnel_bitmap",
+    "purpose": "Копирует 256×160 участок 1bpp туннеля в draw page с выбором EGA-цветовых плоскостей.",
+    "inputs": "scratch0 с bitmap; tunnel_reward_kind и flash state.",
+    "effects": "Источник stride32, назначение40; это не packed4bpp sprite.",
+    "source_file": "src/code/19_ega_video.asm",
+    "direct_calls": [
+      "tunnel_plane_color",
+      "tunnel_flash_color"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_31a4",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 12775,
+    "file_offset": 13287,
+    "name": "tunnel_plane_color",
+    "purpose": "Выбирает маску/цвет туннеля по типу награды.",
+    "inputs": "tunnel_reward_kind.",
+    "effects": "AX: 40h→2, 80h→4, C0h→1, иначе3.",
+    "source_file": "src/code/19_ega_video.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_31e7",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 59
+  },
+  {
+    "cs_offset": 12809,
+    "file_offset": 13321,
+    "name": "tunnel_flash_color",
+    "purpose": "Выдаёт цвет вспышки и переводит двухшаговое состояние к нулю.",
+    "inputs": "tunnel_flash_state.",
+    "effects": "0→color0; 1→color7/state0; другое→color15/state1.",
+    "source_file": "src/code/19_ega_video.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_3209",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 89
+  },
+  {
+    "cs_offset": 12844,
+    "file_offset": 13356,
+    "name": "unused_planar_blit",
+    "purpose": "Сохранённый, статически недостижимый blit четырёх плоскостей с шагом источника 8000.",
+    "inputs": "[BP+4]=bank,+6=height,+8=width bytes,+10=dest,+12=source.",
+    "effects": "RET10; не удалять из byte-exact сборки. Не доказано, что никогда не выполняется.",
+    "source_file": "src/code/19_ega_video.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret 0xa"
+    ],
+    "original_symbol": "unused_planar_blit",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": false,
+    "source_line": 116
+  },
+  {
+    "cs_offset": 12945,
+    "file_offset": 13457,
+    "name": "copy_playfield_between_pages",
+    "purpose": "Копирует видимую область 256×160 между EGA-сегментами через latch copy.",
+    "inputs": "[BP+4]=destination segment; [BP+6]=source segment.",
+    "effects": "RET4; начальный offset=0144h, stride40, 32 байта на строку.",
+    "source_file": "src/code/19_ega_video.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret 0x4"
+    ],
+    "original_symbol": "sub_3291",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 182
+  },
+  {
+    "cs_offset": 13000,
+    "file_offset": 13512,
+    "name": "unused_rectangle_fill",
+    "purpose": "Сохранённая недостижимая заливка прямоугольника draw page.",
+    "inputs": "[BP+4]=color,+6=height,+8=width bytes,+10=dest.",
+    "effects": "RET8; отсутствие статического пути не доказательство неиспользования при любых условиях.",
+    "source_file": "src/code/19_ega_video.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret 0x8"
+    ],
+    "original_symbol": "unused_rectangle_fill",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": false,
+    "source_line": 220
+  },
+  {
+    "cs_offset": 13054,
+    "file_offset": 13566,
+    "name": "draw_scrolling_background",
+    "purpose": "Копирует 160 строк из кольцевого фона A800h, начиная с camera_y*32, на draw page.",
+    "inputs": "camera_y.",
+    "effects": "Source address маскируется 7FFFh после каждой строки; viewport offset0144h.",
+    "source_file": "src/code/19_ega_video.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_32fe",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 259
+  },
+  {
+    "cs_offset": 13116,
+    "file_offset": 13628,
+    "name": "video_init_mode0d",
+    "purpose": "Включает режим 0Dh, задаёт A000/A200 страницы и начальный CRTC start.",
+    "inputs": "Нет аргументов.",
+    "effects": "Обращается к BIOS и EGA, в C-порте заменяется backend, а не DOS-эмуляцией в игровой логике.",
+    "source_file": "src/code/19_ega_video.asm",
+    "direct_calls": [
+      "clear_draw_page",
+      "wait_retrace_cycle"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "video_init_mode0d",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 300
+  },
+  {
+    "cs_offset": 13187,
+    "file_offset": 13699,
+    "name": "present_frame",
+    "purpose": "Меняет местами draw/display сегменты, пишет CRTC start high и ждёт retrace.",
+    "inputs": "Две страницы.",
+    "effects": "Не использует timer_ticks для шага игровой логики; frame pacing привязан к retrace.",
+    "source_file": "src/code/19_ega_video.asm",
+    "direct_calls": [
+      "wait_retrace_cycle"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "present_frame",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 342
+  },
+  {
+    "cs_offset": 13235,
+    "file_offset": 13747,
+    "name": "clear_draw_page",
+    "purpose": "Заливает текущую страницу указанным EGA-цветом.",
+    "inputs": "AL = цвет.",
+    "effects": "8000 байт адресов плоскости, ES=draw segment, DF=0.",
+    "source_file": "src/code/19_ega_video.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "clear_draw_page",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 377
+  },
+  {
+    "cs_offset": 13271,
+    "file_offset": 13783,
+    "name": "wait_retrace_cycle",
+    "purpose": "Ждёт установки и затем снятия бита3 порта3DAh.",
+    "inputs": "Нет аргументов.",
+    "effects": "Два busy loop; нельзя заменять частоту звукового PIT частотой кадров без измерения.",
+    "source_file": "src/code/19_ega_video.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "wait_retrace_cycle",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 407
+  },
+  {
+    "cs_offset": 13285,
+    "file_offset": 13797,
+    "name": "blit_planar_fullscreen",
+    "purpose": "Выводит 4 плоскости по 8000 байт из последовательного буфера.",
+    "inputs": "BX=source segment, SI=source offset.",
+    "effects": "Цикл масок sequencer 8,4,2,1; используется для INTRO.X, не для packed sprites.",
+    "source_file": "src/code/19_ega_video.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_33e5",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 430
+  },
+  {
+    "cs_offset": 13347,
+    "file_offset": 13859,
+    "name": "init_playfield_pages",
+    "purpose": "Очищает обе видеостраницы и рисует рамку.",
+    "inputs": "Нет аргументов.",
+    "effects": "Между страницами выполняется present_frame.",
+    "source_file": "src/code/19_ega_video.asm",
+    "direct_calls": [
+      "clear_draw_page",
+      "draw_playfield_border",
+      "present_frame"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_3423",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 476
+  },
+  {
+    "cs_offset": 13369,
+    "file_offset": 13881,
+    "name": "draw_playfield_border",
+    "purpose": "Рисует рамку вокруг игрового поля прямыми записями в video RAM.",
+    "inputs": "draw segment, ожидаемое состояние EGA и DF.",
+    "effects": "Ширина поля 256; аппаратное состояние важно, не обычный массив RGB.",
+    "source_file": "src/code/19_ega_video.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_3439",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 495
+  },
+  {
+    "cs_offset": 13426,
+    "file_offset": 13938,
+    "name": "prepare_attract_background",
+    "purpose": "Выводит INTRO в обе страницы и сохраняет область игры в A400h.",
+    "inputs": "segment_intro.",
+    "effects": "A400 — фоновый backup для заставки, не третий игровой world buffer.",
+    "source_file": "src/code/19_ega_video.asm",
+    "direct_calls": [
+      "blit_planar_fullscreen",
+      "present_frame",
+      "copy_playfield_between_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_3472",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 530
+  },
+  {
+    "cs_offset": 13464,
+    "file_offset": 13976,
+    "name": "restore_attract_background",
+    "purpose": "Восстанавливает playfield из A400h в текущую draw page.",
+    "inputs": "Backup уже создан.",
+    "effects": "Сущности рисуются после восстановления фона.",
+    "source_file": "src/code/19_ega_video.asm",
+    "direct_calls": [
+      "copy_playfield_between_pages"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_3498",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 555
+  },
+  {
+    "cs_offset": 13480,
+    "file_offset": 13992,
+    "name": "build_tunnel_bitmap",
+    "purpose": "Очищает 1bpp scratch, рисует диагонали и последовательно уменьшаемые восьмиугольники по дистанции.",
+    "inputs": "tunnel_distance, radius tables.",
+    "effects": "Bitmap 256×256 с stride32; на экран берётся его центральная часть.",
+    "source_file": "src/code/20_tunnel_renderer.asm",
+    "direct_calls": [
+      "draw_tunnel_line",
+      "draw_nested_tunnel_rings"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_34a8",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 13756,
+    "file_offset": 14268,
+    "name": "draw_nested_tunnel_rings",
+    "purpose": "Рисует 8 сторон кольца около центра127/128; делит радиусы пополам до порога.",
+    "inputs": "[BP+4]=radiusA, [BP+6]=radiusB.",
+    "effects": "RET4; цикл, а не рекурсивные CALL; после уменьшения сравнивает AL с минимальным радиусом.",
+    "source_file": "src/code/20_tunnel_renderer.asm",
+    "direct_calls": [
+      "draw_tunnel_line"
+    ],
+    "returns_in_physical_span": [
+      "ret 0x4"
+    ],
+    "original_symbol": "sub_35bc",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 145
+  },
+  {
+    "cs_offset": 14036,
+    "file_offset": 14548,
+    "name": "draw_tunnel_line",
+    "purpose": "Целочисленная линия с accumulator; масштабирует y как (10*y+5)/12 и рисует включительно оба конца.",
+    "inputs": "[BP+4]=y2,+6=x2,+8=y1,+10=x1; исходный домен 0..255.",
+    "effects": "RET8; порог накопителя строго >, не >=. Это влияет на пиксели и должно быть проверено при переносе.",
+    "source_file": "src/code/20_tunnel_renderer.asm",
+    "direct_calls": [
+      "plot_tunnel_line_start"
+    ],
+    "returns_in_physical_span": [
+      "ret 0x8"
+    ],
+    "original_symbol": "sub_36d4",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 275
+  },
+  {
+    "cs_offset": 14337,
+    "file_offset": 14849,
+    "name": "plot_tunnel_line_start",
+    "purpose": "Вычисляет offset=y1*32+x1/8, mask=80h>>(x1&7), рисует первый пиксель.",
+    "inputs": "НАСЛЕДУЕТ BP draw_tunnel_line; ES=bitmap. Собственного пролога нет.",
+    "effects": "DI=offset, AL=mask; не трактовать [BP+8/+10] как аргументы собственного CALL.",
+    "source_file": "src/code/20_tunnel_renderer.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_3801",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 425
+  },
+  {
+    "cs_offset": 14378,
+    "file_offset": 14890,
+    "name": "sound_init",
+    "purpose": "Очищает активный/два ожидающих звука, включает звук и сбрасывает toggle latch.",
+    "inputs": "Нет аргументов.",
+    "effects": "Не инициализирует всю память audio, а только выбранные поля.",
+    "source_file": "src/code/21_audio.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sound_init",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 15
+  },
+  {
+    "cs_offset": 14400,
+    "file_offset": 14912,
+    "name": "sound_trigger",
+    "purpose": "Запрашивает эффект: стартует сразу либо помещает в двухступенчатую очередь; последняя ячейка хранит максимум ID.",
+    "inputs": "AL = sound ID.",
+    "effects": "Во время music_active запрос игнорируется. Это не FIFO произвольной длины.",
+    "source_file": "src/code/21_audio.asm",
+    "direct_calls": [
+      "start_sound_descriptor"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sound_trigger",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 35
+  },
+  {
+    "cs_offset": 14461,
+    "file_offset": 14973,
+    "name": "sound_tick",
+    "purpose": "Шаг музыки/эффекта: время, очередь, изменение делителя, модуляция и запись PIT2.",
+    "inputs": "Состояние audio; вызывается из INT1Ch.",
+    "effects": "Счётчики 8-битные, делители16-битные; IRQ-контекст отделить от simulation.",
+    "source_file": "src/code/21_audio.asm",
+    "direct_calls": [
+      "music_tick",
+      "sound_stop",
+      "start_sound_descriptor"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sound_tick",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 76
+  },
+  {
+    "cs_offset": 14612,
+    "file_offset": 15124,
+    "name": "start_sound_descriptor",
+    "purpose": "Загружает 6-байтовый descriptor, подставляет динамические параметры двух эффектов и включает PIT2/speaker.",
+    "inputs": "AL = sound ID1..15.",
+    "effects": "Один вариант pitch зависит от зарядов, другой от угла игрока; таблицы могут изменяться.",
+    "source_file": "src/code/21_audio.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sub_3914",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 152
+  },
+  {
+    "cs_offset": 14755,
+    "file_offset": 15267,
+    "name": "sound_stop",
+    "purpose": "Очищает очередь/время эффекта и отключает speaker gate bits0/1.",
+    "inputs": "Нет аргументов.",
+    "effects": "Не очищает все музыкальные указатели.",
+    "source_file": "src/code/21_audio.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "sound_stop",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 226
+  },
+  {
+    "cs_offset": 14776,
+    "file_offset": 15288,
+    "name": "music_start",
+    "purpose": "Запускает одну из двух последовательностей, выбирая её по pending_name_entry.",
+    "inputs": "Нет аргументов.",
+    "effects": "sequence cursor=0, music divider=0, active=1.",
+    "source_file": "src/code/21_audio.asm",
+    "direct_calls": [],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "music_start",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 246
+  },
+  {
+    "cs_offset": 14811,
+    "file_offset": 15323,
+    "name": "music_tick",
+    "purpose": "Каждые 8 звуковых тиков читает команду: FF конец, FE пауза, 0 специальное заполнение, прочее транспонируется.",
+    "inputs": "music sequence/cursor, sound state.",
+    "effects": "Пустая команда может взять note из отдельной таблицы; не простая нулевая пауза.",
+    "source_file": "src/code/21_audio.asm",
+    "direct_calls": [
+      "music_play_note"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "music_tick",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 270
+  },
+  {
+    "cs_offset": 14907,
+    "file_offset": 15419,
+    "name": "music_play_note",
+    "purpose": "Берёт PIT-делитель по note-1, сохраняет его в descriptor15 и стартует этот эффект.",
+    "inputs": "AL=номер ноты; ноль возвращает без старта.",
+    "effects": "Именно конец этой процедуры физически перекрывает DS:0000..0005.",
+    "source_file": "src/code/21_audio.asm",
+    "direct_calls": [
+      "start_sound_descriptor"
+    ],
+    "returns_in_physical_span": [
+      "ret"
+    ],
+    "original_symbol": "music_play_note",
+    "entry_kind": "recovered entry; not necessarily independent function",
+    "static_cfg_reached": true,
+    "source_line": 324
+  }
+]

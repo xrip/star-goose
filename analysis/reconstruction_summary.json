@@ -1,0 +1,12 @@
+{
+  "entry_count": 204,
+  "instructions": 6022,
+  "code_modules": 21,
+  "data_modules": 5,
+  "data_symbols": 418,
+  "entity_templates": 39,
+  "frame_sets": 29,
+  "level_parts": 24,
+  "typed_data_spans": 316,
+  "function_names_source": "reverse-engineering, not original author symbols"
+}

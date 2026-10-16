@@ -1,0 +1,92 @@
+{
+  "file_size": 53684,
+  "header_size": 512,
+  "load_image_size": 53172,
+  "entry_cs": 0,
+  "entry_ip": 16,
+  "data_segment_relative": 933,
+  "data_linear_base": 14928,
+  "initial_ss": 3324,
+  "initial_sp": 256,
+  "minimum_extra_paragraphs": 17,
+  "relocations": [
+    {
+      "offset": 17,
+      "segment": 0
+    },
+    {
+      "offset": 1233,
+      "segment": 0
+    },
+    {
+      "offset": 1496,
+      "segment": 0
+    },
+    {
+      "offset": 2905,
+      "segment": 0
+    }
+  ],
+  "instruction_count": 6022,
+  "instruction_bytes": 14840,
+  "static_cfg_reached_instructions": 5939,
+  "static_cfg_unreached_instructions": 83,
+  "direct_control_flow_edges": 1247,
+  "table_entries": 35,
+  "named_entry_count": 204,
+  "function_candidate_count": 204,
+  "ds_symbols": 418,
+  "source_lines": 22795,
+  "inline_data": [
+    {
+      "start": 3475,
+      "size": 2,
+      "name": "sprite_stride",
+      "comment": "Writable CS-local row stride (word); read/written by the sprite renderer."
+    },
+    {
+      "start": 3477,
+      "size": 1,
+      "name": "transparent_color",
+      "comment": "Writable CS-local transparent color (byte)."
+    },
+    {
+      "start": 3478,
+      "size": 1,
+      "name": "transparent_pair",
+      "comment": "Writable CS-local duplicated transparent nibble (byte)."
+    },
+    {
+      "start": 4186,
+      "size": 70,
+      "name": "entity_handlers",
+      "comment": "35 near offsets selected by CALL CS:[BX+105Ah]."
+    },
+    {
+      "start": 8667,
+      "size": 1,
+      "name": "padding_21db",
+      "comment": "Inter-procedure alignment byte, not an instruction."
+    },
+    {
+      "start": 11739,
+      "size": 1,
+      "name": "padding_2ddb",
+      "comment": "Inter-procedure alignment byte, not an instruction."
+    },
+    {
+      "start": 13479,
+      "size": 1,
+      "name": "padding_34a7",
+      "comment": "Inter-procedure alignment byte, not an instruction."
+    },
+    {
+      "start": 14377,
+      "size": 1,
+      "name": "padding_3829",
+      "comment": "Inter-procedure alignment byte, not an instruction."
+    }
+  ],
+  "source_layout": "modular",
+  "code_module_count": 21
+}

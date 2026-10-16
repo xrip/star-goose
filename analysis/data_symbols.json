@@ -1,0 +1,2510 @@
+[
+  {
+    "ds_offset": 6,
+    "name": "D_attract_seen",
+    "type": "u8",
+    "description": "Первый attract уже завершён."
+  },
+  {
+    "ds_offset": 7,
+    "name": "D_msg_insufficient_ram",
+    "type": "DOS string",
+    "description": "Сообщение о недостатке памяти, завершается долларом."
+  },
+  {
+    "ds_offset": 42,
+    "name": "D_msg_loading",
+    "type": "DOS string",
+    "description": "Сообщение о загрузке, завершается долларом."
+  },
+  {
+    "ds_offset": 90,
+    "name": "D_key_to_character",
+    "type": "u8[128]",
+    "description": "Таблица scan-code → символ для ввода имени."
+  },
+  {
+    "ds_offset": 218,
+    "name": "D_attract_script_scores",
+    "type": "byte stream",
+    "description": "Сценарий после игровой сессии; первый читаемый элемент имеет индекс1."
+  },
+  {
+    "ds_offset": 233,
+    "name": "D_attract_script_intro",
+    "type": "byte stream",
+    "description": "Сценарий первого показа; первый читаемый элемент имеет индекс1."
+  },
+  {
+    "ds_offset": 265,
+    "name": "D_template_attract",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 288,
+    "name": "D_sprite_frames_0120",
+    "type": "FrameSet[24]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 433,
+    "name": "D_highscore_layout",
+    "type": "records",
+    "description": "Координаты/смещения для имён и результатов шести строк."
+  },
+  {
+    "ds_offset": 435,
+    "name": "D_highscore_name_destinations",
+    "type": "strided u16",
+    "description": "Первое поле адреса имени; следующий элемент через8 байт."
+  },
+  {
+    "ds_offset": 482,
+    "name": "D_filename_bird1",
+    "type": "ASCIIZ",
+    "description": "Имя внешнего файла, нулевой терминатор."
+  },
+  {
+    "ds_offset": 490,
+    "name": "D_filename_bird2",
+    "type": "ASCIIZ",
+    "description": "Имя внешнего файла, нулевой терминатор."
+  },
+  {
+    "ds_offset": 498,
+    "name": "D_filename_blox",
+    "type": "ASCIIZ",
+    "description": "Имя внешнего файла, нулевой терминатор."
+  },
+  {
+    "ds_offset": 505,
+    "name": "D_filename_newbird",
+    "type": "ASCIIZ",
+    "description": "Имя внешнего файла, нулевой терминатор."
+  },
+  {
+    "ds_offset": 515,
+    "name": "D_filename_podz1",
+    "type": "ASCIIZ",
+    "description": "Имя внешнего файла, нулевой терминатор."
+  },
+  {
+    "ds_offset": 523,
+    "name": "D_filename_intro",
+    "type": "ASCIIZ",
+    "description": "Имя внешнего файла, нулевой терминатор."
+  },
+  {
+    "ds_offset": 532,
+    "name": "D_level_tile_streams",
+    "type": "u16[24]",
+    "description": "8 уровней ×3 части: DS offsets RLE-потоков 12×64."
+  },
+  {
+    "ds_offset": 580,
+    "name": "D_level_object_streams",
+    "type": "u16[24]",
+    "description": "Потоки троек размещения объектов, терминатор FFh."
+  },
+  {
+    "ds_offset": 628,
+    "name": "D_template_map_tile",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 631,
+    "name": "D_map_tile_template_z",
+    "type": "i8",
+    "description": "Высотное поле шаблона DS:0274."
+  },
+  {
+    "ds_offset": 633,
+    "name": "D_map_tile_template_x",
+    "type": "u16",
+    "description": "Поле x шаблона DS:0274."
+  },
+  {
+    "ds_offset": 635,
+    "name": "D_map_tile_template_y",
+    "type": "u16",
+    "description": "Поле world_y шаблона DS:0274."
+  },
+  {
+    "ds_offset": 637,
+    "name": "D_map_tile_template_width",
+    "type": "u8",
+    "description": "Поле width шаблона DS:0274."
+  },
+  {
+    "ds_offset": 638,
+    "name": "D_map_tile_template_height",
+    "type": "u8",
+    "description": "Поле height шаблона DS:0274."
+  },
+  {
+    "ds_offset": 641,
+    "name": "D_map_tile_template_bank",
+    "type": "u16",
+    "description": "Смещение в segment table, не номер файла."
+  },
+  {
+    "ds_offset": 643,
+    "name": "D_map_tile_template_sprite",
+    "type": "u16",
+    "description": "Offset packed4bpp-изображения тайла."
+  },
+  {
+    "ds_offset": 651,
+    "name": "D_map_entity_templates",
+    "type": "u16[21]",
+    "description": "Шаблон Entity по kind, извлечённому из маски строки."
+  },
+  {
+    "ds_offset": 693,
+    "name": "D_map_collision_damage",
+    "type": "u8[21]",
+    "description": "Код/урон препятствия; 0 означает отсутствие столкновения."
+  },
+  {
+    "ds_offset": 714,
+    "name": "D_map_collision_halfwidth",
+    "type": "u16[21]",
+    "description": "Полуширина области x для препятствия."
+  },
+  {
+    "ds_offset": 756,
+    "name": "D_map_collision_rightmost_x",
+    "type": "u16[21]",
+    "description": "Базовая координата первого проверяемого из10 столбцов."
+  },
+  {
+    "ds_offset": 798,
+    "name": "D_entity_replacement_templates",
+    "type": "u16[8]",
+    "description": "Шаблон по прежнему handler_id; только подмножество ID используется."
+  },
+  {
+    "ds_offset": 814,
+    "name": "D_collectible_sprite_offsets",
+    "type": "u16[6]",
+    "description": "Шесть изображений коллекционных объектов."
+  },
+  {
+    "ds_offset": 826,
+    "name": "D_template_map_kind_00",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 849,
+    "name": "D_template_map_kind_01",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 872,
+    "name": "D_template_map_kind_02",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 895,
+    "name": "D_template_map_kind_03",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 918,
+    "name": "D_template_map_kind_04",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 941,
+    "name": "D_template_map_kind_05",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 964,
+    "name": "D_template_map_kind_06",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 987,
+    "name": "D_template_map_kind_10",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 1010,
+    "name": "D_template_map_kind_08",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 1033,
+    "name": "D_template_map_kind_09",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 1056,
+    "name": "D_template_map_kind_07",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 1079,
+    "name": "D_template_map_kind_11",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 1102,
+    "name": "D_template_map_kind_12",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 1125,
+    "name": "D_template_map_kind_14",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 1148,
+    "name": "D_template_map_kind_13",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 1171,
+    "name": "D_template_map_kind_15",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 1194,
+    "name": "D_template_collectible_00",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 1217,
+    "name": "D_template_collectible_03",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 1240,
+    "name": "D_template_collectible_04",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 1263,
+    "name": "D_template_collectible_05",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 1286,
+    "name": "D_template_collectible_06",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 1309,
+    "name": "D_tile_heights",
+    "type": "u8[42]",
+    "description": "Высота изображения тайла в пикселях."
+  },
+  {
+    "ds_offset": 1351,
+    "name": "D_tile_y_adjust",
+    "type": "i8[42]",
+    "description": "Поправка y изображения тайла."
+  },
+  {
+    "ds_offset": 1393,
+    "name": "D_tile_height_delta",
+    "type": "i8[42]",
+    "description": "Перепад высоты от левого к правому краю тайла."
+  },
+  {
+    "ds_offset": 1435,
+    "name": "D_tile_surface_variant_a",
+    "type": "u8[42]",
+    "description": "Вариант frame/surface при очищенном бите80h sample."
+  },
+  {
+    "ds_offset": 1477,
+    "name": "D_tile_surface_variant_b",
+    "type": "u8[42]",
+    "description": "Вариант при установленном бите80h sample."
+  },
+  {
+    "ds_offset": 1519,
+    "name": "D_tile_sprite_offsets",
+    "type": "u16[42]",
+    "description": "Смещения packed-изображений тайлов в выбранном bank."
+  },
+  {
+    "ds_offset": 1603,
+    "name": "D_tile_profile_offsets",
+    "type": "u16[42]",
+    "description": "Указатели на 64-байтовые микропрофили 8×8."
+  },
+  {
+    "ds_offset": 3287,
+    "name": "D_map_column_bits",
+    "type": "u16[10]",
+    "description": "Биты столбцов: 0200h..0001h."
+  },
+  {
+    "ds_offset": 3307,
+    "name": "D_map_column_clear_masks",
+    "type": "u16[12]",
+    "description": "Инверсные маски для пометки использованного объекта; значения сохранить точно."
+  },
+  {
+    "ds_offset": 3332,
+    "name": "D_template_tunnel_player",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 3355,
+    "name": "D_template_tunnel_side",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 3378,
+    "name": "D_template_surface_player",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 3401,
+    "name": "D_sprite_frames_0d49",
+    "type": "FrameSet[11]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 3490,
+    "name": "D_template_respawn_effect",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 3513,
+    "name": "D_side_device_z_offsets",
+    "type": "i8 table",
+    "description": "Поправка высоты бокового устройства по frame игрока."
+  },
+  {
+    "ds_offset": 3523,
+    "name": "D_template_side_device",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 3546,
+    "name": "D_sprite_frames_0dda",
+    "type": "FrameSet[10]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 3627,
+    "name": "D_sprite_frames_0e2b",
+    "type": "FrameSet[4]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 3660,
+    "name": "D_pingpong_frame_sequence",
+    "type": "u8[6]",
+    "description": "Последовательность циклической анимации handler3."
+  },
+  {
+    "ds_offset": 3666,
+    "name": "D_sprite_frames_0e52",
+    "type": "FrameSet[4]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 3699,
+    "name": "D_sprite_frames_0e73",
+    "type": "FrameSet[5]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 3740,
+    "name": "D_sprite_frames_0e9c",
+    "type": "FrameSet[5]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 3781,
+    "name": "D_sprite_frames_0ec5",
+    "type": "FrameSet[5]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 3822,
+    "name": "D_sprite_frames_0eee",
+    "type": "FrameSet[10]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 3903,
+    "name": "D_sprite_frames_0f3f",
+    "type": "FrameSet[10]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 3984,
+    "name": "D_sprite_frames_0f90",
+    "type": "FrameSet[10]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 4065,
+    "name": "D_mobile_enemy_descriptors",
+    "type": "u16[3]",
+    "description": "Таблица descriptor по param мобильного врага."
+  },
+  {
+    "ds_offset": 4071,
+    "name": "D_shot_variation_sequence",
+    "type": "u8[16]",
+    "description": "Детерминированная циклическая вариация; не PRNG."
+  },
+  {
+    "ds_offset": 4087,
+    "name": "D_template_muzzle_effect",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 4090,
+    "name": "D_shot_effect_template_z",
+    "type": "i8",
+    "description": "Высота шаблона DS:0FF7."
+  },
+  {
+    "ds_offset": 4091,
+    "name": "D_shot_effect_template_frame",
+    "type": "u8",
+    "description": "Frame/state шаблона эффекта."
+  },
+  {
+    "ds_offset": 4092,
+    "name": "D_shot_effect_template_x",
+    "type": "u16",
+    "description": "Координата x шаблона эффекта."
+  },
+  {
+    "ds_offset": 4094,
+    "name": "D_shot_effect_template_y",
+    "type": "u16",
+    "description": "Координата y шаблона эффекта."
+  },
+  {
+    "ds_offset": 4110,
+    "name": "D_sprite_frames_100e",
+    "type": "FrameSet[4]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 4143,
+    "name": "D_aimed_effect_descriptors",
+    "type": "u16[5]",
+    "description": "Sprite descriptors по направлению выстрела."
+  },
+  {
+    "ds_offset": 4153,
+    "name": "D_sprite_frames_1039",
+    "type": "FrameSet[4]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 4186,
+    "name": "D_sprite_frames_105a",
+    "type": "FrameSet[4]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 4219,
+    "name": "D_sprite_frames_107b",
+    "type": "FrameSet[4]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 4252,
+    "name": "D_sprite_frames_109c",
+    "type": "FrameSet[4]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 4285,
+    "name": "D_sprite_frames_10bd",
+    "type": "FrameSet[4]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 4318,
+    "name": "D_ground_shot_dx",
+    "type": "i8[5]",
+    "description": "Поправки spawn x по направлению."
+  },
+  {
+    "ds_offset": 4323,
+    "name": "D_ground_shot_dy",
+    "type": "i8[5]",
+    "description": "Поправки spawn y по направлению."
+  },
+  {
+    "ds_offset": 4328,
+    "name": "D_template_ground_shot",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 4351,
+    "name": "D_ground_shot_descriptors",
+    "type": "u16[5]",
+    "description": "Sprite descriptors наземного снаряда."
+  },
+  {
+    "ds_offset": 4361,
+    "name": "D_sprite_frames_1109",
+    "type": "FrameSet[10]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 4442,
+    "name": "D_sprite_frames_115a",
+    "type": "FrameSet[10]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 4523,
+    "name": "D_sprite_frames_11ab",
+    "type": "FrameSet[10]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 4604,
+    "name": "D_sprite_frames_11fc",
+    "type": "FrameSet[10]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 4685,
+    "name": "D_sprite_frames_124d",
+    "type": "FrameSet[10]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 4766,
+    "name": "D_template_explosion",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 4768,
+    "name": "D_explosion_template_layer",
+    "type": "u8",
+    "description": "Layer шаблона взрыва DS:129E."
+  },
+  {
+    "ds_offset": 4769,
+    "name": "D_explosion_template_z",
+    "type": "i8",
+    "description": "Z шаблона взрыва."
+  },
+  {
+    "ds_offset": 4771,
+    "name": "D_explosion_template_x",
+    "type": "u16",
+    "description": "X шаблона взрыва."
+  },
+  {
+    "ds_offset": 4773,
+    "name": "D_explosion_template_y",
+    "type": "u16",
+    "description": "Y шаблона взрыва."
+  },
+  {
+    "ds_offset": 4789,
+    "name": "D_sprite_frames_12b5",
+    "type": "FrameSet[5]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 4830,
+    "name": "D_template_arc_effect",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 4853,
+    "name": "D_sprite_frames_12f5",
+    "type": "FrameSet[6]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 4902,
+    "name": "D_side_impact_template",
+    "type": "Entity",
+    "description": "Шаблон эффектов двух сторон; flags20h меняется перед копированием."
+  },
+  {
+    "ds_offset": 4925,
+    "name": "D_sprite_frames_133d",
+    "type": "FrameSet[4]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 4958,
+    "name": "D_template_player_shot",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 4961,
+    "name": "D_player_shot_template_z",
+    "type": "i8",
+    "description": "Поле шаблона player shot DS:135E."
+  },
+  {
+    "ds_offset": 4963,
+    "name": "D_player_shot_template_x",
+    "type": "u16",
+    "description": "Поле шаблона player shot."
+  },
+  {
+    "ds_offset": 4965,
+    "name": "D_player_shot_template_y",
+    "type": "u16",
+    "description": "Поле шаблона player shot."
+  },
+  {
+    "ds_offset": 4981,
+    "name": "D_player_left_muzzle_dx",
+    "type": "i8[10]",
+    "description": "Смещения левого ствола по frame."
+  },
+  {
+    "ds_offset": 4991,
+    "name": "D_player_right_muzzle_dx",
+    "type": "i8[10]",
+    "description": "Смещения правого ствола по frame."
+  },
+  {
+    "ds_offset": 5001,
+    "name": "D_player_left_muzzle_dz",
+    "type": "i8[10]",
+    "description": "Поправка высоты левого ствола."
+  },
+  {
+    "ds_offset": 5011,
+    "name": "D_player_right_muzzle_dz",
+    "type": "i8[10]",
+    "description": "Поправка высоты правого ствола."
+  },
+  {
+    "ds_offset": 5021,
+    "name": "D_player_shot_frame_map",
+    "type": "u8[10]",
+    "description": "Выбор варианта выстрела по frame игрока."
+  },
+  {
+    "ds_offset": 5031,
+    "name": "D_shot_variant_heights",
+    "type": "u8[3]",
+    "description": "Высоты трёх вариантов выстрела."
+  },
+  {
+    "ds_offset": 5034,
+    "name": "D_player_shot_sprite_offsets",
+    "type": "u16[3]",
+    "description": "Sprite offsets выстрела игрока."
+  },
+  {
+    "ds_offset": 5040,
+    "name": "D_template_enemy_shot",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 5063,
+    "name": "D_enemy_shot_sprite_offsets",
+    "type": "u16[3]",
+    "description": "Sprite offsets выстрела противника."
+  },
+  {
+    "ds_offset": 5069,
+    "name": "D_enemy_muzzle_a_left_dz",
+    "type": "i8[10]",
+    "description": "Таблица высот pattern0, левая точка."
+  },
+  {
+    "ds_offset": 5079,
+    "name": "D_enemy_muzzle_a_right_dz",
+    "type": "i8[10]",
+    "description": "Таблица высот pattern0, правая точка."
+  },
+  {
+    "ds_offset": 5089,
+    "name": "D_enemy_muzzle_b_dz",
+    "type": "i8[10]",
+    "description": "Таблица высот pattern1."
+  },
+  {
+    "ds_offset": 5099,
+    "name": "D_enemy_muzzle_c_left_dz",
+    "type": "i8[10]",
+    "description": "Таблица высот pattern2, левая точка."
+  },
+  {
+    "ds_offset": 5109,
+    "name": "D_enemy_muzzle_c_center_dz",
+    "type": "i8[10]",
+    "description": "Таблица высот pattern2, центральная точка."
+  },
+  {
+    "ds_offset": 5119,
+    "name": "D_enemy_muzzle_c_right_dz",
+    "type": "i8[10]",
+    "description": "Таблица высот pattern2, правая точка."
+  },
+  {
+    "ds_offset": 5129,
+    "name": "D_aimed_muzzle_dx",
+    "type": "i8[5]",
+    "description": "X offset по направлению."
+  },
+  {
+    "ds_offset": 5134,
+    "name": "D_aimed_muzzle_dy",
+    "type": "i8[5]",
+    "description": "Y offset по направлению."
+  },
+  {
+    "ds_offset": 5139,
+    "name": "D_enemy_shot_widths",
+    "type": "u8[5]",
+    "description": "Ширина выстрела по направлению."
+  },
+  {
+    "ds_offset": 5144,
+    "name": "D_enemy_shot_heights",
+    "type": "u8[5]",
+    "description": "Высота выстрела по направлению."
+  },
+  {
+    "ds_offset": 5149,
+    "name": "D_enemy_aimed_shot_sprites",
+    "type": "u16[5]",
+    "description": "Sprite offsets направленных выстрелов."
+  },
+  {
+    "ds_offset": 5159,
+    "name": "D_template_impact",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 5182,
+    "name": "D_impact_frame_sprites",
+    "type": "u16[4]",
+    "description": "Четыре последовательных кадра попадания."
+  },
+  {
+    "ds_offset": 5190,
+    "name": "D_template_arc_shot",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 5213,
+    "name": "D_arc_spawn_dx",
+    "type": "i8[5]",
+    "description": "X offset навесного снаряда."
+  },
+  {
+    "ds_offset": 5218,
+    "name": "D_arc_spawn_dy",
+    "type": "i8[5]",
+    "description": "Y offset навесного снаряда."
+  },
+  {
+    "ds_offset": 5223,
+    "name": "D_arc_height_deltas",
+    "type": "i8[16]",
+    "description": "Вертикальные приращения по возрасту снаряда."
+  },
+  {
+    "ds_offset": 5239,
+    "name": "D_tunnel_gate_frame_sprites",
+    "type": "u16[6]",
+    "description": "Кадры створок входа; fully-open скрывает layer."
+  },
+  {
+    "ds_offset": 5251,
+    "name": "D_exit_gate_frame_sprites",
+    "type": "u16[9]",
+    "description": "Кадры ворот выхода после6 collectibles."
+  },
+  {
+    "ds_offset": 5269,
+    "name": "D_tunnel_destinations_a",
+    "type": "u16[24]",
+    "description": "Destination_y в10 битах и reward kind в старших2."
+  },
+  {
+    "ds_offset": 5317,
+    "name": "D_tunnel_destinations_b",
+    "type": "u16[24]",
+    "description": "Вторая таблица входов/выходов туннеля."
+  },
+  {
+    "ds_offset": 5365,
+    "name": "D_level_start_y",
+    "type": "u16[8]",
+    "description": "Исходная позиция камеры по level_index."
+  },
+  {
+    "ds_offset": 5382,
+    "name": "D_filename_hiscores",
+    "type": "ASCIIZ",
+    "description": "Имя внешнего файла, нулевой терминатор."
+  },
+  {
+    "ds_offset": 5391,
+    "name": "D_control_prompt_banks",
+    "type": "u16[8]",
+    "description": "Bank offsets фрагментов запросов управления."
+  },
+  {
+    "ds_offset": 5407,
+    "name": "D_control_prompt_sources",
+    "type": "u16[8]",
+    "description": "Sprite offsets запросов управления."
+  },
+  {
+    "ds_offset": 5423,
+    "name": "D_control_prompt_destinations",
+    "type": "u16[8]",
+    "description": "Адреса назначения в video RAM, не DS-указатели."
+  },
+  {
+    "ds_offset": 5439,
+    "name": "D_control_prompt_widths",
+    "type": "u16[8]",
+    "description": "Ширины фрагментов в пикселях."
+  },
+  {
+    "ds_offset": 5455,
+    "name": "D_control_prompt_heights",
+    "type": "u16[8]",
+    "description": "Высоты фрагментов."
+  },
+  {
+    "ds_offset": 5471,
+    "name": "D_hud_digit_sprites",
+    "type": "u16[10]",
+    "description": "Sprite offsets цифр HUD."
+  },
+  {
+    "ds_offset": 5491,
+    "name": "D_hud_digit_destinations",
+    "type": "u16[6]",
+    "description": "Адреса цифр в video RAM."
+  },
+  {
+    "ds_offset": 5503,
+    "name": "D_highscore_digit_sprites",
+    "type": "u16[10]",
+    "description": "Sprite offsets цифр таблицы рекордов."
+  },
+  {
+    "ds_offset": 5524,
+    "name": "D_sprite_frames_1594",
+    "type": "FrameSet[28]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 5749,
+    "name": "D_tunnel_circle_x",
+    "type": "i8[128]",
+    "description": "Готовые x координаты окружности; сохранить lookup, не заменять sin/cos."
+  },
+  {
+    "ds_offset": 5877,
+    "name": "D_tunnel_circle_y",
+    "type": "i8[128]",
+    "description": "Готовые y координаты окружности."
+  },
+  {
+    "ds_offset": 6005,
+    "name": "D_tunnel_player_frames",
+    "type": "u8[128]",
+    "description": "Frame корабля по углу."
+  },
+  {
+    "ds_offset": 6133,
+    "name": "D_tunnel_frame_to_sector",
+    "type": "u8[28]",
+    "description": "Сектор сбора предмета по frame игрока; фактический домен см. таблицу."
+  },
+  {
+    "ds_offset": 6161,
+    "name": "D_sprite_frames_1811",
+    "type": "FrameSet[16]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 6290,
+    "name": "D_tunnel_side_frames",
+    "type": "u8[128]",
+    "description": "Frame бокового устройства по углу игрока."
+  },
+  {
+    "ds_offset": 6418,
+    "name": "D_template_tunnel_exit",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 6441,
+    "name": "D_sprite_frames_1929",
+    "type": "FrameSet[24]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 6634,
+    "name": "D_tunnel_exit_frames",
+    "type": "u8[32]",
+    "description": "Анимация выходного маркера по remaining distance."
+  },
+  {
+    "ds_offset": 6666,
+    "name": "D_tunnel_min_ring_radii",
+    "type": "u8[32]",
+    "description": "Минимальный радиус колец по дистанции."
+  },
+  {
+    "ds_offset": 6698,
+    "name": "D_tunnel_pattern_pointers",
+    "type": "u16[4]",
+    "description": "Четыре потока появления туннельных предметов."
+  },
+  {
+    "ds_offset": 6762,
+    "name": "D_tunnel_pickup_radii",
+    "type": "u8[48]",
+    "description": "Радиус изображения по дистанции от spawn."
+  },
+  {
+    "ds_offset": 6810,
+    "name": "D_tunnel_pickup_layers",
+    "type": "u8[24]",
+    "description": "Layer по кадру приближения предмета."
+  },
+  {
+    "ds_offset": 6834,
+    "name": "D_template_tunnel_pickup",
+    "type": "Entity template",
+    "description": "Изменяемый шаблон 23 байта; структура см. entity.inc."
+  },
+  {
+    "ds_offset": 6857,
+    "name": "D_sprite_frames_1ac9",
+    "type": "FrameSet[24]",
+    "description": "SoA: count, width[], height[], anchor_x[], anchor_y[], {bank, offset}[]."
+  },
+  {
+    "ds_offset": 7050,
+    "name": "D_entity_records",
+    "type": "Entity[48]",
+    "description": "Пул сущностей: 48 ×23 байта; первая запись — игрок."
+  },
+  {
+    "ds_offset": 7052,
+    "name": "D_player_layer",
+    "type": "u8",
+    "description": "Поле+02 первой записи пула."
+  },
+  {
+    "ds_offset": 7053,
+    "name": "D_player_z",
+    "type": "i8",
+    "description": "Поле+03 первой записи; знаковая высота/проекционное смещение."
+  },
+  {
+    "ds_offset": 7054,
+    "name": "D_player_frame",
+    "type": "u8",
+    "description": "Поле+04 первой записи, также вариант рельефа."
+  },
+  {
+    "ds_offset": 7055,
+    "name": "D_player_x",
+    "type": "u16",
+    "description": "Поле+05 первой записи."
+  },
+  {
+    "ds_offset": 7057,
+    "name": "D_player_y",
+    "type": "u16",
+    "description": "Поле+07 первой записи; modulo1024 на поверхности."
+  },
+  {
+    "ds_offset": 7068,
+    "name": "D_player_handler",
+    "type": "u8",
+    "description": "Поле+12 первой записи, состояние игрока."
+  },
+  {
+    "ds_offset": 7070,
+    "name": "D_player_map_row",
+    "type": "u8",
+    "description": "Поле+14 первой записи; в туннеле пересекается с иными state."
+  },
+  {
+    "ds_offset": 7072,
+    "name": "D_player_angle_or_age",
+    "type": "u8",
+    "description": "Поле+16: в туннеле угол, в иных состояниях счётчик."
+  },
+  {
+    "ds_offset": 8156,
+    "name": "D_tunnel_ring_radius_curve",
+    "type": "u8[64]",
+    "description": "Радиус по младшим6 битам дистанции."
+  },
+  {
+    "ds_offset": 8220,
+    "name": "D_tunnel_edge_x_curve",
+    "type": "u8[13]",
+    "description": "Дополнительные линии при phase<=12."
+  },
+  {
+    "ds_offset": 8233,
+    "name": "D_tunnel_edge_y_curve",
+    "type": "u8[13]",
+    "description": "Вторая таблица дополнительных линий."
+  },
+  {
+    "ds_offset": 25270,
+    "name": "D_level_01_part_1_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 25669,
+    "name": "D_level_01_part_2_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 26068,
+    "name": "D_level_01_part_3_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 26453,
+    "name": "D_level_01_part_1_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 26508,
+    "name": "D_level_01_part_2_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 26563,
+    "name": "D_level_01_part_3_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 26615,
+    "name": "D_level_02_part_1_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 27007,
+    "name": "D_level_02_part_2_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 27451,
+    "name": "D_level_02_part_3_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 27820,
+    "name": "D_level_02_part_1_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 27881,
+    "name": "D_level_02_part_2_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 27945,
+    "name": "D_level_02_part_3_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 27997,
+    "name": "D_level_03_part_1_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 28375,
+    "name": "D_level_03_part_2_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 28755,
+    "name": "D_level_03_part_3_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 29148,
+    "name": "D_level_03_part_1_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 29224,
+    "name": "D_level_03_part_2_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 29279,
+    "name": "D_level_03_part_3_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 29331,
+    "name": "D_level_04_part_1_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 29718,
+    "name": "D_level_04_part_2_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 30120,
+    "name": "D_level_04_part_3_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 30520,
+    "name": "D_level_04_part_1_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 30593,
+    "name": "D_level_04_part_2_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 30648,
+    "name": "D_level_04_part_3_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 30716,
+    "name": "D_level_05_part_1_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 31122,
+    "name": "D_level_05_part_2_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 31470,
+    "name": "D_level_05_part_3_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 31878,
+    "name": "D_level_05_part_1_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 31927,
+    "name": "D_level_05_part_2_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 31982,
+    "name": "D_level_05_part_3_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 32046,
+    "name": "D_level_06_part_1_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 32382,
+    "name": "D_level_06_part_2_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 32700,
+    "name": "D_level_06_part_3_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 33032,
+    "name": "D_level_06_part_1_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 33114,
+    "name": "D_level_06_part_2_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 33163,
+    "name": "D_level_06_part_3_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 33251,
+    "name": "D_level_07_part_1_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 33581,
+    "name": "D_level_07_part_2_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 33849,
+    "name": "D_level_07_part_3_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 34198,
+    "name": "D_level_07_part_1_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 34265,
+    "name": "D_level_07_part_2_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 34320,
+    "name": "D_level_07_part_3_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 34393,
+    "name": "D_level_08_part_1_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 34807,
+    "name": "D_level_08_part_2_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 35245,
+    "name": "D_level_08_part_3_tiles",
+    "type": "RLE stream",
+    "description": "Точные RLE-токены; декодирование даёт12×64 клетки."
+  },
+  {
+    "ds_offset": 35599,
+    "name": "D_level_08_part_1_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 35675,
+    "name": "D_level_08_part_2_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 35748,
+    "name": "D_level_08_part_3_objects",
+    "type": "placement stream",
+    "description": "Тройки kind,column,source_row; FFh завершает поток."
+  },
+  {
+    "ds_offset": 35812,
+    "name": "D_sound_descriptor_pointers",
+    "type": "u16[15]",
+    "description": "Таблица 6-байтовых звуковых descriptor."
+  },
+  {
+    "ds_offset": 35842,
+    "name": "D_sound_descriptor_01",
+    "type": "SoundDescriptor",
+    "description": "modulation u8, duration u8, divisor u16, step i16; 6 bytes."
+  },
+  {
+    "ds_offset": 35848,
+    "name": "D_sound_descriptor_02",
+    "type": "SoundDescriptor",
+    "description": "modulation u8, duration u8, divisor u16, step i16; 6 bytes."
+  },
+  {
+    "ds_offset": 35854,
+    "name": "D_sound_descriptor_03",
+    "type": "SoundDescriptor",
+    "description": "modulation u8, duration u8, divisor u16, step i16; 6 bytes."
+  },
+  {
+    "ds_offset": 35860,
+    "name": "D_sound_descriptor_04",
+    "type": "SoundDescriptor",
+    "description": "modulation u8, duration u8, divisor u16, step i16; 6 bytes."
+  },
+  {
+    "ds_offset": 35866,
+    "name": "D_sound_descriptor_05",
+    "type": "SoundDescriptor",
+    "description": "modulation u8, duration u8, divisor u16, step i16; 6 bytes."
+  },
+  {
+    "ds_offset": 35872,
+    "name": "D_sound_descriptor_06",
+    "type": "SoundDescriptor",
+    "description": "modulation u8, duration u8, divisor u16, step i16; 6 bytes."
+  },
+  {
+    "ds_offset": 35878,
+    "name": "D_sound_descriptor_07",
+    "type": "SoundDescriptor",
+    "description": "modulation u8, duration u8, divisor u16, step i16; 6 bytes."
+  },
+  {
+    "ds_offset": 35884,
+    "name": "D_sound_descriptor_08",
+    "type": "SoundDescriptor",
+    "description": "modulation u8, duration u8, divisor u16, step i16; 6 bytes."
+  },
+  {
+    "ds_offset": 35886,
+    "name": "D_charge_sound_divisor",
+    "type": "u16",
+    "description": "Динамически меняется по side_charge_units."
+  },
+  {
+    "ds_offset": 35890,
+    "name": "D_sound_descriptor_09",
+    "type": "SoundDescriptor",
+    "description": "modulation u8, duration u8, divisor u16, step i16; 6 bytes."
+  },
+  {
+    "ds_offset": 35892,
+    "name": "D_angle_sound_divisor",
+    "type": "u16",
+    "description": "Динамически меняется по углу игрока."
+  },
+  {
+    "ds_offset": 35896,
+    "name": "D_sound_descriptor_10",
+    "type": "SoundDescriptor",
+    "description": "modulation u8, duration u8, divisor u16, step i16; 6 bytes."
+  },
+  {
+    "ds_offset": 35902,
+    "name": "D_sound_descriptor_11",
+    "type": "SoundDescriptor",
+    "description": "modulation u8, duration u8, divisor u16, step i16; 6 bytes."
+  },
+  {
+    "ds_offset": 35908,
+    "name": "D_sound_descriptor_12",
+    "type": "SoundDescriptor",
+    "description": "modulation u8, duration u8, divisor u16, step i16; 6 bytes."
+  },
+  {
+    "ds_offset": 35914,
+    "name": "D_sound_descriptor_13",
+    "type": "SoundDescriptor",
+    "description": "modulation u8, duration u8, divisor u16, step i16; 6 bytes."
+  },
+  {
+    "ds_offset": 35920,
+    "name": "D_sound_descriptor_14",
+    "type": "SoundDescriptor",
+    "description": "modulation u8, duration u8, divisor u16, step i16; 6 bytes."
+  },
+  {
+    "ds_offset": 35926,
+    "name": "D_music_descriptor_modulation",
+    "type": "u8",
+    "description": "Первый байт изменяемого descriptor15."
+  },
+  {
+    "ds_offset": 35927,
+    "name": "D_music_descriptor_duration",
+    "type": "u8",
+    "description": "Время изменяемого descriptor15."
+  },
+  {
+    "ds_offset": 35928,
+    "name": "D_music_descriptor_divisor",
+    "type": "u16",
+    "description": "PIT-divisor выбранной ноты."
+  },
+  {
+    "ds_offset": 35932,
+    "name": "D_sound_modulation_pointers",
+    "type": "u16[4]",
+    "description": "Указатели на циклы модуляции по16 слов."
+  },
+  {
+    "ds_offset": 35940,
+    "name": "D_sound_modulation_1",
+    "type": "i16[16]",
+    "description": "Циклическая добавка к делителю; индекс&15."
+  },
+  {
+    "ds_offset": 35972,
+    "name": "D_sound_modulation_2",
+    "type": "i16[16]",
+    "description": "Циклическая добавка к делителю; индекс&15."
+  },
+  {
+    "ds_offset": 36004,
+    "name": "D_sound_modulation_3",
+    "type": "i16[16]",
+    "description": "Циклическая добавка к делителю; индекс&15."
+  },
+  {
+    "ds_offset": 36036,
+    "name": "D_sound_modulation_4",
+    "type": "i16[16]",
+    "description": "Циклическая добавка к делителю; индекс&15."
+  },
+  {
+    "ds_offset": 36068,
+    "name": "D_note_divisors",
+    "type": "u16 table",
+    "description": "Делитель PIT2 по note index."
+  },
+  {
+    "ds_offset": 36445,
+    "name": "D_music_fill_notes",
+    "type": "u8[32]",
+    "description": "Ноты специальной нулевой команды музыки."
+  },
+  {
+    "ds_offset": 36478,
+    "name": "D_attract_script_pointer",
+    "type": "u16",
+    "description": "DS offset сценария заставки."
+  },
+  {
+    "ds_offset": 36480,
+    "name": "D_attract_step_counter",
+    "type": "u16",
+    "description": "Счётчик кадров сценария; команда каждую8-ю итерацию."
+  },
+  {
+    "ds_offset": 36482,
+    "name": "D_old_keyboard_segment",
+    "type": "u16",
+    "description": "Сегмент старого INT09h."
+  },
+  {
+    "ds_offset": 36484,
+    "name": "D_old_keyboard_offset",
+    "type": "u16",
+    "description": "Offset старого INT09h."
+  },
+  {
+    "ds_offset": 36486,
+    "name": "D_old_timer_segment",
+    "type": "u16",
+    "description": "Сегмент старого INT1Ch."
+  },
+  {
+    "ds_offset": 36488,
+    "name": "D_old_timer_offset",
+    "type": "u16",
+    "description": "Offset старого INT1Ch."
+  },
+  {
+    "ds_offset": 36490,
+    "name": "D_keyboard_state",
+    "type": "u8[128]",
+    "description": "0 = отпущена, 1 = нажата; индекс — scan-code."
+  },
+  {
+    "ds_offset": 36618,
+    "name": "D_mouse_present",
+    "type": "u8",
+    "description": "Признак установленного драйвера мыши."
+  },
+  {
+    "ds_offset": 36619,
+    "name": "D_last_key_pointer",
+    "type": "u16",
+    "description": "DS offset последней клавиши при вводе имени."
+  },
+  {
+    "ds_offset": 36621,
+    "name": "D_key_left",
+    "type": "u16",
+    "description": "Настроенный scan-code; фактически используется младший байт."
+  },
+  {
+    "ds_offset": 36623,
+    "name": "D_key_right",
+    "type": "u16",
+    "description": "Настроенный scan-code; фактически используется младший байт."
+  },
+  {
+    "ds_offset": 36625,
+    "name": "D_key_up",
+    "type": "u16",
+    "description": "Настроенный scan-code; фактически используется младший байт."
+  },
+  {
+    "ds_offset": 36627,
+    "name": "D_key_down",
+    "type": "u16",
+    "description": "Настроенный scan-code; фактически используется младший байт."
+  },
+  {
+    "ds_offset": 36629,
+    "name": "D_key_fire",
+    "type": "u16",
+    "description": "Настроенный scan-code; фактически используется младший байт."
+  },
+  {
+    "ds_offset": 36631,
+    "name": "D_key_action_n",
+    "type": "u16",
+    "description": "Настроенный scan-code; фактически используется младший байт."
+  },
+  {
+    "ds_offset": 36633,
+    "name": "D_key_action_m",
+    "type": "u16",
+    "description": "Настроенный scan-code; фактически используется младший байт."
+  },
+  {
+    "ds_offset": 36635,
+    "name": "D_key_quit",
+    "type": "u16",
+    "description": "Настроенный scan-code; фактически используется младший байт."
+  },
+  {
+    "ds_offset": 36638,
+    "name": "D_file_handle",
+    "type": "u16",
+    "description": "DOS file handle."
+  },
+  {
+    "ds_offset": 36640,
+    "name": "D_file_destination_segment",
+    "type": "u16",
+    "description": "Временный сегмент назначения DOS read."
+  },
+  {
+    "ds_offset": 36642,
+    "name": "D_map_running_height",
+    "type": "u8",
+    "description": "Накопленная высота вдоль текущей строки тайлов."
+  },
+  {
+    "ds_offset": 36643,
+    "name": "D_map_row_y",
+    "type": "u16",
+    "description": "Текущая y-строка карты при prerender."
+  },
+  {
+    "ds_offset": 36645,
+    "name": "D_map_tile_cursor",
+    "type": "u16",
+    "description": "DS offset следующего декодированного тайла."
+  },
+  {
+    "ds_offset": 36649,
+    "name": "D_decoded_map_tiles",
+    "type": "u8[768]",
+    "description": "12 столбцов ×64 строки; хранение обратное world_y."
+  },
+  {
+    "ds_offset": 37417,
+    "name": "D_map_spawn_rows",
+    "type": "u16[64]",
+    "description": "10 бит колонок +6 бит вида объекта строки."
+  },
+  {
+    "ds_offset": 37545,
+    "name": "D_map_available_masks",
+    "type": "u16[3][64]",
+    "description": "Сброшенный бит означает использованный объект этой части уровня."
+  },
+  {
+    "ds_offset": 37929,
+    "name": "D_collision_damage_tmp",
+    "type": "u8",
+    "description": "Временный результат query_player_map_collision."
+  },
+  {
+    "ds_offset": 37932,
+    "name": "D_collision_column_tmp",
+    "type": "u16",
+    "description": "Текущий столбец поиска препятствия."
+  },
+  {
+    "ds_offset": 37934,
+    "name": "D_sprite_dest_segment",
+    "type": "u16",
+    "description": "EGA segment для следующего blit."
+  },
+  {
+    "ds_offset": 37936,
+    "name": "D_sprite_clip_enabled",
+    "type": "u16",
+    "description": "1 для игрового экрана, 0 для prerender карты."
+  },
+  {
+    "ds_offset": 37938,
+    "name": "D_player_forced_stop",
+    "type": "u8",
+    "description": "Запрос отдельного состояния игрока после выхода из туннеля."
+  },
+  {
+    "ds_offset": 37939,
+    "name": "D_player_history_x0",
+    "type": "u16",
+    "description": "Новейшая из4 сохранённых координат x."
+  },
+  {
+    "ds_offset": 37941,
+    "name": "D_player_history_x1",
+    "type": "u16",
+    "description": "История x, задержка1."
+  },
+  {
+    "ds_offset": 37943,
+    "name": "D_player_history_x2",
+    "type": "u16",
+    "description": "История x, задержка2."
+  },
+  {
+    "ds_offset": 37945,
+    "name": "D_player_history_x3",
+    "type": "u16",
+    "description": "История x, задержка3."
+  },
+  {
+    "ds_offset": 37947,
+    "name": "D_player_history_y0",
+    "type": "u16",
+    "description": "Новейшая y."
+  },
+  {
+    "ds_offset": 37949,
+    "name": "D_player_history_y1",
+    "type": "u16",
+    "description": "История y1."
+  },
+  {
+    "ds_offset": 37951,
+    "name": "D_player_history_y2",
+    "type": "u16",
+    "description": "История y2."
+  },
+  {
+    "ds_offset": 37953,
+    "name": "D_player_history_y3",
+    "type": "u16",
+    "description": "История y3."
+  },
+  {
+    "ds_offset": 37955,
+    "name": "D_player_history_frame0",
+    "type": "u8",
+    "description": "Новейший frame."
+  },
+  {
+    "ds_offset": 37956,
+    "name": "D_player_history_frame1",
+    "type": "u8",
+    "description": "История frame1."
+  },
+  {
+    "ds_offset": 37957,
+    "name": "D_player_history_frame2",
+    "type": "u8",
+    "description": "История frame2."
+  },
+  {
+    "ds_offset": 37958,
+    "name": "D_player_history_frame3",
+    "type": "u8",
+    "description": "История frame3."
+  },
+  {
+    "ds_offset": 37959,
+    "name": "D_player_history_z0",
+    "type": "i8",
+    "description": "Новейшая высота."
+  },
+  {
+    "ds_offset": 37960,
+    "name": "D_player_history_z1",
+    "type": "i8",
+    "description": "История z1."
+  },
+  {
+    "ds_offset": 37961,
+    "name": "D_player_history_z2",
+    "type": "i8",
+    "description": "История z2."
+  },
+  {
+    "ds_offset": 37962,
+    "name": "D_player_history_z3",
+    "type": "i8",
+    "description": "История z3."
+  },
+  {
+    "ds_offset": 37964,
+    "name": "D_hud_frame_counter",
+    "type": "u8",
+    "description": "Очки за этап начисляются при (counter&3)==0."
+  },
+  {
+    "ds_offset": 37965,
+    "name": "D_score_leading_zero",
+    "type": "u8",
+    "description": "Флаг подавления ведущих нулей."
+  },
+  {
+    "ds_offset": 37966,
+    "name": "D_text_draw_offset",
+    "type": "u16",
+    "description": "Offset в PODZ1 для текста таблицы рекордов."
+  },
+  {
+    "ds_offset": 37968,
+    "name": "D_pending_highscore_rank",
+    "type": "u8",
+    "description": "Строка редактируемого имени."
+  },
+  {
+    "ds_offset": 37969,
+    "name": "D_pending_name_pointer",
+    "type": "u16",
+    "description": "DS offset 12-байтового имени."
+  },
+  {
+    "ds_offset": 37971,
+    "name": "D_name_cursor",
+    "type": "u16",
+    "description": "Позиция0..12 при редактировании имени."
+  },
+  {
+    "ds_offset": 37973,
+    "name": "D_highscore_data",
+    "type": "u8[140]",
+    "description": "HISCORES: 84 байта имён, 42 цифр, 7 scratch, 7 индексов."
+  },
+  {
+    "ds_offset": 38057,
+    "name": "D_score_digit_100000",
+    "type": "u8",
+    "description": "Первая из6 цифр текущего счёта; начало7 результатов."
+  },
+  {
+    "ds_offset": 38058,
+    "name": "D_score_digit_10000",
+    "type": "u8",
+    "description": "Десятичная цифра10000."
+  },
+  {
+    "ds_offset": 38059,
+    "name": "D_score_digit_1000",
+    "type": "u8",
+    "description": "Десятичная цифра1000."
+  },
+  {
+    "ds_offset": 38060,
+    "name": "D_score_digit_100",
+    "type": "u8",
+    "description": "Десятичная цифра100."
+  },
+  {
+    "ds_offset": 38061,
+    "name": "D_score_digit_10",
+    "type": "u8",
+    "description": "Десятичная цифра10."
+  },
+  {
+    "ds_offset": 38062,
+    "name": "D_score_digit_1",
+    "type": "u8",
+    "description": "Десятичная цифра1."
+  },
+  {
+    "ds_offset": 38099,
+    "name": "D_highscore_sort_scratch0",
+    "type": "u8",
+    "description": "Первый из7 scratch индексов сортировки."
+  },
+  {
+    "ds_offset": 38100,
+    "name": "D_highscore_sort_scratch1",
+    "type": "u8",
+    "description": "Scratch1."
+  },
+  {
+    "ds_offset": 38101,
+    "name": "D_highscore_sort_scratch2",
+    "type": "u8",
+    "description": "Scratch2."
+  },
+  {
+    "ds_offset": 38102,
+    "name": "D_highscore_sort_scratch3",
+    "type": "u8",
+    "description": "Scratch3."
+  },
+  {
+    "ds_offset": 38103,
+    "name": "D_highscore_sort_scratch4",
+    "type": "u8",
+    "description": "Scratch4."
+  },
+  {
+    "ds_offset": 38104,
+    "name": "D_highscore_sort_scratch5",
+    "type": "u8",
+    "description": "Scratch5."
+  },
+  {
+    "ds_offset": 38105,
+    "name": "D_highscore_sort_scratch6",
+    "type": "u8",
+    "description": "Scratch6."
+  },
+  {
+    "ds_offset": 38106,
+    "name": "D_highscore_order0",
+    "type": "u8",
+    "description": "Первый из7 отсортированных индексов."
+  },
+  {
+    "ds_offset": 38107,
+    "name": "D_highscore_order1",
+    "type": "u8",
+    "description": "Order1."
+  },
+  {
+    "ds_offset": 38108,
+    "name": "D_highscore_order2",
+    "type": "u8",
+    "description": "Order2."
+  },
+  {
+    "ds_offset": 38109,
+    "name": "D_highscore_order3",
+    "type": "u8",
+    "description": "Order3."
+  },
+  {
+    "ds_offset": 38110,
+    "name": "D_highscore_order4",
+    "type": "u8",
+    "description": "Order4."
+  },
+  {
+    "ds_offset": 38111,
+    "name": "D_highscore_order5",
+    "type": "u8",
+    "description": "Order5."
+  },
+  {
+    "ds_offset": 38112,
+    "name": "D_highscore_order6",
+    "type": "u8",
+    "description": "Последний индекс; 0 означает, что текущий результат не вошёл в6 лучших."
+  },
+  {
+    "ds_offset": 38114,
+    "name": "D_tunnel_pattern_pointer",
+    "type": "u16",
+    "description": "DS offset потока объектов туннеля."
+  },
+  {
+    "ds_offset": 38116,
+    "name": "D_tunnel_pattern_index",
+    "type": "u8",
+    "description": "Циклический выбор паттерна по &3."
+  },
+  {
+    "ds_offset": 38117,
+    "name": "D_tunnel_angle_history0",
+    "type": "u8",
+    "description": "История угла0."
+  },
+  {
+    "ds_offset": 38118,
+    "name": "D_tunnel_angle_history1",
+    "type": "u8",
+    "description": "История угла1."
+  },
+  {
+    "ds_offset": 38119,
+    "name": "D_tunnel_angle_history2",
+    "type": "u8",
+    "description": "История угла2."
+  },
+  {
+    "ds_offset": 38120,
+    "name": "D_segment_bird1",
+    "type": "u16 segment",
+    "description": "Сегмент 32-KiB банка; индекс E_BANK — байтовое смещение в этой таблице."
+  },
+  {
+    "ds_offset": 38122,
+    "name": "D_segment_bird2",
+    "type": "u16 segment",
+    "description": "Сегмент 32-KiB банка; индекс E_BANK — байтовое смещение в этой таблице."
+  },
+  {
+    "ds_offset": 38124,
+    "name": "D_segment_blox",
+    "type": "u16 segment",
+    "description": "Сегмент 32-KiB банка; индекс E_BANK — байтовое смещение в этой таблице."
+  },
+  {
+    "ds_offset": 38126,
+    "name": "D_segment_newbird",
+    "type": "u16 segment",
+    "description": "Сегмент 32-KiB банка; индекс E_BANK — байтовое смещение в этой таблице."
+  },
+  {
+    "ds_offset": 38128,
+    "name": "D_segment_podz1",
+    "type": "u16 segment",
+    "description": "Сегмент 32-KiB банка; индекс E_BANK — байтовое смещение в этой таблице."
+  },
+  {
+    "ds_offset": 38130,
+    "name": "D_segment_intro",
+    "type": "u16 segment",
+    "description": "Сегмент 32-KiB банка; индекс E_BANK — байтовое смещение в этой таблице."
+  },
+  {
+    "ds_offset": 38132,
+    "name": "D_segment_scratch0",
+    "type": "u16 segment",
+    "description": "Сегмент 32-KiB банка; индекс E_BANK — байтовое смещение в этой таблице."
+  },
+  {
+    "ds_offset": 38134,
+    "name": "D_segment_scratch1",
+    "type": "u16 segment",
+    "description": "Сегмент 32-KiB банка; индекс E_BANK — байтовое смещение в этой таблице."
+  },
+  {
+    "ds_offset": 38136,
+    "name": "D_video_draw_segment",
+    "type": "u16",
+    "description": "Сегмент текущей экранной страницы для рисования."
+  },
+  {
+    "ds_offset": 38138,
+    "name": "D_video_display_segment",
+    "type": "u16",
+    "description": "Сегмент второй видеостраницы."
+  },
+  {
+    "ds_offset": 38140,
+    "name": "D_base_scroll_speed",
+    "type": "u16/mixed",
+    "description": "Базовая скорость; start_game_cycle пишет только младший байт."
+  },
+  {
+    "ds_offset": 38142,
+    "name": "D_stage_counter",
+    "type": "u8",
+    "description": "Число этапов, влияет на базовую скорость и очки."
+  },
+  {
+    "ds_offset": 38143,
+    "name": "D_tunnel_mode",
+    "type": "u8",
+    "description": "0=поверхность,1=туннель."
+  },
+  {
+    "ds_offset": 38144,
+    "name": "D_game_loop_end_flag",
+    "type": "u8",
+    "description": "Запрос завершить game_loop."
+  },
+  {
+    "ds_offset": 38145,
+    "name": "D_level_index",
+    "type": "u8",
+    "description": "Индекс уровня 0..7."
+  },
+  {
+    "ds_offset": 38146,
+    "name": "D_level_part",
+    "type": "u8",
+    "description": "Часть уровня 0..2."
+  },
+  {
+    "ds_offset": 38147,
+    "name": "D_attract_active",
+    "type": "u8",
+    "description": "Маркер заставки; не подменять им состояние главного цикла."
+  },
+  {
+    "ds_offset": 38148,
+    "name": "D_timer_ticks",
+    "type": "u8",
+    "description": "Счётчик INT1Ch; переполнение modulo256."
+  },
+  {
+    "ds_offset": 38149,
+    "name": "D_sound_toggle_state",
+    "type": "u8",
+    "description": "Автомат кнопки звука0/1/2/3."
+  },
+  {
+    "ds_offset": 38150,
+    "name": "D_sound_enabled",
+    "type": "u8",
+    "description": "Разрешение звуков/музыки."
+  },
+  {
+    "ds_offset": 38151,
+    "name": "D_last_spawn_row",
+    "type": "u16",
+    "description": "Последняя обработанная строка перед камерой."
+  },
+  {
+    "ds_offset": 38153,
+    "name": "D_dispatch_mode_snapshot",
+    "type": "u8",
+    "description": "Режим на входе в проход update_entities."
+  },
+  {
+    "ds_offset": 38154,
+    "name": "D_surface_resume_x",
+    "type": "u16",
+    "description": "X для создания игрока после смены режима."
+  },
+  {
+    "ds_offset": 38156,
+    "name": "D_surface_resume_y",
+    "type": "u16",
+    "description": "Y камеры при выходе из туннеля."
+  },
+  {
+    "ds_offset": 38158,
+    "name": "D_map_reload_pending",
+    "type": "u8",
+    "description": "Запрос rebuild после перехода между частями."
+  },
+  {
+    "ds_offset": 38159,
+    "name": "D_fuel_distance_accumulator",
+    "type": "u16",
+    "description": "Разные пороги расхода в surface/tunnel режимах."
+  },
+  {
+    "ds_offset": 38161,
+    "name": "D_ammo_use_accumulator",
+    "type": "u16",
+    "description": "Отложенный расход шкалы стрельбы."
+  },
+  {
+    "ds_offset": 38163,
+    "name": "D_player_respawn_pending",
+    "type": "u8",
+    "description": "Запрос смерти/respawn dispatcher."
+  },
+  {
+    "ds_offset": 38164,
+    "name": "D_player_death_age",
+    "type": "u8",
+    "description": "Таймер handler17."
+  },
+  {
+    "ds_offset": 38165,
+    "name": "D_player_zero_frame_age",
+    "type": "u8",
+    "description": "Срок пребывания в frame0 до смерти."
+  },
+  {
+    "ds_offset": 38166,
+    "name": "D_shot_variation_index",
+    "type": "u8",
+    "description": "Циклическая последовательность16 значений, не RNG."
+  },
+  {
+    "ds_offset": 38167,
+    "name": "D_side_impact_mask",
+    "type": "u8",
+    "description": "Занятые эффекты левого/правого ствола01h/80h."
+  },
+  {
+    "ds_offset": 38168,
+    "name": "D_spawn_projectile_gate",
+    "type": "u8",
+    "description": "Разрешает реальный снаряд вместе с эффектом."
+  },
+  {
+    "ds_offset": 38169,
+    "name": "D_respawn_effect_pending",
+    "type": "u8",
+    "description": "Создать эффект восстановления игрока."
+  },
+  {
+    "ds_offset": 38170,
+    "name": "D_left_device_state",
+    "type": "u8",
+    "description": "Автомат левой кнопки/устройства0..3."
+  },
+  {
+    "ds_offset": 38171,
+    "name": "D_right_device_state",
+    "type": "u8",
+    "description": "Автомат правой кнопки/устройства0..3."
+  },
+  {
+    "ds_offset": 38172,
+    "name": "D_tunnel_flash_state",
+    "type": "u8",
+    "description": "Вспышка:2→1→0."
+  },
+  {
+    "ds_offset": 38173,
+    "name": "D_tunnel_reward_kind",
+    "type": "u8",
+    "description": "40 ammo,80 fuel,C0 shield,F0 переход уровня,прочее score."
+  },
+  {
+    "ds_offset": 38174,
+    "name": "D_tunnel_angular_velocity",
+    "type": "i16",
+    "description": "Инерция угла, clamp[-64,64]."
+  },
+  {
+    "ds_offset": 38176,
+    "name": "D_tunnel_passive_force",
+    "type": "i16",
+    "description": "Пассивная добавка угловой скорости."
+  },
+  {
+    "ds_offset": 38178,
+    "name": "D_tunnel_input_force",
+    "type": "i16",
+    "description": "Добавка от LEFT/RIGHT."
+  },
+  {
+    "ds_offset": 38180,
+    "name": "D_tunnel_exit_spawned",
+    "type": "u8",
+    "description": "Выходной marker уже создан."
+  },
+  {
+    "ds_offset": 38181,
+    "name": "D_tunnel_distance_remaining",
+    "type": "u16",
+    "description": "Дистанция до конца для маркера."
+  },
+  {
+    "ds_offset": 38183,
+    "name": "D_tunnel_last_section",
+    "type": "u8",
+    "description": "Последняя секция потока по distance>>6."
+  },
+  {
+    "ds_offset": 38184,
+    "name": "D_camera_y",
+    "type": "u16",
+    "description": "Кольцевая координата поверхности modulo1024."
+  },
+  {
+    "ds_offset": 38186,
+    "name": "D_scroll_speed",
+    "type": "u16",
+    "description": "Скорость прокрутки/движения."
+  },
+  {
+    "ds_offset": 38188,
+    "name": "D_player_x_velocity",
+    "type": "i16",
+    "description": "Горизонтальная инерция [-24,24] на поверхности."
+  },
+  {
+    "ds_offset": 38190,
+    "name": "D_collectible_0",
+    "type": "u8",
+    "description": "Collected flag0; подряд6 байтов."
+  },
+  {
+    "ds_offset": 38191,
+    "name": "D_collectible_1",
+    "type": "u8",
+    "description": "Collected flag1."
+  },
+  {
+    "ds_offset": 38192,
+    "name": "D_collectible_2",
+    "type": "u8",
+    "description": "Collected flag2."
+  },
+  {
+    "ds_offset": 38193,
+    "name": "D_collectible_3",
+    "type": "u8",
+    "description": "Collected flag3."
+  },
+  {
+    "ds_offset": 38194,
+    "name": "D_collectible_4",
+    "type": "u8",
+    "description": "Collected flag4."
+  },
+  {
+    "ds_offset": 38195,
+    "name": "D_collectible_5",
+    "type": "u8",
+    "description": "Collected flag5."
+  },
+  {
+    "ds_offset": 38196,
+    "name": "D_life_count",
+    "type": "u16",
+    "description": "Жизни0..3 на штатных путях."
+  },
+  {
+    "ds_offset": 38198,
+    "name": "D_side_charge_units",
+    "type": "u16",
+    "description": "Заряды боковых устройств0..6."
+  },
+  {
+    "ds_offset": 38200,
+    "name": "D_side_charge_delta",
+    "type": "i16",
+    "description": "Накопленное изменение зарядов; применяется HUD."
+  },
+  {
+    "ds_offset": 38202,
+    "name": "D_fuel_units",
+    "type": "u16",
+    "description": "Шкала движения0..44; имя fuel — вывод по использованию."
+  },
+  {
+    "ds_offset": 38204,
+    "name": "D_fuel_delta",
+    "type": "i16",
+    "description": "Отложенное изменение топлива; отрицательное значит один decrement."
+  },
+  {
+    "ds_offset": 38206,
+    "name": "D_ammo_units",
+    "type": "u16",
+    "description": "Шкала стрельбы0..48."
+  },
+  {
+    "ds_offset": 38208,
+    "name": "D_ammo_delta",
+    "type": "i16",
+    "description": "Отложенное изменение ammo; отрицательное значит один decrement."
+  },
+  {
+    "ds_offset": 38210,
+    "name": "D_shield_units",
+    "type": "u16",
+    "description": "Шкала урона0..56; имя shield условное."
+  },
+  {
+    "ds_offset": 38212,
+    "name": "D_shield_delta",
+    "type": "i16",
+    "description": "Накопленное изменение прочности."
+  },
+  {
+    "ds_offset": 38214,
+    "name": "D_pending_name_entry",
+    "type": "u8",
+    "description": "Нужно ввести имя для рекорда; выбирает музыку заставки."
+  },
+  {
+    "ds_offset": 38215,
+    "name": "D_tunnel_distance",
+    "type": "u16",
+    "description": "Пройденная дистанция0..896 на штатном пути."
+  },
+  {
+    "ds_offset": 38217,
+    "name": "D_tunnel_min_radius",
+    "type": "u8",
+    "description": "Порог уменьшения колец."
+  },
+  {
+    "ds_offset": 38220,
+    "name": "D_control_bits",
+    "type": "u16",
+    "description": "Маска управления; смысл битов см. constants.inc."
+  },
+  {
+    "ds_offset": 38222,
+    "name": "D_tunnel_ring_phase",
+    "type": "u16",
+    "description": "distance&63 для построения bitmap."
+  },
+  {
+    "ds_offset": 38224,
+    "name": "D_sound_active_id",
+    "type": "u8",
+    "description": "Активный sound ID;0=нет."
+  },
+  {
+    "ds_offset": 38225,
+    "name": "D_sound_pending_id",
+    "type": "u8",
+    "description": "Первый ожидающий эффект."
+  },
+  {
+    "ds_offset": 38226,
+    "name": "D_sound_priority_id",
+    "type": "u8",
+    "description": "Второй ожидающий; хранит максимальный ID из запросов."
+  },
+  {
+    "ds_offset": 38227,
+    "name": "D_sound_modulation_id",
+    "type": "u8",
+    "description": "0=без модуляции; иначе индекс таблицы+1."
+  },
+  {
+    "ds_offset": 38228,
+    "name": "D_sound_modulation_phase",
+    "type": "u8",
+    "description": "Индекс последовательности по &15."
+  },
+  {
+    "ds_offset": 38229,
+    "name": "D_sound_modulation_pointer",
+    "type": "u16",
+    "description": "DS offset16 слов модуляции."
+  },
+  {
+    "ds_offset": 38231,
+    "name": "D_sound_ticks_left",
+    "type": "u8",
+    "description": "Тики до завершения эффекта."
+  },
+  {
+    "ds_offset": 38232,
+    "name": "D_sound_divisor",
+    "type": "u16",
+    "description": "Основной делитель PIT2."
+  },
+  {
+    "ds_offset": 38234,
+    "name": "D_sound_divisor_step",
+    "type": "i16",
+    "description": "Приращение делителя на тик (16-битный wrap)."
+  },
+  {
+    "ds_offset": 38236,
+    "name": "D_sound_output_divisor",
+    "type": "u16",
+    "description": "Сумма основного делителя и модуляции."
+  },
+  {
+    "ds_offset": 38238,
+    "name": "D_music_active",
+    "type": "u8",
+    "description": "Запрещает обычные sound_trigger пока активен."
+  },
+  {
+    "ds_offset": 38239,
+    "name": "D_music_cursor",
+    "type": "u16",
+    "description": "Позиция в потоке команд музыки."
+  },
+  {
+    "ds_offset": 38241,
+    "name": "D_music_tick_divider",
+    "type": "u8",
+    "description": "Шаг последовательности раз в8 IRQ-тиков."
+  },
+  {
+    "ds_offset": 38242,
+    "name": "D_music_sequence_pointer",
+    "type": "u16",
+    "description": "DS offset выбранной последовательности."
+  }
+]

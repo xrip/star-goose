@@ -1,0 +1,169 @@
+{
+  "status": "PASS",
+  "revision": "readable-v2",
+  "byte_exact": {
+    "status": "PASS",
+    "actual_size": 53684,
+    "expected_size": 53684,
+    "actual_sha256": "631ffed20bb29e564b455d9185220d30dc1c35964bd9f7aeb421cad4567c4a0b",
+    "expected_sha256": "631ffed20bb29e564b455d9185220d30dc1c35964bd9f7aeb421cad4567c4a0b",
+    "instructions_checked": 6022,
+    "instruction_encoding_mismatch_count": 0,
+    "instruction_encoding_mismatch_examples": [],
+    "mz": {
+      "header_bytes": 512,
+      "declared_file_size": 53684,
+      "cs": 0,
+      "ip": 16,
+      "ss": 3324,
+      "sp": 256,
+      "checksum_field": 57449,
+      "relocations": [
+        {
+          "offset": 17,
+          "segment": 0
+        },
+        {
+          "offset": 1233,
+          "segment": 0
+        },
+        {
+          "offset": 1496,
+          "segment": 0
+        },
+        {
+          "offset": 2905,
+          "segment": 0
+        }
+      ]
+    },
+    "bundled_assets": {
+      "BIRD1.X": {
+        "size": 32000,
+        "sha256": "7d52a91214dfe7071364b1c0d458844e7ba8053060faa3cfb7c13e8e53ec8449",
+        "match": true
+      },
+      "BIRD2.X": {
+        "size": 32000,
+        "sha256": "c80398ebecaa4c5ff8f249bacab1533025363b6f278e7a9acd8989a3c88025df",
+        "match": true
+      },
+      "BLOX.X": {
+        "size": 32000,
+        "sha256": "8b297518801abf6f4ea20ede8d4ff8251282758c4e93c6261d5891388a96ff0e",
+        "match": true
+      },
+      "HISCORES": {
+        "size": 140,
+        "sha256": "fbe0fedd08703b736f0a87a6ec3c56ad1307d7600363cd85cf0d55f13d6a7e17",
+        "match": true
+      },
+      "INTRO.X": {
+        "size": 32000,
+        "sha256": "db50391261b437806cb3755fd5e3006679cf3dd0df1e83f2f1a2130c1d35bc62",
+        "match": true
+      },
+      "NEWBIRD.X": {
+        "size": 32000,
+        "sha256": "c1f7338db77e51eada16399f229a953087a5cc6e897f1d3616e5d619038b033d",
+        "match": true
+      },
+      "PODZ1.X": {
+        "size": 32000,
+        "sha256": "87a9bf83b6f8f01085c0925b09e97e88784001a1a405961f32f1434ba2454a5c",
+        "match": true
+      }
+    },
+    "direct_comparison": {
+      "reference_name": "goose.zip",
+      "reference_size": 53684,
+      "reference_sha256": "631ffed20bb29e564b455d9185220d30dc1c35964bd9f7aeb421cad4567c4a0b",
+      "differing_bytes": 0,
+      "equal": true
+    },
+    "problems": [],
+    "toolchain": {
+      "assembler": "GNU assembler (GNU Binutils for Debian) 2.44",
+      "objcopy": "GNU objcopy (GNU Binutils for Debian) 2.44"
+    },
+    "source_files_sha256": {
+      "src/GOOSE.asm": "7f033e175fb603e70c6ec4c4593fdd6c691c44b543759b160d9a65305627e6d7",
+      "src/code/01_boot_and_attract.asm": "a2c8f96d78dfffc9ed8d84c21272aa74afebaa3daba6d508713d632c05a1c6d7",
+      "src/code/02_controls.asm": "b339367ef876a60db62382deed6a9f182a745ab4d422cbdde1c519534112c45b",
+      "src/code/03_dos_interrupts.asm": "fa28b5b646dd51d56255271681a7a8eaa2a99343939d8b82c24df23bf58752ff",
+      "src/code/04_resource_io.asm": "656eaf9fa21d68052ea34754ca4cec300e9598e7f321f8fa776f96cb222498fe",
+      "src/code/05_world_map.asm": "d33a4d5c87a1e944c084b7956392ca06115162a973042c21d335e0d43acd190a",
+      "src/code/06_entity_pool.asm": "f6076c99a1e7b60eafd053d77dfdeb85f13ed0ee4c82a190705e5fdf3d457c15",
+      "src/code/07_sprite_blitter.asm": "3892e06b5a11799d09323f5820b2b5265f4955355783c968c4d381ccc6926ef1",
+      "src/code/08_game_lifecycle.asm": "bc0d5c3bd09587a4e94de2873aec2052f2e24682dc43072fc29e298ad51952c9",
+      "src/code/09_entity_dispatch.asm": "8544e2aa7f8c3c1121bac7d98986979cd6bccd81421de1d7fcec482ee80eff12",
+      "src/code/10_player_surface.asm": "6ebf601fecbfbfbe847417490ced02fdd103855c994a27e906fe24299046e315",
+      "src/code/11_entity_behaviors.asm": "47aa5f89aa8d75fb46060c05e6e29375fb7e921097cd3c1dd586416164d70078",
+      "src/code/12_player_world_state.asm": "f4ec9adac879f9bf8ae7fc001a0d812731f4f89f0940f2e51fd9bab92af2188c",
+      "src/code/13_weapons_and_frames.asm": "385ace5ff44c233b316ce430d9feca18aad54f7539fd4cdbd4a143651b04f4c2",
+      "src/code/14_hud.asm": "83c125981e6fc19a82417c381c1bd1f4e77bc2848abf02fd337aa78cdb3feaf1",
+      "src/code/15_score.asm": "189134e563eb2fade47a24de74b12b46c954d8cd5ae0b347e9ef030425360e0e",
+      "src/code/16_highscores.asm": "f56a07319f0b7e5f21ec1f686eff56732876744c3186bb87d035b97259eb7bd0",
+      "src/code/17_ui_primitives.asm": "32274294a1c3057b7695080ceca9fad33ce0ca016837e71897981243bc739491",
+      "src/code/18_tunnel_gameplay.asm": "05bf812bb1bf61c1efd34d8c754bd83260473c1403781db5bdcb1db1c421dd8c",
+      "src/code/19_ega_video.asm": "c32695e92c123eb397819e55ea41eba96a21fbf134efe7efe3a3b73d85814430",
+      "src/code/20_tunnel_renderer.asm": "32295e3fb686a1fe1f70b3a3132674398f0d6671fb488d8b635abcddc0b4f5e1",
+      "src/code/21_audio.asm": "257800f4de7d58414e0bf0d8512d52d5610e9828051af2a254756cf831399157",
+      "src/data/00_mz_header.inc": "762a3659b36ecc83ba0c0f18e8163682278e8dd8cf61ecad885d192e94901030",
+      "src/data/01_strings_templates_tables.inc": "2f2e918b1666eb678771773e62fa09d40015b1364890c016bd74d3f938e93d9f",
+      "src/data/02_embedded_unclassified.inc": "409b106874e6f7e711be5782d4135283ee6eb8df010be00b2e3f961ec7b81286",
+      "src/data/03_levels.inc": "31ea07d8208ea6358b7a39b6f061f45d83f8d963aac59050e9172040ed0f4581",
+      "src/data/04_sound_tables.inc": "4b023e974ca228d1576df9a3390a48802f4bbaa869898b261d538178f013a9f9",
+      "src/data/05_runtime_state.inc": "f89c50a55a5074833051fc2477fb826b894b18cd55127f4afad8f2b3c1aa62e7",
+      "src/include/constants.inc": "8f1f28f0f00f2a5f787446c1edf3dcab002bad7feacdf01d77f5989398205227",
+      "src/include/data_macros.inc": "ddb0757f4f5a28b474847f5c94b12ab224c580128ca02e24d55af77bb9a16887",
+      "src/include/encoding.inc": "a9aa83be13d01f3c225a96c53d4bf20b5f0d04ce1fc246897d1611e6e4983985",
+      "src/include/entity.inc": "ea646dd28dcea04a576e7322a638457bbf854b0ada91f65fda8247fcd297d076",
+      "src/include/globals.inc": "fde51d8e0b7633a76d55770553c0f1ed6c2cc6ca636787556312c731c4565d10"
+    }
+  },
+  "structure": {
+    "status": "PASS",
+    "binary_sha256": "631ffed20bb29e564b455d9185220d30dc1c35964bd9f7aeb421cad4567c4a0b",
+    "binary_size": 53684,
+    "instruction_source_links_checked": 6022,
+    "entry_contracts_checked": 204,
+    "handler_entries_checked": 35,
+    "level_parts_checked": 24,
+    "rle_tokens_roundtripped": 9029,
+    "placements_roundtripped": 496,
+    "flat_build_in_isolated_directory": "PASS",
+    "object_relocations": "There are no relocations in this file.",
+    "scope": "structural/source-map/byte identity tests; no whole-game execution"
+  },
+  "c_helper_contracts": {
+    "status": "PASS",
+    "scope": "C helper/data contract tests; NOT original x86 execution or whole-game equivalence",
+    "compiler": "cc (Debian 14.2.0-19) 14.2.0",
+    "counts": {
+      "entity_roundtrips": 4135,
+      "frame_applications": 279,
+      "pool_contract_scenarios": 3,
+      "sar_cases": 524288,
+      "surface_dx_cases": 65536,
+      "tunnel_force_cases": 256,
+      "invalid_buffer_checks": 2
+    }
+  },
+  "negative_control": {
+    "status": "PASS",
+    "injected_byte_offset": 528,
+    "verification_result": "FAIL",
+    "instruction_mismatches": 1
+  },
+  "limitations": [
+    "No complete DOS execution or visual verification.",
+    "C models are limited contract tests, not execution of original x86 routines.",
+    "Not all data/state semantics are resolved."
+  ],
+  "clean_archive_rebuild": {
+    "status": "PASS",
+    "stdout": "PASS: GOOSE.EXE (53684 bytes)\nSHA256: 631ffed20bb29e564b455d9185220d30dc1c35964bd9f7aeb421cad4567c4a0b\nInstruction encodings: 6022 checked, 0 mismatches\nDirect reference comparison: 0 differing bytes\nReport: /tmp/goose-delivery-y_l8ri7p/goose-readable/build/verification.json\n",
+    "cached_build_directory_removed": true
+  }
+}

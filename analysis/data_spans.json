@@ -1,0 +1,1582 @@
+[
+  {
+    "ds_start": 265,
+    "ds_end": 288,
+    "description": "Entity template: attract"
+  },
+  {
+    "ds_start": 288,
+    "ds_end": 481,
+    "description": "FrameSet 0120: 24 frames, SoA layout"
+  },
+  {
+    "ds_start": 532,
+    "ds_end": 580,
+    "description": "Таблица D_level_tile_streams"
+  },
+  {
+    "ds_start": 580,
+    "ds_end": 628,
+    "description": "Таблица D_level_object_streams"
+  },
+  {
+    "ds_start": 628,
+    "ds_end": 651,
+    "description": "Entity template: map_tile"
+  },
+  {
+    "ds_start": 651,
+    "ds_end": 693,
+    "description": "Таблица D_map_entity_templates"
+  },
+  {
+    "ds_start": 693,
+    "ds_end": 714,
+    "description": "Код/урон препятствия; 0 означает отсутствие столкновения."
+  },
+  {
+    "ds_start": 714,
+    "ds_end": 756,
+    "description": "Таблица D_map_collision_halfwidth"
+  },
+  {
+    "ds_start": 756,
+    "ds_end": 798,
+    "description": "Таблица D_map_collision_rightmost_x"
+  },
+  {
+    "ds_start": 798,
+    "ds_end": 814,
+    "description": "Таблица D_entity_replacement_templates"
+  },
+  {
+    "ds_start": 814,
+    "ds_end": 826,
+    "description": "Таблица D_collectible_sprite_offsets"
+  },
+  {
+    "ds_start": 826,
+    "ds_end": 849,
+    "description": "Entity template: map_kind_00"
+  },
+  {
+    "ds_start": 849,
+    "ds_end": 872,
+    "description": "Entity template: map_kind_01"
+  },
+  {
+    "ds_start": 872,
+    "ds_end": 895,
+    "description": "Entity template: map_kind_02"
+  },
+  {
+    "ds_start": 895,
+    "ds_end": 918,
+    "description": "Entity template: map_kind_03"
+  },
+  {
+    "ds_start": 918,
+    "ds_end": 941,
+    "description": "Entity template: map_kind_04"
+  },
+  {
+    "ds_start": 941,
+    "ds_end": 964,
+    "description": "Entity template: map_kind_05"
+  },
+  {
+    "ds_start": 964,
+    "ds_end": 987,
+    "description": "Entity template: map_kind_06"
+  },
+  {
+    "ds_start": 987,
+    "ds_end": 1010,
+    "description": "Entity template: map_kind_10"
+  },
+  {
+    "ds_start": 1010,
+    "ds_end": 1033,
+    "description": "Entity template: map_kind_08"
+  },
+  {
+    "ds_start": 1033,
+    "ds_end": 1056,
+    "description": "Entity template: map_kind_09"
+  },
+  {
+    "ds_start": 1056,
+    "ds_end": 1079,
+    "description": "Entity template: map_kind_07"
+  },
+  {
+    "ds_start": 1079,
+    "ds_end": 1102,
+    "description": "Entity template: map_kind_11"
+  },
+  {
+    "ds_start": 1102,
+    "ds_end": 1125,
+    "description": "Entity template: map_kind_12"
+  },
+  {
+    "ds_start": 1125,
+    "ds_end": 1148,
+    "description": "Entity template: map_kind_14"
+  },
+  {
+    "ds_start": 1148,
+    "ds_end": 1171,
+    "description": "Entity template: map_kind_13"
+  },
+  {
+    "ds_start": 1171,
+    "ds_end": 1194,
+    "description": "Entity template: map_kind_15"
+  },
+  {
+    "ds_start": 1194,
+    "ds_end": 1217,
+    "description": "Entity template: collectible_00"
+  },
+  {
+    "ds_start": 1217,
+    "ds_end": 1240,
+    "description": "Entity template: collectible_03"
+  },
+  {
+    "ds_start": 1240,
+    "ds_end": 1263,
+    "description": "Entity template: collectible_04"
+  },
+  {
+    "ds_start": 1263,
+    "ds_end": 1286,
+    "description": "Entity template: collectible_05"
+  },
+  {
+    "ds_start": 1286,
+    "ds_end": 1309,
+    "description": "Entity template: collectible_06"
+  },
+  {
+    "ds_start": 1309,
+    "ds_end": 1351,
+    "description": "Высота изображения тайла в пикселях."
+  },
+  {
+    "ds_start": 1351,
+    "ds_end": 1393,
+    "description": "Поправка y изображения тайла."
+  },
+  {
+    "ds_start": 1393,
+    "ds_end": 1435,
+    "description": "Перепад высоты от левого к правому краю тайла."
+  },
+  {
+    "ds_start": 1435,
+    "ds_end": 1477,
+    "description": "Вариант frame/surface при очищенном бите80h sample."
+  },
+  {
+    "ds_start": 1477,
+    "ds_end": 1519,
+    "description": "Вариант при установленном бите80h sample."
+  },
+  {
+    "ds_start": 1519,
+    "ds_end": 1603,
+    "description": "Таблица D_tile_sprite_offsets"
+  },
+  {
+    "ds_start": 1603,
+    "ds_end": 1687,
+    "description": "Таблица D_tile_profile_offsets"
+  },
+  {
+    "ds_start": 3287,
+    "ds_end": 3307,
+    "description": "Таблица D_map_column_bits"
+  },
+  {
+    "ds_start": 3332,
+    "ds_end": 3355,
+    "description": "Entity template: tunnel_player"
+  },
+  {
+    "ds_start": 3355,
+    "ds_end": 3378,
+    "description": "Entity template: tunnel_side"
+  },
+  {
+    "ds_start": 3378,
+    "ds_end": 3401,
+    "description": "Entity template: surface_player"
+  },
+  {
+    "ds_start": 3401,
+    "ds_end": 3490,
+    "description": "FrameSet 0D49: 11 frames, SoA layout"
+  },
+  {
+    "ds_start": 3490,
+    "ds_end": 3513,
+    "description": "Entity template: respawn_effect"
+  },
+  {
+    "ds_start": 3523,
+    "ds_end": 3546,
+    "description": "Entity template: side_device"
+  },
+  {
+    "ds_start": 3546,
+    "ds_end": 3627,
+    "description": "FrameSet 0DDA: 10 frames, SoA layout"
+  },
+  {
+    "ds_start": 3627,
+    "ds_end": 3660,
+    "description": "FrameSet 0E2B: 4 frames, SoA layout"
+  },
+  {
+    "ds_start": 3666,
+    "ds_end": 3699,
+    "description": "FrameSet 0E52: 4 frames, SoA layout"
+  },
+  {
+    "ds_start": 3699,
+    "ds_end": 3740,
+    "description": "FrameSet 0E73: 5 frames, SoA layout"
+  },
+  {
+    "ds_start": 3740,
+    "ds_end": 3781,
+    "description": "FrameSet 0E9C: 5 frames, SoA layout"
+  },
+  {
+    "ds_start": 3781,
+    "ds_end": 3822,
+    "description": "FrameSet 0EC5: 5 frames, SoA layout"
+  },
+  {
+    "ds_start": 3822,
+    "ds_end": 3903,
+    "description": "FrameSet 0EEE: 10 frames, SoA layout"
+  },
+  {
+    "ds_start": 3903,
+    "ds_end": 3984,
+    "description": "FrameSet 0F3F: 10 frames, SoA layout"
+  },
+  {
+    "ds_start": 3984,
+    "ds_end": 4065,
+    "description": "FrameSet 0F90: 10 frames, SoA layout"
+  },
+  {
+    "ds_start": 4065,
+    "ds_end": 4071,
+    "description": "Таблица D_mobile_enemy_descriptors"
+  },
+  {
+    "ds_start": 4087,
+    "ds_end": 4110,
+    "description": "Entity template: muzzle_effect"
+  },
+  {
+    "ds_start": 4110,
+    "ds_end": 4143,
+    "description": "FrameSet 100E: 4 frames, SoA layout"
+  },
+  {
+    "ds_start": 4143,
+    "ds_end": 4153,
+    "description": "Таблица D_aimed_effect_descriptors"
+  },
+  {
+    "ds_start": 4153,
+    "ds_end": 4186,
+    "description": "FrameSet 1039: 4 frames, SoA layout"
+  },
+  {
+    "ds_start": 4186,
+    "ds_end": 4219,
+    "description": "FrameSet 105A: 4 frames, SoA layout"
+  },
+  {
+    "ds_start": 4219,
+    "ds_end": 4252,
+    "description": "FrameSet 107B: 4 frames, SoA layout"
+  },
+  {
+    "ds_start": 4252,
+    "ds_end": 4285,
+    "description": "FrameSet 109C: 4 frames, SoA layout"
+  },
+  {
+    "ds_start": 4285,
+    "ds_end": 4318,
+    "description": "FrameSet 10BD: 4 frames, SoA layout"
+  },
+  {
+    "ds_start": 4328,
+    "ds_end": 4351,
+    "description": "Entity template: ground_shot"
+  },
+  {
+    "ds_start": 4351,
+    "ds_end": 4361,
+    "description": "Таблица D_ground_shot_descriptors"
+  },
+  {
+    "ds_start": 4361,
+    "ds_end": 4442,
+    "description": "FrameSet 1109: 10 frames, SoA layout"
+  },
+  {
+    "ds_start": 4442,
+    "ds_end": 4523,
+    "description": "FrameSet 115A: 10 frames, SoA layout"
+  },
+  {
+    "ds_start": 4523,
+    "ds_end": 4604,
+    "description": "FrameSet 11AB: 10 frames, SoA layout"
+  },
+  {
+    "ds_start": 4604,
+    "ds_end": 4685,
+    "description": "FrameSet 11FC: 10 frames, SoA layout"
+  },
+  {
+    "ds_start": 4685,
+    "ds_end": 4766,
+    "description": "FrameSet 124D: 10 frames, SoA layout"
+  },
+  {
+    "ds_start": 4766,
+    "ds_end": 4789,
+    "description": "Entity template: explosion"
+  },
+  {
+    "ds_start": 4789,
+    "ds_end": 4830,
+    "description": "FrameSet 12B5: 5 frames, SoA layout"
+  },
+  {
+    "ds_start": 4830,
+    "ds_end": 4853,
+    "description": "Entity template: arc_effect"
+  },
+  {
+    "ds_start": 4853,
+    "ds_end": 4902,
+    "description": "FrameSet 12F5: 6 frames, SoA layout"
+  },
+  {
+    "ds_start": 4902,
+    "ds_end": 4925,
+    "description": "Entity template: side_impact"
+  },
+  {
+    "ds_start": 4925,
+    "ds_end": 4958,
+    "description": "FrameSet 133D: 4 frames, SoA layout"
+  },
+  {
+    "ds_start": 4958,
+    "ds_end": 4981,
+    "description": "Entity template: player_shot"
+  },
+  {
+    "ds_start": 5040,
+    "ds_end": 5063,
+    "description": "Entity template: enemy_shot"
+  },
+  {
+    "ds_start": 5159,
+    "ds_end": 5182,
+    "description": "Entity template: impact"
+  },
+  {
+    "ds_start": 5190,
+    "ds_end": 5213,
+    "description": "Entity template: arc_shot"
+  },
+  {
+    "ds_start": 5524,
+    "ds_end": 5749,
+    "description": "FrameSet 1594: 28 frames, SoA layout"
+  },
+  {
+    "ds_start": 6161,
+    "ds_end": 6290,
+    "description": "FrameSet 1811: 16 frames, SoA layout"
+  },
+  {
+    "ds_start": 6418,
+    "ds_end": 6441,
+    "description": "Entity template: tunnel_exit"
+  },
+  {
+    "ds_start": 6441,
+    "ds_end": 6634,
+    "description": "FrameSet 1929: 24 frames, SoA layout"
+  },
+  {
+    "ds_start": 6834,
+    "ds_end": 6857,
+    "description": "Entity template: tunnel_pickup"
+  },
+  {
+    "ds_start": 6857,
+    "ds_end": 7050,
+    "description": "FrameSet 1AC9: 24 frames, SoA layout"
+  },
+  {
+    "ds_start": 7050,
+    "ds_end": 8154,
+    "description": "Entity pool: 48 records; original initializes every byte to zero."
+  },
+  {
+    "ds_start": 8154,
+    "ds_end": 8156,
+    "description": "Pool sentinel, not a 49th Entity"
+  },
+  {
+    "ds_start": 8156,
+    "ds_end": 8220,
+    "description": "Радиус по младшим6 битам дистанции."
+  },
+  {
+    "ds_start": 8220,
+    "ds_end": 8233,
+    "description": "Дополнительные линии при phase<=12."
+  },
+  {
+    "ds_start": 8233,
+    "ds_end": 8246,
+    "description": "Вторая таблица дополнительных линий."
+  },
+  {
+    "ds_start": 25270,
+    "ds_end": 25669,
+    "description": "Level 1, part 1: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 25669,
+    "ds_end": 26068,
+    "description": "Level 1, part 2: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 26068,
+    "ds_end": 26453,
+    "description": "Level 1, part 3: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 26453,
+    "ds_end": 26508,
+    "description": "Level 1, part 1: placements"
+  },
+  {
+    "ds_start": 26508,
+    "ds_end": 26563,
+    "description": "Level 1, part 2: placements"
+  },
+  {
+    "ds_start": 26563,
+    "ds_end": 26615,
+    "description": "Level 1, part 3: placements"
+  },
+  {
+    "ds_start": 26615,
+    "ds_end": 27007,
+    "description": "Level 2, part 1: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 27007,
+    "ds_end": 27451,
+    "description": "Level 2, part 2: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 27451,
+    "ds_end": 27820,
+    "description": "Level 2, part 3: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 27820,
+    "ds_end": 27881,
+    "description": "Level 2, part 1: placements"
+  },
+  {
+    "ds_start": 27881,
+    "ds_end": 27945,
+    "description": "Level 2, part 2: placements"
+  },
+  {
+    "ds_start": 27945,
+    "ds_end": 27997,
+    "description": "Level 2, part 3: placements"
+  },
+  {
+    "ds_start": 27997,
+    "ds_end": 28375,
+    "description": "Level 3, part 1: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 28375,
+    "ds_end": 28755,
+    "description": "Level 3, part 2: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 28755,
+    "ds_end": 29148,
+    "description": "Level 3, part 3: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 29148,
+    "ds_end": 29224,
+    "description": "Level 3, part 1: placements"
+  },
+  {
+    "ds_start": 29224,
+    "ds_end": 29279,
+    "description": "Level 3, part 2: placements"
+  },
+  {
+    "ds_start": 29279,
+    "ds_end": 29331,
+    "description": "Level 3, part 3: placements"
+  },
+  {
+    "ds_start": 29331,
+    "ds_end": 29718,
+    "description": "Level 4, part 1: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 29718,
+    "ds_end": 30120,
+    "description": "Level 4, part 2: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 30120,
+    "ds_end": 30520,
+    "description": "Level 4, part 3: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 30520,
+    "ds_end": 30593,
+    "description": "Level 4, part 1: placements"
+  },
+  {
+    "ds_start": 30593,
+    "ds_end": 30648,
+    "description": "Level 4, part 2: placements"
+  },
+  {
+    "ds_start": 30648,
+    "ds_end": 30715,
+    "description": "Level 4, part 3: placements"
+  },
+  {
+    "ds_start": 30716,
+    "ds_end": 31122,
+    "description": "Level 5, part 1: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 31122,
+    "ds_end": 31470,
+    "description": "Level 5, part 2: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 31470,
+    "ds_end": 31878,
+    "description": "Level 5, part 3: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 31878,
+    "ds_end": 31927,
+    "description": "Level 5, part 1: placements"
+  },
+  {
+    "ds_start": 31927,
+    "ds_end": 31982,
+    "description": "Level 5, part 2: placements"
+  },
+  {
+    "ds_start": 31982,
+    "ds_end": 32046,
+    "description": "Level 5, part 3: placements"
+  },
+  {
+    "ds_start": 32046,
+    "ds_end": 32382,
+    "description": "Level 6, part 1: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 32382,
+    "ds_end": 32700,
+    "description": "Level 6, part 2: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 32700,
+    "ds_end": 33032,
+    "description": "Level 6, part 3: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 33032,
+    "ds_end": 33114,
+    "description": "Level 6, part 1: placements"
+  },
+  {
+    "ds_start": 33114,
+    "ds_end": 33163,
+    "description": "Level 6, part 2: placements"
+  },
+  {
+    "ds_start": 33163,
+    "ds_end": 33251,
+    "description": "Level 6, part 3: placements"
+  },
+  {
+    "ds_start": 33251,
+    "ds_end": 33581,
+    "description": "Level 7, part 1: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 33581,
+    "ds_end": 33849,
+    "description": "Level 7, part 2: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 33849,
+    "ds_end": 34198,
+    "description": "Level 7, part 3: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 34198,
+    "ds_end": 34265,
+    "description": "Level 7, part 1: placements"
+  },
+  {
+    "ds_start": 34265,
+    "ds_end": 34320,
+    "description": "Level 7, part 2: placements"
+  },
+  {
+    "ds_start": 34320,
+    "ds_end": 34393,
+    "description": "Level 7, part 3: placements"
+  },
+  {
+    "ds_start": 34393,
+    "ds_end": 34807,
+    "description": "Level 8, part 1: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 34807,
+    "ds_end": 35245,
+    "description": "Level 8, part 2: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 35245,
+    "ds_end": 35599,
+    "description": "Level 8, part 3: RLE tokens, 12 columns x64 stored rows"
+  },
+  {
+    "ds_start": 35599,
+    "ds_end": 35675,
+    "description": "Level 8, part 1: placements"
+  },
+  {
+    "ds_start": 35675,
+    "ds_end": 35748,
+    "description": "Level 8, part 2: placements"
+  },
+  {
+    "ds_start": 35748,
+    "ds_end": 35812,
+    "description": "Level 8, part 3: placements"
+  },
+  {
+    "ds_start": 35812,
+    "ds_end": 35842,
+    "description": "Таблица D_sound_descriptor_pointers"
+  },
+  {
+    "ds_start": 35842,
+    "ds_end": 35848,
+    "description": "Sound descriptor 1"
+  },
+  {
+    "ds_start": 35848,
+    "ds_end": 35854,
+    "description": "Sound descriptor 2"
+  },
+  {
+    "ds_start": 35854,
+    "ds_end": 35860,
+    "description": "Sound descriptor 3"
+  },
+  {
+    "ds_start": 35860,
+    "ds_end": 35866,
+    "description": "Sound descriptor 4"
+  },
+  {
+    "ds_start": 35866,
+    "ds_end": 35872,
+    "description": "Sound descriptor 5"
+  },
+  {
+    "ds_start": 35872,
+    "ds_end": 35878,
+    "description": "Sound descriptor 6"
+  },
+  {
+    "ds_start": 35878,
+    "ds_end": 35884,
+    "description": "Sound descriptor 7"
+  },
+  {
+    "ds_start": 35884,
+    "ds_end": 35890,
+    "description": "Sound descriptor 8"
+  },
+  {
+    "ds_start": 35890,
+    "ds_end": 35896,
+    "description": "Sound descriptor 9"
+  },
+  {
+    "ds_start": 35896,
+    "ds_end": 35902,
+    "description": "Sound descriptor 10"
+  },
+  {
+    "ds_start": 35902,
+    "ds_end": 35908,
+    "description": "Sound descriptor 11"
+  },
+  {
+    "ds_start": 35908,
+    "ds_end": 35914,
+    "description": "Sound descriptor 12"
+  },
+  {
+    "ds_start": 35914,
+    "ds_end": 35920,
+    "description": "Sound descriptor 13"
+  },
+  {
+    "ds_start": 35920,
+    "ds_end": 35926,
+    "description": "Sound descriptor 14"
+  },
+  {
+    "ds_start": 35926,
+    "ds_end": 35932,
+    "description": "Sound descriptor 15"
+  },
+  {
+    "ds_start": 35932,
+    "ds_end": 35940,
+    "description": "Таблица D_sound_modulation_pointers"
+  },
+  {
+    "ds_start": 35940,
+    "ds_end": 35972,
+    "description": "Sound modulation 1: 16 words"
+  },
+  {
+    "ds_start": 35972,
+    "ds_end": 36004,
+    "description": "Sound modulation 2: 16 words"
+  },
+  {
+    "ds_start": 36004,
+    "ds_end": 36036,
+    "description": "Sound modulation 3: 16 words"
+  },
+  {
+    "ds_start": 36036,
+    "ds_end": 36068,
+    "description": "Sound modulation 4: 16 words"
+  },
+  {
+    "ds_start": 36068,
+    "ds_end": 36172,
+    "description": "Таблица D_note_divisors"
+  },
+  {
+    "ds_start": 36478,
+    "ds_end": 36480,
+    "description": "D_attract_script_pointer — DS offset сценария заставки."
+  },
+  {
+    "ds_start": 36480,
+    "ds_end": 36482,
+    "description": "D_attract_step_counter — Счётчик кадров сценария; команда каждую8-ю итерацию."
+  },
+  {
+    "ds_start": 36482,
+    "ds_end": 36484,
+    "description": "D_old_keyboard_segment — Сегмент старого INT09h."
+  },
+  {
+    "ds_start": 36484,
+    "ds_end": 36486,
+    "description": "D_old_keyboard_offset — Offset старого INT09h."
+  },
+  {
+    "ds_start": 36486,
+    "ds_end": 36488,
+    "description": "D_old_timer_segment — Сегмент старого INT1Ch."
+  },
+  {
+    "ds_start": 36488,
+    "ds_end": 36490,
+    "description": "D_old_timer_offset — Offset старого INT1Ch."
+  },
+  {
+    "ds_start": 36618,
+    "ds_end": 36619,
+    "description": "D_mouse_present — Признак установленного драйвера мыши."
+  },
+  {
+    "ds_start": 36619,
+    "ds_end": 36621,
+    "description": "D_last_key_pointer — DS offset последней клавиши при вводе имени."
+  },
+  {
+    "ds_start": 36621,
+    "ds_end": 36623,
+    "description": "D_key_left — Настроенный scan-code; фактически используется младший байт."
+  },
+  {
+    "ds_start": 36623,
+    "ds_end": 36625,
+    "description": "D_key_right — Настроенный scan-code; фактически используется младший байт."
+  },
+  {
+    "ds_start": 36625,
+    "ds_end": 36627,
+    "description": "D_key_up — Настроенный scan-code; фактически используется младший байт."
+  },
+  {
+    "ds_start": 36627,
+    "ds_end": 36629,
+    "description": "D_key_down — Настроенный scan-code; фактически используется младший байт."
+  },
+  {
+    "ds_start": 36629,
+    "ds_end": 36631,
+    "description": "D_key_fire — Настроенный scan-code; фактически используется младший байт."
+  },
+  {
+    "ds_start": 36631,
+    "ds_end": 36633,
+    "description": "D_key_action_n — Настроенный scan-code; фактически используется младший байт."
+  },
+  {
+    "ds_start": 36633,
+    "ds_end": 36635,
+    "description": "D_key_action_m — Настроенный scan-code; фактически используется младший байт."
+  },
+  {
+    "ds_start": 36635,
+    "ds_end": 36637,
+    "description": "D_key_quit — Настроенный scan-code; фактически используется младший байт."
+  },
+  {
+    "ds_start": 36638,
+    "ds_end": 36640,
+    "description": "D_file_handle — DOS file handle."
+  },
+  {
+    "ds_start": 36640,
+    "ds_end": 36642,
+    "description": "D_file_destination_segment — Временный сегмент назначения DOS read."
+  },
+  {
+    "ds_start": 36642,
+    "ds_end": 36643,
+    "description": "D_map_running_height — Накопленная высота вдоль текущей строки тайлов."
+  },
+  {
+    "ds_start": 36643,
+    "ds_end": 36645,
+    "description": "D_map_row_y — Текущая y-строка карты при prerender."
+  },
+  {
+    "ds_start": 36645,
+    "ds_end": 36647,
+    "description": "D_map_tile_cursor — DS offset следующего декодированного тайла."
+  },
+  {
+    "ds_start": 37929,
+    "ds_end": 37930,
+    "description": "D_collision_damage_tmp — Временный результат query_player_map_collision."
+  },
+  {
+    "ds_start": 37932,
+    "ds_end": 37934,
+    "description": "D_collision_column_tmp — Текущий столбец поиска препятствия."
+  },
+  {
+    "ds_start": 37934,
+    "ds_end": 37936,
+    "description": "D_sprite_dest_segment — EGA segment для следующего blit."
+  },
+  {
+    "ds_start": 37936,
+    "ds_end": 37938,
+    "description": "D_sprite_clip_enabled — 1 для игрового экрана, 0 для prerender карты."
+  },
+  {
+    "ds_start": 37938,
+    "ds_end": 37939,
+    "description": "D_player_forced_stop — Запрос отдельного состояния игрока после выхода из туннеля."
+  },
+  {
+    "ds_start": 37939,
+    "ds_end": 37941,
+    "description": "D_player_history_x0 — Новейшая из4 сохранённых координат x."
+  },
+  {
+    "ds_start": 37941,
+    "ds_end": 37943,
+    "description": "D_player_history_x1 — История x, задержка1."
+  },
+  {
+    "ds_start": 37943,
+    "ds_end": 37945,
+    "description": "D_player_history_x2 — История x, задержка2."
+  },
+  {
+    "ds_start": 37945,
+    "ds_end": 37947,
+    "description": "D_player_history_x3 — История x, задержка3."
+  },
+  {
+    "ds_start": 37947,
+    "ds_end": 37949,
+    "description": "D_player_history_y0 — Новейшая y."
+  },
+  {
+    "ds_start": 37949,
+    "ds_end": 37951,
+    "description": "D_player_history_y1 — История y1."
+  },
+  {
+    "ds_start": 37951,
+    "ds_end": 37953,
+    "description": "D_player_history_y2 — История y2."
+  },
+  {
+    "ds_start": 37953,
+    "ds_end": 37955,
+    "description": "D_player_history_y3 — История y3."
+  },
+  {
+    "ds_start": 37955,
+    "ds_end": 37956,
+    "description": "D_player_history_frame0 — Новейший frame."
+  },
+  {
+    "ds_start": 37956,
+    "ds_end": 37957,
+    "description": "D_player_history_frame1 — История frame1."
+  },
+  {
+    "ds_start": 37957,
+    "ds_end": 37958,
+    "description": "D_player_history_frame2 — История frame2."
+  },
+  {
+    "ds_start": 37958,
+    "ds_end": 37959,
+    "description": "D_player_history_frame3 — История frame3."
+  },
+  {
+    "ds_start": 37959,
+    "ds_end": 37960,
+    "description": "D_player_history_z0 — Новейшая высота."
+  },
+  {
+    "ds_start": 37960,
+    "ds_end": 37961,
+    "description": "D_player_history_z1 — История z1."
+  },
+  {
+    "ds_start": 37961,
+    "ds_end": 37962,
+    "description": "D_player_history_z2 — История z2."
+  },
+  {
+    "ds_start": 37962,
+    "ds_end": 37963,
+    "description": "D_player_history_z3 — История z3."
+  },
+  {
+    "ds_start": 37964,
+    "ds_end": 37965,
+    "description": "D_hud_frame_counter — Очки за этап начисляются при (counter&3)==0."
+  },
+  {
+    "ds_start": 37965,
+    "ds_end": 37966,
+    "description": "D_score_leading_zero — Флаг подавления ведущих нулей."
+  },
+  {
+    "ds_start": 37966,
+    "ds_end": 37968,
+    "description": "D_text_draw_offset — Offset в PODZ1 для текста таблицы рекордов."
+  },
+  {
+    "ds_start": 37968,
+    "ds_end": 37969,
+    "description": "D_pending_highscore_rank — Строка редактируемого имени."
+  },
+  {
+    "ds_start": 37969,
+    "ds_end": 37971,
+    "description": "D_pending_name_pointer — DS offset 12-байтового имени."
+  },
+  {
+    "ds_start": 37971,
+    "ds_end": 37973,
+    "description": "D_name_cursor — Позиция0..12 при редактировании имени."
+  },
+  {
+    "ds_start": 38057,
+    "ds_end": 38058,
+    "description": "D_score_digit_100000 — Первая из6 цифр текущего счёта; начало7 результатов."
+  },
+  {
+    "ds_start": 38058,
+    "ds_end": 38059,
+    "description": "D_score_digit_10000 — Десятичная цифра10000."
+  },
+  {
+    "ds_start": 38059,
+    "ds_end": 38060,
+    "description": "D_score_digit_1000 — Десятичная цифра1000."
+  },
+  {
+    "ds_start": 38060,
+    "ds_end": 38061,
+    "description": "D_score_digit_100 — Десятичная цифра100."
+  },
+  {
+    "ds_start": 38061,
+    "ds_end": 38062,
+    "description": "D_score_digit_10 — Десятичная цифра10."
+  },
+  {
+    "ds_start": 38062,
+    "ds_end": 38063,
+    "description": "D_score_digit_1 — Десятичная цифра1."
+  },
+  {
+    "ds_start": 38099,
+    "ds_end": 38100,
+    "description": "D_highscore_sort_scratch0 — Первый из7 scratch индексов сортировки."
+  },
+  {
+    "ds_start": 38100,
+    "ds_end": 38101,
+    "description": "D_highscore_sort_scratch1 — Scratch1."
+  },
+  {
+    "ds_start": 38101,
+    "ds_end": 38102,
+    "description": "D_highscore_sort_scratch2 — Scratch2."
+  },
+  {
+    "ds_start": 38102,
+    "ds_end": 38103,
+    "description": "D_highscore_sort_scratch3 — Scratch3."
+  },
+  {
+    "ds_start": 38103,
+    "ds_end": 38104,
+    "description": "D_highscore_sort_scratch4 — Scratch4."
+  },
+  {
+    "ds_start": 38104,
+    "ds_end": 38105,
+    "description": "D_highscore_sort_scratch5 — Scratch5."
+  },
+  {
+    "ds_start": 38105,
+    "ds_end": 38106,
+    "description": "D_highscore_sort_scratch6 — Scratch6."
+  },
+  {
+    "ds_start": 38106,
+    "ds_end": 38107,
+    "description": "D_highscore_order0 — Первый из7 отсортированных индексов."
+  },
+  {
+    "ds_start": 38107,
+    "ds_end": 38108,
+    "description": "D_highscore_order1 — Order1."
+  },
+  {
+    "ds_start": 38108,
+    "ds_end": 38109,
+    "description": "D_highscore_order2 — Order2."
+  },
+  {
+    "ds_start": 38109,
+    "ds_end": 38110,
+    "description": "D_highscore_order3 — Order3."
+  },
+  {
+    "ds_start": 38110,
+    "ds_end": 38111,
+    "description": "D_highscore_order4 — Order4."
+  },
+  {
+    "ds_start": 38111,
+    "ds_end": 38112,
+    "description": "D_highscore_order5 — Order5."
+  },
+  {
+    "ds_start": 38112,
+    "ds_end": 38113,
+    "description": "D_highscore_order6 — Последний индекс; 0 означает, что текущий результат не вошёл в6 лучших."
+  },
+  {
+    "ds_start": 38114,
+    "ds_end": 38116,
+    "description": "D_tunnel_pattern_pointer — DS offset потока объектов туннеля."
+  },
+  {
+    "ds_start": 38116,
+    "ds_end": 38117,
+    "description": "D_tunnel_pattern_index — Циклический выбор паттерна по &3."
+  },
+  {
+    "ds_start": 38117,
+    "ds_end": 38118,
+    "description": "D_tunnel_angle_history0 — История угла0."
+  },
+  {
+    "ds_start": 38118,
+    "ds_end": 38119,
+    "description": "D_tunnel_angle_history1 — История угла1."
+  },
+  {
+    "ds_start": 38119,
+    "ds_end": 38120,
+    "description": "D_tunnel_angle_history2 — История угла2."
+  },
+  {
+    "ds_start": 38120,
+    "ds_end": 38122,
+    "description": "D_segment_bird1 — Сегмент 32-KiB банка; индекс E_BANK — байтовое смещение в этой таблице."
+  },
+  {
+    "ds_start": 38122,
+    "ds_end": 38124,
+    "description": "D_segment_bird2 — Сегмент 32-KiB банка; индекс E_BANK — байтовое смещение в этой таблице."
+  },
+  {
+    "ds_start": 38124,
+    "ds_end": 38126,
+    "description": "D_segment_blox — Сегмент 32-KiB банка; индекс E_BANK — байтовое смещение в этой таблице."
+  },
+  {
+    "ds_start": 38126,
+    "ds_end": 38128,
+    "description": "D_segment_newbird — Сегмент 32-KiB банка; индекс E_BANK — байтовое смещение в этой таблице."
+  },
+  {
+    "ds_start": 38128,
+    "ds_end": 38130,
+    "description": "D_segment_podz1 — Сегмент 32-KiB банка; индекс E_BANK — байтовое смещение в этой таблице."
+  },
+  {
+    "ds_start": 38130,
+    "ds_end": 38132,
+    "description": "D_segment_intro — Сегмент 32-KiB банка; индекс E_BANK — байтовое смещение в этой таблице."
+  },
+  {
+    "ds_start": 38132,
+    "ds_end": 38134,
+    "description": "D_segment_scratch0 — Сегмент 32-KiB банка; индекс E_BANK — байтовое смещение в этой таблице."
+  },
+  {
+    "ds_start": 38134,
+    "ds_end": 38136,
+    "description": "D_segment_scratch1 — Сегмент 32-KiB банка; индекс E_BANK — байтовое смещение в этой таблице."
+  },
+  {
+    "ds_start": 38136,
+    "ds_end": 38138,
+    "description": "D_video_draw_segment — Сегмент текущей экранной страницы для рисования."
+  },
+  {
+    "ds_start": 38138,
+    "ds_end": 38140,
+    "description": "D_video_display_segment — Сегмент второй видеостраницы."
+  },
+  {
+    "ds_start": 38140,
+    "ds_end": 38142,
+    "description": "D_base_scroll_speed — Базовая скорость; start_game_cycle пишет только младший байт."
+  },
+  {
+    "ds_start": 38142,
+    "ds_end": 38143,
+    "description": "D_stage_counter — Число этапов, влияет на базовую скорость и очки."
+  },
+  {
+    "ds_start": 38143,
+    "ds_end": 38144,
+    "description": "D_tunnel_mode — 0=поверхность,1=туннель."
+  },
+  {
+    "ds_start": 38144,
+    "ds_end": 38145,
+    "description": "D_game_loop_end_flag — Запрос завершить game_loop."
+  },
+  {
+    "ds_start": 38145,
+    "ds_end": 38146,
+    "description": "D_level_index — Индекс уровня 0..7."
+  },
+  {
+    "ds_start": 38146,
+    "ds_end": 38147,
+    "description": "D_level_part — Часть уровня 0..2."
+  },
+  {
+    "ds_start": 38147,
+    "ds_end": 38148,
+    "description": "D_attract_active — Маркер заставки; не подменять им состояние главного цикла."
+  },
+  {
+    "ds_start": 38148,
+    "ds_end": 38149,
+    "description": "D_timer_ticks — Счётчик INT1Ch; переполнение modulo256."
+  },
+  {
+    "ds_start": 38149,
+    "ds_end": 38150,
+    "description": "D_sound_toggle_state — Автомат кнопки звука0/1/2/3."
+  },
+  {
+    "ds_start": 38150,
+    "ds_end": 38151,
+    "description": "D_sound_enabled — Разрешение звуков/музыки."
+  },
+  {
+    "ds_start": 38151,
+    "ds_end": 38153,
+    "description": "D_last_spawn_row — Последняя обработанная строка перед камерой."
+  },
+  {
+    "ds_start": 38153,
+    "ds_end": 38154,
+    "description": "D_dispatch_mode_snapshot — Режим на входе в проход update_entities."
+  },
+  {
+    "ds_start": 38154,
+    "ds_end": 38156,
+    "description": "D_surface_resume_x — X для создания игрока после смены режима."
+  },
+  {
+    "ds_start": 38156,
+    "ds_end": 38158,
+    "description": "D_surface_resume_y — Y камеры при выходе из туннеля."
+  },
+  {
+    "ds_start": 38158,
+    "ds_end": 38159,
+    "description": "D_map_reload_pending — Запрос rebuild после перехода между частями."
+  },
+  {
+    "ds_start": 38159,
+    "ds_end": 38161,
+    "description": "D_fuel_distance_accumulator — Разные пороги расхода в surface/tunnel режимах."
+  },
+  {
+    "ds_start": 38161,
+    "ds_end": 38163,
+    "description": "D_ammo_use_accumulator — Отложенный расход шкалы стрельбы."
+  },
+  {
+    "ds_start": 38163,
+    "ds_end": 38164,
+    "description": "D_player_respawn_pending — Запрос смерти/respawn dispatcher."
+  },
+  {
+    "ds_start": 38164,
+    "ds_end": 38165,
+    "description": "D_player_death_age — Таймер handler17."
+  },
+  {
+    "ds_start": 38165,
+    "ds_end": 38166,
+    "description": "D_player_zero_frame_age — Срок пребывания в frame0 до смерти."
+  },
+  {
+    "ds_start": 38166,
+    "ds_end": 38167,
+    "description": "D_shot_variation_index — Циклическая последовательность16 значений, не RNG."
+  },
+  {
+    "ds_start": 38167,
+    "ds_end": 38168,
+    "description": "D_side_impact_mask — Занятые эффекты левого/правого ствола01h/80h."
+  },
+  {
+    "ds_start": 38168,
+    "ds_end": 38169,
+    "description": "D_spawn_projectile_gate — Разрешает реальный снаряд вместе с эффектом."
+  },
+  {
+    "ds_start": 38169,
+    "ds_end": 38170,
+    "description": "D_respawn_effect_pending — Создать эффект восстановления игрока."
+  },
+  {
+    "ds_start": 38170,
+    "ds_end": 38171,
+    "description": "D_left_device_state — Автомат левой кнопки/устройства0..3."
+  },
+  {
+    "ds_start": 38171,
+    "ds_end": 38172,
+    "description": "D_right_device_state — Автомат правой кнопки/устройства0..3."
+  },
+  {
+    "ds_start": 38172,
+    "ds_end": 38173,
+    "description": "D_tunnel_flash_state — Вспышка:2→1→0."
+  },
+  {
+    "ds_start": 38173,
+    "ds_end": 38174,
+    "description": "D_tunnel_reward_kind — 40 ammo,80 fuel,C0 shield,F0 переход уровня,прочее score."
+  },
+  {
+    "ds_start": 38174,
+    "ds_end": 38176,
+    "description": "D_tunnel_angular_velocity — Инерция угла, clamp[-64,64]."
+  },
+  {
+    "ds_start": 38176,
+    "ds_end": 38178,
+    "description": "D_tunnel_passive_force — Пассивная добавка угловой скорости."
+  },
+  {
+    "ds_start": 38178,
+    "ds_end": 38180,
+    "description": "D_tunnel_input_force — Добавка от LEFT/RIGHT."
+  },
+  {
+    "ds_start": 38180,
+    "ds_end": 38181,
+    "description": "D_tunnel_exit_spawned — Выходной marker уже создан."
+  },
+  {
+    "ds_start": 38181,
+    "ds_end": 38183,
+    "description": "D_tunnel_distance_remaining — Дистанция до конца для маркера."
+  },
+  {
+    "ds_start": 38183,
+    "ds_end": 38184,
+    "description": "D_tunnel_last_section — Последняя секция потока по distance>>6."
+  },
+  {
+    "ds_start": 38184,
+    "ds_end": 38186,
+    "description": "D_camera_y — Кольцевая координата поверхности modulo1024."
+  },
+  {
+    "ds_start": 38186,
+    "ds_end": 38188,
+    "description": "D_scroll_speed — Скорость прокрутки/движения."
+  },
+  {
+    "ds_start": 38188,
+    "ds_end": 38190,
+    "description": "D_player_x_velocity — Горизонтальная инерция [-24,24] на поверхности."
+  },
+  {
+    "ds_start": 38190,
+    "ds_end": 38191,
+    "description": "D_collectible_0 — Collected flag0; подряд6 байтов."
+  },
+  {
+    "ds_start": 38191,
+    "ds_end": 38192,
+    "description": "D_collectible_1 — Collected flag1."
+  },
+  {
+    "ds_start": 38192,
+    "ds_end": 38193,
+    "description": "D_collectible_2 — Collected flag2."
+  },
+  {
+    "ds_start": 38193,
+    "ds_end": 38194,
+    "description": "D_collectible_3 — Collected flag3."
+  },
+  {
+    "ds_start": 38194,
+    "ds_end": 38195,
+    "description": "D_collectible_4 — Collected flag4."
+  },
+  {
+    "ds_start": 38195,
+    "ds_end": 38196,
+    "description": "D_collectible_5 — Collected flag5."
+  },
+  {
+    "ds_start": 38196,
+    "ds_end": 38198,
+    "description": "D_life_count — Жизни0..3 на штатных путях."
+  },
+  {
+    "ds_start": 38198,
+    "ds_end": 38200,
+    "description": "D_side_charge_units — Заряды боковых устройств0..6."
+  },
+  {
+    "ds_start": 38200,
+    "ds_end": 38202,
+    "description": "D_side_charge_delta — Накопленное изменение зарядов; применяется HUD."
+  },
+  {
+    "ds_start": 38202,
+    "ds_end": 38204,
+    "description": "D_fuel_units — Шкала движения0..44; имя fuel — вывод по использованию."
+  },
+  {
+    "ds_start": 38204,
+    "ds_end": 38206,
+    "description": "D_fuel_delta — Отложенное изменение топлива; отрицательное значит один decrement."
+  },
+  {
+    "ds_start": 38206,
+    "ds_end": 38208,
+    "description": "D_ammo_units — Шкала стрельбы0..48."
+  },
+  {
+    "ds_start": 38208,
+    "ds_end": 38210,
+    "description": "D_ammo_delta — Отложенное изменение ammo; отрицательное значит один decrement."
+  },
+  {
+    "ds_start": 38210,
+    "ds_end": 38212,
+    "description": "D_shield_units — Шкала урона0..56; имя shield условное."
+  },
+  {
+    "ds_start": 38212,
+    "ds_end": 38214,
+    "description": "D_shield_delta — Накопленное изменение прочности."
+  },
+  {
+    "ds_start": 38214,
+    "ds_end": 38215,
+    "description": "D_pending_name_entry — Нужно ввести имя для рекорда; выбирает музыку заставки."
+  },
+  {
+    "ds_start": 38215,
+    "ds_end": 38217,
+    "description": "D_tunnel_distance — Пройденная дистанция0..896 на штатном пути."
+  },
+  {
+    "ds_start": 38217,
+    "ds_end": 38218,
+    "description": "D_tunnel_min_radius — Порог уменьшения колец."
+  },
+  {
+    "ds_start": 38220,
+    "ds_end": 38222,
+    "description": "D_control_bits — Маска управления; смысл битов см. constants.inc."
+  },
+  {
+    "ds_start": 38222,
+    "ds_end": 38224,
+    "description": "D_tunnel_ring_phase — distance&63 для построения bitmap."
+  },
+  {
+    "ds_start": 38224,
+    "ds_end": 38225,
+    "description": "D_sound_active_id — Активный sound ID;0=нет."
+  },
+  {
+    "ds_start": 38225,
+    "ds_end": 38226,
+    "description": "D_sound_pending_id — Первый ожидающий эффект."
+  },
+  {
+    "ds_start": 38226,
+    "ds_end": 38227,
+    "description": "D_sound_priority_id — Второй ожидающий; хранит максимальный ID из запросов."
+  },
+  {
+    "ds_start": 38227,
+    "ds_end": 38228,
+    "description": "D_sound_modulation_id — 0=без модуляции; иначе индекс таблицы+1."
+  },
+  {
+    "ds_start": 38228,
+    "ds_end": 38229,
+    "description": "D_sound_modulation_phase — Индекс последовательности по &15."
+  },
+  {
+    "ds_start": 38229,
+    "ds_end": 38231,
+    "description": "D_sound_modulation_pointer — DS offset16 слов модуляции."
+  },
+  {
+    "ds_start": 38231,
+    "ds_end": 38232,
+    "description": "D_sound_ticks_left — Тики до завершения эффекта."
+  },
+  {
+    "ds_start": 38232,
+    "ds_end": 38234,
+    "description": "D_sound_divisor — Основной делитель PIT2."
+  },
+  {
+    "ds_start": 38234,
+    "ds_end": 38236,
+    "description": "D_sound_divisor_step — Приращение делителя на тик (16-битный wrap)."
+  },
+  {
+    "ds_start": 38236,
+    "ds_end": 38238,
+    "description": "D_sound_output_divisor — Сумма основного делителя и модуляции."
+  },
+  {
+    "ds_start": 38238,
+    "ds_end": 38239,
+    "description": "D_music_active — Запрещает обычные sound_trigger пока активен."
+  },
+  {
+    "ds_start": 38239,
+    "ds_end": 38241,
+    "description": "D_music_cursor — Позиция в потоке команд музыки."
+  },
+  {
+    "ds_start": 38241,
+    "ds_end": 38242,
+    "description": "D_music_tick_divider — Шаг последовательности раз в8 IRQ-тиков."
+  },
+  {
+    "ds_start": 38242,
+    "ds_end": 38244,
+    "description": "D_music_sequence_pointer — DS offset выбранной последовательности."
+  }
+]
