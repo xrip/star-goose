@@ -172,12 +172,39 @@ var gooseTouch = (function () {
         // phone was turned or the orientation lock rotated it.
         landscape: function () {
             return new Promise(function (resolve) {
+                var lastW = -1;
+                var lastH = -1;
+                var done = false;
+                function viewSize() {
+                    var view = window.visualViewport;
+                    return {
+                        w: Math.floor(view ? view.width : window.innerWidth),
+                        h: Math.floor(view ? view.height : window.innerHeight)
+                    };
+                }
+                function settled(box) {
+                    if (portraitPhone.matches) return false;
+                    if (phone.matches && box.h > box.w) return false;
+                    return box.w > 0 && box.h > 0;
+                }
                 function check() {
-                    if (portraitPhone.matches) return;
-                    portraitPhone.removeEventListener("change", check);
-                    requestAnimationFrame(function () { resolve(); });
+                    if (done) return;
+                    var box = viewSize();
+                    if (settled(box) && box.w === lastW && box.h === lastH) {
+                        done = true;
+                        portraitPhone.removeEventListener("change", check);
+                        window.removeEventListener("resize", check);
+                        if (screen.orientation) screen.orientation.removeEventListener("change", check);
+                        resolve();
+                        return;
+                    }
+                    lastW = settled(box) ? box.w : -1;
+                    lastH = settled(box) ? box.h : -1;
+                    requestAnimationFrame(check);
                 }
                 portraitPhone.addEventListener("change", check);
+                window.addEventListener("resize", check);
+                if (screen.orientation) screen.orientation.addEventListener("change", check);
                 check();
             });
         }

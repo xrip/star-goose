@@ -1,4 +1,4 @@
-var CACHE = "star-goose-v4";
+var CACHE = "star-goose-v5";
 var FILES = [
   "./",
   "./index.html",

@@ -138,6 +138,36 @@ static unsigned touch_controls(void) {
 #endif
 }
 
+/* Raylib sizes the web canvas once, from window.innerWidth, and a later
+ * orientation lock often never updates that size. The CSS box can also stay
+ * at the 960x600 startup size, so the picture cannot grow. Measure the visible
+ * viewport every frame and integer-scale into its device pixels. */
+static void fit_web_canvas(void) {
+#if defined(__EMSCRIPTEN__)
+    int size[2] = {1, 1};
+    EM_ASM({
+        var view = window.visualViewport;
+        var cssW = view ? view.width : window.innerWidth;
+        var cssH = view ? view.height : window.innerHeight;
+        var dpr = window.devicePixelRatio || 1;
+        if (dpr < 1) dpr = 1;
+        setValue($0, Math.max(1, Math.round(cssW * dpr)), "i32");
+        setValue($0 + 4, Math.max(1, Math.round(cssH * dpr)), "i32");
+    }, size);
+    if (GetScreenWidth() != size[0] || GetScreenHeight() != size[1])
+        SetWindowSize(size[0], size[1]);
+    EM_ASM({
+        var view = window.visualViewport;
+        var cssW = view ? view.width : window.innerWidth;
+        var cssH = view ? view.height : window.innerHeight;
+        var canvas = Module.canvas || document.getElementById("canvas");
+        if (!canvas) return;
+        canvas.style.width = cssW + "px";
+        canvas.style.height = cssH + "px";
+    });
+#endif
+}
+
 static void sample_mouse(void) {
     Vector2 delta = GetMouseDelta();
     /* A finger on an on-screen button also moves the pointer. Do not steer from that. */
@@ -229,6 +259,7 @@ int main(void) {
             hud_control_prompt(REBIND_PROMPT[rebind_step]);
         }
         pictures_finish();
+        fit_web_canvas();
         BeginDrawing();
         ClearBackground(BLACK);
         pictures_present();
