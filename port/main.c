@@ -8,6 +8,13 @@
 #include <stdlib.h>
 
 enum { SCREEN_W = 320, SCREEN_H = 200, SCALE = 3 };
+enum { MOUSE_X_DEAD = 5, MOUSE_Y_DEAD = 10 };
+enum {
+    SCAN_Q = 0x10, SCAN_Y = 0x15, SCAN_LSHIFT = 0x2a, SCAN_N = 0x31, SCAN_M = 0x32,
+    SCAN_RSHIFT = 0x36, SCAN_SPACE = 0x39, SCAN_F1 = 0x3b, SCAN_F2 = 0x3c,
+    SCAN_F3 = 0x3d, SCAN_F4 = 0x3e, SCAN_UP = 0x48, SCAN_LEFT = 0x4b,
+    SCAN_RIGHT = 0x4d, SCAN_DOWN = 0x50
+};
 enum { UI_PLAY, UI_PAUSE, UI_QUIT, UI_REBIND, UI_RELEASE };
 enum { BIND_LEFT, BIND_RIGHT, BIND_UP, BIND_DOWN, BIND_FIRE, BIND_N, BIND_M, BIND_QUIT, BIND_COUNT };
 
@@ -42,7 +49,9 @@ static const int REBIND_SLOT[8] = {
 };
 static const int REBIND_PROMPT[8] = {4, 0, 1, 2, 3, 6, 7, 5};
 
-static int binding[BIND_COUNT] = {0x4b, 0x4d, 0x48, 0x50, 0x39, 0x31, 0x32, 0x10};
+static int binding[BIND_COUNT] = {
+    SCAN_LEFT, SCAN_RIGHT, SCAN_UP, SCAN_DOWN, SCAN_SPACE, SCAN_N, SCAN_M, SCAN_Q
+};
 static int ui_mode;
 static int rebind_step;
 static int sound_gate;
@@ -56,7 +65,8 @@ static int key_down(int scan) {
 static int first_scancode(int skip_fixed) {
     for (int scan = 1; scan < 128; scan++) {
         if (!SCAN_KEY[scan] || !IsKeyDown(SCAN_KEY[scan])) continue;
-        if (skip_fixed && (scan == 0x2a || scan == 0x36 || (scan >= 0x3b && scan <= 0x3e))) continue;
+        if (skip_fixed && (scan == SCAN_LSHIFT || scan == SCAN_RSHIFT ||
+                           (scan >= SCAN_F1 && scan <= SCAN_F4))) continue;
         return scan;
     }
     return 0;
@@ -64,12 +74,12 @@ static int first_scancode(int skip_fixed) {
 
 static void service_keys(void) {
     if (ui_mode == UI_PAUSE) {
-        if (key_down(0x3e)) ui_mode = UI_PLAY;
+        if (key_down(SCAN_F4)) ui_mode = UI_PLAY;
         return;
     }
     if (ui_mode == UI_QUIT) {
-        if (key_down(0x15)) leave_game = 1;
-        else if (key_down(0x31)) ui_mode = UI_RELEASE;
+        if (key_down(SCAN_Y)) leave_game = 1;
+        else if (key_down(SCAN_N)) ui_mode = UI_RELEASE;
         return;
     }
     if (ui_mode == UI_RELEASE) {
@@ -87,16 +97,16 @@ static void service_keys(void) {
         if (rebind_step >= 8) ui_mode = UI_RELEASE;
         return;
     }
-    if (key_down(0x3d)) {
+    if (key_down(SCAN_F3)) {
         ui_mode = UI_PAUSE;
         return;
     }
-    if (key_down(0x3b)) {
+    if (key_down(SCAN_F1)) {
         ui_mode = UI_REBIND;
         rebind_step = 0;
         return;
     }
-    if (key_down(0x3c)) {
+    if (key_down(SCAN_F2)) {
         if (sound_gate == 0) {
             sound_trigger(SOUND_MUTE);
             sound_gate = 1;
@@ -136,10 +146,10 @@ static unsigned read_controls(void) {
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) controls |= CONTROL_FIRE;
     if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) controls |= CONTROL_RIGHT_DEVICE;
     if (controls & direction) return controls;
-    if (mouse_x < -5.0f) controls |= CONTROL_LEFT;
-    else if (mouse_x > 5.0f) controls |= CONTROL_RIGHT;
-    if (mouse_y < -10.0f) controls |= CONTROL_UP;
-    else if (mouse_y > 10.0f) controls |= CONTROL_DOWN;
+    if (mouse_x < -(float)MOUSE_X_DEAD) controls |= CONTROL_LEFT;
+    else if (mouse_x > (float)MOUSE_X_DEAD) controls |= CONTROL_RIGHT;
+    if (mouse_y < -(float)MOUSE_Y_DEAD) controls |= CONTROL_UP;
+    else if (mouse_y > (float)MOUSE_Y_DEAD) controls |= CONTROL_DOWN;
     mouse_x = 0.0f;
     mouse_y = 0.0f;
     return controls;

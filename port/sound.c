@@ -1,7 +1,6 @@
 #include "sound.h"
 #include "raylib.h"
 #include <stdint.h>
-#include <string.h>
 
 enum {
     SAMPLE_RATE = 44100,

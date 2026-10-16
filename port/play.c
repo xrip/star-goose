@@ -615,11 +615,13 @@ static void sprite_name(const Actor *actor, char *name, size_t size) {
     else snprintf(name, size, "%s", actor->sprite);
 }
 
+static int absolute(int value) {
+    return value < 0 ? -value : value;
+}
+
 static int near_player(const Game *game, const Actor *actor, int xlim, int ylim) {
-    int dx = game->flight.x - actor->x;
-    int dy = (int)player_y(game) - (int)actor->y;
-    if (dx < 0) dx = -dx;
-    if (dy < 0) dy = -dy;
+    int dx = absolute(game->flight.x - actor->x);
+    int dy = absolute((int)player_y(game) - (int)actor->y);
     return dx < xlim && dy < ylim;
 }
 
@@ -870,12 +872,9 @@ static void update_enemy_shot(Game *game, Actor *shot) {
         return;
     }
     if (dying) return;
-    int dx = shot->x - game->flight.x;
-    int dy = (int)shot->y - (int)player_y(game);
-    int dz = goose_signed8((unsigned)shot->z) - game->flight.z;
-    if (dx < 0) dx = -dx;
-    if (dy < 0) dy = -dy;
-    if (dz < 0) dz = -dz;
+    int dx = absolute(shot->x - game->flight.x);
+    int dy = absolute((int)shot->y - (int)player_y(game));
+    int dz = absolute(goose_signed8((unsigned)shot->z) - game->flight.z);
     if (dx < PLAYER_HIT_X && dy < ENEMY_HIT_Y && dz < HIT_Z) {
         hurt(game, TOUCH_HURT);
         sound_trigger(SOUND_SHIELD_TAP);
@@ -900,18 +899,15 @@ static void update_mobile(Game *game, Actor *actor) {
     for (int i = 0; i < ACTORS; i++) {
         Actor *shot = &actors[i];
         if (shot == actor || (shot->flags & GOOSE_PROJECTILE) == 0) continue;
-        int dx = shot->x - actor->x;
-        int dy = (int)shot->y - (int)actor->y;
-        if (dx < 0) dx = -dx;
-        if (dy < 0) dy = -dy;
+        int dx = absolute(shot->x - actor->x);
+        int dy = absolute((int)shot->y - (int)actor->y);
         if (dx >= HIT_X || dy >= HIT_Y) continue;
         if (shot->handler == HANDLER_PLAYER_SHOT) {
             actor->state[2] = HP_MARK;
             shot->flags = 0;
             continue;
         }
-        int dz = goose_signed8((unsigned)shot->z) - goose_signed8((unsigned)actor->z);
-        if (dz < 0) dz = -dz;
+        int dz = absolute(goose_signed8((unsigned)shot->z) - goose_signed8((unsigned)actor->z));
         if (dz >= HIT_Z) continue;
         actor->state[2]--;
         become_impact(shot);
@@ -926,8 +922,7 @@ static void update_mobile(Game *game, Actor *actor) {
         return;
     }
     if (!dying) {
-        int dx = game->flight.x - actor->x;
-        if (dx < 0) dx = -dx;
+        int dx = absolute(game->flight.x - actor->x);
         if (player_y(game) > actor->y && dx < MOBILE_AIM_X) {
             uint8_t next = (uint8_t)(actor->state[3] - 1u);
             if (next & HP_DEPLETED) {
@@ -1108,10 +1103,8 @@ static void update_ground_enemy_shot(Game *game, Actor *shot) {
     shot->z = (int8_t)(ground.height + LOB_Z);
     shot->frame = ground.frame < SHIP_FIRE_FRAME + 1 ? ground.frame : 0;
     if (!game->flight.alive) return;
-    int dx = shot->x - game->flight.x;
-    if (dx < 0) dx = -dx;
-    int dy = wrapped_delta(shot->y, player_y(game)) - LOB_Z;
-    if (dy < 0) dy = -dy;
+    int dx = absolute(shot->x - game->flight.x);
+    int dy = absolute(wrapped_delta(shot->y, player_y(game)) - LOB_Z);
     if (dx >= GROUND_HIT || dy >= GROUND_HIT) return;
     sound_trigger(SOUND_HEAVY_HIT);
     hurt(game, HEAVY_HURT);
@@ -1149,12 +1142,9 @@ static void update_arcing(Game *game, Actor *shot) {
     }
     shot->z = (int8_t)((uint8_t)shot->z + (uint8_t)ARC_DZ[shot->state[3]]);
     if (!game->flight.alive) return;
-    int dx = shot->x - game->flight.x;
-    int dy = wrapped_delta(shot->y, player_y(game));
-    int dz = goose_signed8((unsigned)shot->z) - game->flight.z;
-    if (dx < 0) dx = -dx;
-    if (dy < 0) dy = -dy;
-    if (dz < 0) dz = -dz;
+    int dx = absolute(shot->x - game->flight.x);
+    int dy = absolute(wrapped_delta(shot->y, player_y(game)));
+    int dz = absolute(goose_signed8((unsigned)shot->z) - game->flight.z);
     if (dx >= ARC_HIT_X || dy >= ARC_HIT_Y || dz >= HIT_Z) return;
     hurt(game, ARC_HURT);
     sound_trigger(SOUND_HEAVY_HIT);
@@ -1169,10 +1159,8 @@ static void nudge_x(Game *game, int dx) {
 }
 
 static void update_gate(Game *game, Actor *actor, int entrance_b) {
-    int dx = game->flight.x - actor->x - GATE_INSET;
-    if (dx < 0) dx = -dx;
-    int dy = (int)player_y(game) - (int)actor->y;
-    if (dy < 0) dy = -dy;
+    int dx = absolute(game->flight.x - actor->x - GATE_INSET);
+    int dy = absolute((int)player_y(game) - (int)actor->y);
     int open = actor->frame >> 1;
     if (dx + dy <= GATE_REACH) {
         if (open != ENTRANCE_FULL) actor->frame++;
@@ -1211,10 +1199,8 @@ static void update_exit(Game *game, Actor *actor) {
         if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
         return;
     }
-    int dx = game->flight.x - actor->x - GATE_INSET;
-    if (dx < 0) dx = -dx;
-    int dy = (int)player_y(game) - PULL_LIMIT - (int)actor->y;
-    if (dy < 0) dy = -dy;
+    int dx = absolute(game->flight.x - actor->x - GATE_INSET);
+    int dy = absolute((int)player_y(game) - PULL_LIMIT - (int)actor->y);
     int open = actor->frame >> 1;
     if (dx + dy <= GATE_REACH) {
         if (open != GATE_OPEN) actor->frame++;
@@ -1484,8 +1470,7 @@ static int strike_map(Game *game, Actor *shot, unsigned row) {
         break;
     }
     if (!target) return 0;
-    int dz = goose_signed8((unsigned)target->z) - goose_signed8((unsigned)shot->z);
-    if (dz < 0) dz = -dz;
+    int dz = absolute(goose_signed8((unsigned)target->z) - goose_signed8((unsigned)shot->z));
     if (dz >= HIT_Z) return 0;
     target->state[2]--;
     if (target->state[2] & HP_DEPLETED) {
@@ -1516,20 +1501,23 @@ static void collide_player_map(Game *game) {
     if (game->flight.shield <= 0) game->flight.alive = 0;
 }
 
+static void step_frames(Game *game, Actor *actor, unsigned limit) {
+    actor->state[3]++;
+    unsigned frame = (actor->state[3] >> 2) & 7u;
+    if (frame >= limit) actor->flags = 0;
+    else {
+        actor->frame = (uint8_t)frame;
+        if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
+    }
+}
+
 static void update_actor(Game *game, Actor *actor) {
     if (actor->flags == 0) return;
     if (actor->handler == HANDLER_PLAYER_SHOT) update_shot(game, actor);
     else if (actor->handler == HANDLER_IMPACT) update_impact(game, actor);
     else if (actor->handler == HANDLER_SIDE_IMPACT) update_side_impact(actor);
-    else if (actor->handler == HANDLER_EXPLOSION) {
-        actor->state[3]++;
-        unsigned frame = (actor->state[3] >> 2) & 7u;
-        if (frame >= EXPLOSION_FRAMES) actor->flags = 0;
-        else {
-            actor->frame = (uint8_t)frame;
-            if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
-        }
-    } else if (actor->handler == HANDLER_SIDE_FOLLOW) update_side_follow(game, actor);
+    else if (actor->handler == HANDLER_EXPLOSION) step_frames(game, actor, EXPLOSION_FRAMES);
+    else if (actor->handler == HANDLER_SIDE_FOLLOW) update_side_follow(game, actor);
     else if (actor->handler == HANDLER_SIDE_GROUND) update_ground_shot(game, actor);
     else if (actor->handler == HANDLER_ENEMY_SHOT) update_enemy_shot(game, actor);
     else if (actor->handler == HANDLER_COUNTDOWN) {
@@ -1554,15 +1542,7 @@ static void update_actor(Game *game, Actor *actor) {
     else if (actor->handler == HANDLER_REFILL) update_refill(game, actor);
     else if (actor->handler == HANDLER_GROUND_ENEMY) update_ground_enemy_shot(game, actor);
     else if (actor->handler == HANDLER_ARC) update_arcing(game, actor);
-    else if (actor->handler == HANDLER_ARC_BURST) {
-        actor->state[3]++;
-        unsigned frame = (actor->state[3] >> 2) & 7u;
-        if (frame >= BURST_FRAMES) actor->flags = 0;
-        else {
-            actor->frame = (uint8_t)frame;
-            if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
-        }
-    }
+    else if (actor->handler == HANDLER_ARC_BURST) step_frames(game, actor, BURST_FRAMES);
     else if (actor->handler == HANDLER_MOBILE) update_mobile(game, actor);
     else if (actor->handler == HANDLER_GATE_A) update_gate(game, actor, 0);
     else if (actor->handler == HANDLER_GATE_B) update_gate(game, actor, 1);
@@ -1840,6 +1820,12 @@ static void enter_tunnel(Game *game) {
     tunnel_pending = 0;
 }
 
+static void reset_collectibles(void) {
+    memset(collected, 0, sizeof collected);
+    memset(consumed, 0, sizeof consumed);
+    memset(available_masks, 0xff, sizeof available_masks);
+}
+
 static void leave_tunnel(Game *game) {
     sound_trigger(SOUND_TUNNEL);
     game->mode = MODE_SURFACE;
@@ -1856,9 +1842,7 @@ static void leave_tunnel(Game *game) {
         else if (stage_counter >= STAGE_QUICK) base = SCROLL_STAGE3;
         level_index++;
         if (level_index > LEVELS - 1) level_index = 1;
-        memset(collected, 0, sizeof collected);
-        memset(consumed, 0, sizeof consumed);
-        memset(available_masks, 0xff, sizeof available_masks);
+        reset_collectibles();
         game->flight.base_scroll_speed = base;
         game->flight.scroll_speed = base;
         game->flight.camera_y = START_CAMERA;
@@ -1955,9 +1939,7 @@ static void begin_level(Game *game) {
     tunnel_pattern_index = 0;
     reload_pending = 0;
     pending_object = -1;
-    memset(collected, 0, sizeof collected);
-    memset(consumed, 0, sizeof consumed);
-    memset(available_masks, 0xff, sizeof available_masks);
+    reset_collectibles();
     game->flight.base_scroll_speed = BASE_SCROLL;
     resume_y = 0;
     place_map(game, game->flight.camera_y);

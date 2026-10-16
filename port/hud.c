@@ -1,6 +1,5 @@
 #include "hud.h"
 #include "pictures.h"
-#include "surface.h"
 
 enum {
     EGA_STRIDE = 40,
