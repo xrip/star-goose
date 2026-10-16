@@ -37,7 +37,7 @@ jobs:
           mkdir -p site
           cp build/web/goose.html site/index.html
           cp build/web/goose.js build/web/goose.wasm build/web/goose.data site/
-          cp web/manifest.json web/sw.js web/touch_controls.js web/icon-192.png web/icon-512.png web/intro.png site/
+          cp web/manifest.json web/sw.js web/touch_controls.js web/robots.txt web/icon-192.png web/icon-512.png web/intro.png site/
           : > site/.nojekyll
 
       - uses: actions/upload-pages-artifact@v3

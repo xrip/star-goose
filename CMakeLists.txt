@@ -41,6 +41,7 @@ if (EMSCRIPTEN)
         "SHELL:-s ASYNCIFY=1"
         "SHELL:-s ALLOW_MEMORY_GROWTH=1"
         "SHELL:-s INITIAL_MEMORY=67108864"
+        "SHELL:-s MINIFY_HTML=0"
         "SHELL:--shell-file ${CMAKE_SOURCE_DIR}/web/shell.html"
         "SHELL:--preload-file ${CMAKE_SOURCE_DIR}/assets@assets")
 endif()
