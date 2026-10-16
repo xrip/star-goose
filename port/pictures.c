@@ -418,39 +418,21 @@ void pictures_fill(int x, int y, int width, int height, int color) {
 }
 
 #if defined(__SWITCH__)
-/* Handheld is 1280x720, a docked TV is 1920x1080. Both are 16:9.
- * The native window has to be this size before raylib creates its EGL surface.
- * raylib itself still records 1280x720, so the GL view is set again each frame. */
-static int panel_w = 1280;
-static int panel_h = 720;
-
-static void switch_panel(int *width, int *height) {
-    AppletOperationMode mode = appletGetOperationMode();
-    *width = (mode == AppletOperationMode_Console) ? 1920 : 1280;
-    *height = (mode == AppletOperationMode_Console) ? 1080 : 720;
-}
+/* Switch Lite is 1280x720. 320x200 at 3x is 960x600, drawn at (160, 60):
+ * 60 black rows above and below, 160 black columns on each side.
+ * libnx already opens the window at this size; the viewport is set to match
+ * so the 960x600 picture is measured on the panel, not inside a smaller box. */
+enum { PANEL_W = 1280, PANEL_H = 720 };
 
 void pictures_switch_window(void) {
-    int width;
-    int height;
-    switch_panel(&width, &height);
-    nwindowSetDimensions(nwindowGetDefault(), (u32)width, (u32)height);
-    panel_w = width;
-    panel_h = height;
+    nwindowSetDimensions(nwindowGetDefault(), PANEL_W, PANEL_H);
 }
 
 void pictures_prepare_screen(void) {
-    int width;
-    int height;
-    switch_panel(&width, &height);
-    if (width != panel_w || height != panel_h)
-        nwindowSetDimensions(nwindowGetDefault(), (u32)width, (u32)height);
-    panel_w = width;
-    panel_h = height;
-    rlViewport(0, 0, width, height);
+    rlViewport(0, 0, PANEL_W, PANEL_H);
     rlMatrixMode(RL_PROJECTION);
     rlLoadIdentity();
-    rlOrtho(0, width, height, 0, 0.0f, 1.0f);
+    rlOrtho(0, PANEL_W, PANEL_H, 0, 0.0f, 1.0f);
     rlMatrixMode(RL_MODELVIEW);
     rlLoadIdentity();
 }
@@ -466,17 +448,12 @@ void pictures_present(void) {
     int origin_x = 0;
     int origin_y = 0;
 #if defined(__SWITCH__)
-    /* 16:9 is wider than 320x200, so the whole-pixel scale that covers the
-     * panel crops the top. The gauges sit on the bottom and stay on screen. */
-    int width = panel_w;
-    int height = panel_h;
-    int fit_x = width / SCREEN_W;
-    int fit_y = height / SCREEN_H;
-    scale = fit_x > fit_y ? fit_x : fit_y;
+    int fit_x = PANEL_W / SCREEN_W;
+    int fit_y = PANEL_H / SCREEN_H;
+    scale = fit_x < fit_y ? fit_x : fit_y;
     if (scale < 1) scale = 1;
-    origin_x = (width - SCREEN_W * scale) / 2;
-    origin_y = height - SCREEN_H * scale;
-    if (origin_y > 0) origin_y /= 2;
+    origin_x = (PANEL_W - SCREEN_W * scale) / 2;
+    origin_y = (PANEL_H - SCREEN_H * scale) / 2;
 #elif defined(__EMSCRIPTEN__)
     int fit = 1;
 #else
