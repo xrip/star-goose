@@ -1,5 +1,6 @@
 #include "pictures.h"
 #include "play.h"
+#include "sound.h"
 #include "raylib.h"
 #include "surface.h"
 #include <stdio.h>
@@ -25,6 +26,7 @@ int main(void) {
         CloseWindow();
         return 1;
     }
+    sound_init();
 
     Game game;
     game_boot(&game);
@@ -54,6 +56,7 @@ int main(void) {
                 else game_tick(&game, read_controls());
             }
         }
+        sound_pump();
         game_draw(&game);
         BeginDrawing();
         ClearBackground(BLACK);
@@ -68,6 +71,7 @@ int main(void) {
         if (shot) break;
     }
     pictures_shutdown();
+    sound_shutdown();
     CloseWindow();
     return 0;
 }

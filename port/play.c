@@ -3,6 +3,7 @@
 #include "maps.h"
 #include "hud.h"
 #include "pictures.h"
+#include "sound.h"
 #include "terrain.h"
 #include "tunnel.h"
 #include <stdio.h>
@@ -427,6 +428,7 @@ static void update_shot(Game *game, Actor *shot) {
     TerrainSample ground = terrain_sample(game->flight.tiles, (unsigned)shot->x, shot->y);
     if (ground.height >= shot->z) {
         shot->flags = 0;
+        sound_trigger(6);
         return;
     }
     for (int i = 0; i < ACTORS; i++) {
@@ -441,10 +443,12 @@ static void update_shot(Game *game, Actor *shot) {
         if (dx >= 0x14 || dy >= 0x10 || dz >= 0x10) continue;
         if (target->state[2] == 0) target->state[2] = 0xff;
         else target->state[2]--;
+        sound_trigger(3);
         if (target->state[2] & 0x80) {
             consume_actor(target);
             target->flags = 0;
             score_add(game, 0, 1, 5, 0);
+            sound_trigger(7);
         } else {
             score_add(game, 0, 0, 1, 0);
         }
@@ -475,6 +479,7 @@ static void update_enemy_shot(Game *game, Actor *shot) {
     TerrainSample ground = terrain_sample(game->flight.tiles, (unsigned)shot->x, shot->y);
     if (ground.height >= shot->z) {
         shot->flags = 0;
+        sound_trigger(6);
         return;
     }
     int dx = shot->x - game->flight.x;
@@ -485,6 +490,7 @@ static void update_enemy_shot(Game *game, Actor *shot) {
     if (dz < 0) dz = -dz;
     if (dx < 0x0c && dy < 8 && dz < 0x10) {
         hurt(game, 1);
+        sound_trigger(4);
         shot->flags = 0;
     }
 }
@@ -502,6 +508,7 @@ static void update_mobile(Game *game, Actor *actor) {
         consume_actor(actor);
         actor->flags = 0;
         score_add(game, 0, 1, 5, 0);
+        sound_trigger(7);
         return;
     }
     if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
@@ -637,6 +644,7 @@ static void update_actor(Game *game, Actor *actor) {
             consume_actor(actor);
             actor->flags = 0;
             score_add(game, 0, 1, 5, 0);
+            sound_trigger(0x0a);
         }
     } else if (cull_after(actor, game->flight.camera_y)) {
         actor->flags = 0;
@@ -644,6 +652,7 @@ static void update_actor(Game *game, Actor *actor) {
 }
 
 static void enter_tunnel(Game *game) {
+    sound_trigger(0x0b);
     if (pending_object >= 0 && pending_part >= 0 && pending_part < 3) {
         consumed[pending_part] |= 1u << pending_object;
     }
@@ -661,6 +670,7 @@ static void enter_tunnel(Game *game) {
 }
 
 static void leave_tunnel(Game *game) {
+    sound_trigger(0x0b);
     game->mode = MODE_SURFACE;
     game->tunnel_distance = 0;
     game->flight.velocity = 0;
@@ -784,6 +794,7 @@ void game_boot(Game *game) {
     memset(score_digits, 0, sizeof score_digits);
     hud_frame = 0;
     side_charges = 6;
+    sound_reset();
     surface_start(&game->flight);
 }
 
@@ -801,6 +812,7 @@ void game_tick(Game *game, unsigned controls) {
         return;
     }
     hud_tick(game);
+    sound_context(side_charges, ship_angle);
     if (game->mode == MODE_TUNNEL) {
         tunnel_tick(game, controls);
         return;
@@ -815,7 +827,9 @@ void game_tick(Game *game, unsigned controls) {
         }
         return;
     }
+    int was_alive = game->flight.alive;
     surface_tick(&game->flight, controls);
+    if (was_alive && !game->flight.alive) sound_trigger(0x0c);
     advance_spawns(game->flight.camera_y);
     if (game->flight.alive && game->flight.frame != 0 && game->ammo > 0 && (controls & CONTROL_FIRE)) {
         fire(game);
