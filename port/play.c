@@ -153,6 +153,8 @@ enum {
     SCORE_ROW_FIRST = 12,
     SCORE_ROW_LAST = 23,
     DEATH_TICKS = 40,
+    FORCE_STOP_LO = 0x28,
+    FORCE_STOP_HI = 0x58,
     GROUND_LIFE = 5,
     EXPLOSION_FRAMES = 5,
     BURST_FRAMES = 6
@@ -263,6 +265,7 @@ static uint32_t consumed[3];
 static const uint8_t *map_tiles;
 static int death_hold;
 static int dying;
+static int forced_stop;
 static int tunnel_pending;
 static unsigned last_spawn_row;
 static uint8_t pending_reward;
@@ -1478,7 +1481,10 @@ static void leave_tunnel(Game *game) {
         game->flight.x = START_X;
         game->flight.fuel_distance = 0;
         reload_pending = 0;
+        forced_stop = 0;
     } else {
+        uint8_t ang = ship_angle & ANGLE_MASK;
+        forced_stop = ang > FORCE_STOP_LO && ang < FORCE_STOP_HI;
         game->flight.camera_y = resume_y & WORLD_MASK;
         game->flight.x = resume_x;
         reload_pending = 0;
@@ -1553,6 +1559,7 @@ static void begin_level(Game *game) {
     variation = 0;
     death_hold = 0;
     dying = 0;
+    forced_stop = 0;
     tunnel_pending = 0;
     level_index = 0;
     level_part = 0;
@@ -1575,6 +1582,7 @@ static void begin_level(Game *game) {
 static void respawn(Game *game) {
     death_hold = 0;
     dying = 0;
+    forced_stop = 0;
     game->flight.alive = 1;
     game->flight.fuel = FUEL_FULL;
     game->flight.shield = SHIELD_FULL;
@@ -1848,6 +1856,12 @@ void game_tick(Game *game, unsigned controls) {
         advance_spawns(game->flight.camera_y);
         update_surface_actors(game);
         death_hold++;
+        return;
+    }
+    if (forced_stop) {
+        if (surface_brake(&game->flight)) begin_surface_death(game);
+        advance_spawns(game->flight.camera_y);
+        update_surface_actors(game);
         return;
     }
     int was_alive = game->flight.alive;

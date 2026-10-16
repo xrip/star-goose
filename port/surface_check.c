@@ -78,10 +78,22 @@ static void check_fuel_and_crash(void) {
     expect(!game.alive, "fourth void tick crashes");
 }
 
+static void check_brake(void) {
+    Surface game;
+    surface_start(&game);
+    for (int i = 0; i < 5; i++) expect(!surface_brake(&game), "brake still has speed");
+    expect(game.alive && game.scroll_speed == 1 && game.frame == BRAKE_FRAME, "brake holds the last frame");
+    expect(game.camera_y == START_CAMERA - 5u, "brake keeps scrolling");
+    expect(surface_brake(&game), "brake crashes when three more would go negative");
+    expect(!game.alive && game.scroll_speed == 1, "crash keeps the last speed");
+    expect(game.camera_y == START_CAMERA - 6u, "crash tick still scrolls");
+}
+
 int main(void) {
     check_start();
     check_motion();
     check_fuel_and_crash();
+    check_brake();
     if (failures) {
         fprintf(stderr, "%d failed\n", failures);
         return 1;

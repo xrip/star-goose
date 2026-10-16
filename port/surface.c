@@ -81,6 +81,18 @@ void surface_coast(Surface *game) {
     surface_apply_fuel(game);
 }
 
+int surface_brake(Surface *game) {
+    int speed = game->scroll_speed - BRAKE_STEP;
+    int crash = speed < 0;
+    if (crash) game->alive = 0;
+    else game->scroll_speed = speed;
+    advance_scroll(game);
+    sync_player(game);
+    game->frame = (uint8_t)BRAKE_FRAME;
+    surface_apply_fuel(game);
+    return crash;
+}
+
 void surface_start(Surface *game) {
     *game = (Surface){0};
     game->tiles = goose_level0_tiles;

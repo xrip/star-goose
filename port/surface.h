@@ -33,7 +33,9 @@ enum {
     PLAYER_AHEAD = 112,
     START_X = 128,
     START_CAMERA = 0x350,
-    VOID_FRAMES = 4
+    VOID_FRAMES = 4,
+    BRAKE_STEP = 3,
+    BRAKE_FRAME = 10
 };
 
 /* Surface flight. Weapons and the tunnel live in the session around this. */
@@ -62,5 +64,9 @@ void surface_update_speed(Surface *game, unsigned controls);
 void surface_apply_fuel(Surface *game);
 /* Handler 17: slow the scroll by one, then keep the camera and the terrain moving. */
 void surface_coast(Surface *game);
+/* Handler 35. Subtract three from the scroll. A negative result starts the crash
+ * and leaves the previous speed in place. The camera still advances, and the
+ * ship is held on its last frame. Returns 1 when the crash starts. */
+int surface_brake(Surface *game);
 
 #endif
