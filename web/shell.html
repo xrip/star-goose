@@ -39,14 +39,78 @@
       color: #fff;
       font: 14px/1 sans-serif;
     }
-    #install { cursor: pointer; }
-    #ios-install { max-width: 16em; }
+    #install { cursor: pointer; z-index: 4; }
+    #ios-install { max-width: 16em; z-index: 4; }
+    #touch { display: none; }
+    @media (pointer: coarse) {
+      #touch { display: block; }
+    }
+    #pad, #weapons {
+      position: fixed;
+      z-index: 3;
+      bottom: max(12px, env(safe-area-inset-bottom));
+      pointer-events: none;
+    }
+    #pad {
+      left: max(12px, env(safe-area-inset-left));
+      display: grid;
+      grid-template-columns: repeat(3, clamp(52px, 16vmin, 76px));
+      grid-template-areas: ". up ." "left . right" ". down .";
+      gap: 6px;
+    }
+    #weapons {
+      right: max(12px, env(safe-area-inset-right));
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+    }
+    #sides { display: flex; flex-direction: column; gap: 6px; }
+    #touch button {
+      pointer-events: auto;
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border: 2px solid #fff;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      font: 700 14px/1 sans-serif;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+    #pad button, #sides button { width: clamp(52px, 16vmin, 76px); height: clamp(52px, 16vmin, 76px); }
+    #touch .up { grid-area: up; }
+    #touch .left { grid-area: left; }
+    #touch .right { grid-area: right; }
+    #touch .down { grid-area: down; }
+    #touch .fire {
+      width: clamp(76px, 22vmin, 112px);
+      height: clamp(76px, 22vmin, 112px);
+      font-size: 16px;
+    }
+    #touch button.held { background: #55ffff; color: #000; }
   </style>
 </head>
 <body>
   <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
   <button id="install" type="button" hidden>Установить</button>
   <p id="ios-install" hidden>В Safari: Поделиться, затем «На экран Домой».</p>
+  <div id="touch">
+    <div id="pad">
+      <button type="button" class="up" data-bit="4" tabindex="-1">↑</button>
+      <button type="button" class="left" data-bit="1" tabindex="-1">←</button>
+      <button type="button" class="right" data-bit="2" tabindex="-1">→</button>
+      <button type="button" class="down" data-bit="8" tabindex="-1">↓</button>
+    </div>
+    <div id="weapons">
+      <div id="sides">
+        <button type="button" data-bit="64" tabindex="-1">ЛЕВ</button>
+        <button type="button" data-bit="32" tabindex="-1">ПРАВ</button>
+      </div>
+      <button type="button" class="fire" data-bit="128" tabindex="-1">ОГОНЬ</button>
+    </div>
+  </div>
   <script>
     var installEvent = null;
     var installButton = document.getElementById("install");
@@ -93,9 +157,51 @@
       });
     }
 
+    var touchHeld = {};
     var Module = {
-      canvas: document.getElementById("canvas")
+      canvas: document.getElementById("canvas"),
+      touchMask: 0
     };
+
+    function refreshTouch() {
+      var mask = 0;
+      for (var id in touchHeld) mask |= touchHeld[id].bit;
+      Module.touchMask = mask;
+    }
+
+    function buttonStillHeld(button) {
+      for (var id in touchHeld) {
+        if (touchHeld[id].button === button) return true;
+      }
+      return false;
+    }
+
+    var touchButtons = document.querySelectorAll("#touch button");
+    for (var i = 0; i < touchButtons.length; i++) {
+      (function (button) {
+        var bit = parseInt(button.getAttribute("data-bit"), 10);
+        button.addEventListener("contextmenu", function (event) { event.preventDefault(); });
+        button.addEventListener("pointerdown", function (event) {
+          if (event.button !== 0) return;
+          event.preventDefault();
+          event.stopPropagation();
+          button.setPointerCapture(event.pointerId);
+          touchHeld[event.pointerId] = { bit: bit, button: button };
+          button.classList.add("held");
+          refreshTouch();
+        });
+        function release(event) {
+          var press = touchHeld[event.pointerId];
+          if (!press) return;
+          delete touchHeld[event.pointerId];
+          if (!buttonStillHeld(press.button)) press.button.classList.remove("held");
+          refreshTouch();
+        }
+        button.addEventListener("pointerup", release);
+        button.addEventListener("pointercancel", release);
+        button.addEventListener("lostpointercapture", release);
+      })(touchButtons[i]);
+    }
   </script>
   {{{ SCRIPT }}}
 </body>

@@ -6,6 +6,9 @@
 #include "surface.h"
 #include <stdio.h>
 #include <stdlib.h>
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+#endif
 
 enum { SCREEN_W = 320, SCREEN_H = 200, SCALE = 3 };
 enum { MOUSE_X_DEAD = 5, MOUSE_Y_DEAD = 10 };
@@ -127,22 +130,37 @@ static void service_keys(void) {
 static float mouse_x;
 static float mouse_y;
 
+static unsigned touch_controls(void) {
+#if defined(__EMSCRIPTEN__)
+    return (unsigned)EM_ASM_INT({ return Module.touchMask | 0; });
+#else
+    return 0;
+#endif
+}
+
 static void sample_mouse(void) {
     Vector2 delta = GetMouseDelta();
+    /* A finger on an on-screen button also moves the pointer. Do not steer from that. */
+    if (touch_controls()) {
+        mouse_x = 0.0f;
+        mouse_y = 0.0f;
+        return;
+    }
     mouse_x += delta.x;
     mouse_y += delta.y;
 }
 
 static unsigned read_controls(void) {
     unsigned controls = 0;
+    unsigned touch = touch_controls();
     unsigned direction = CONTROL_LEFT | CONTROL_RIGHT | CONTROL_UP | CONTROL_DOWN;
-    if (key_down(binding[BIND_LEFT])) controls = CONTROL_LEFT;
-    else if (key_down(binding[BIND_RIGHT])) controls = CONTROL_RIGHT;
-    if (key_down(binding[BIND_UP])) controls |= CONTROL_UP;
-    else if (key_down(binding[BIND_DOWN])) controls |= CONTROL_DOWN;
-    if (key_down(binding[BIND_FIRE])) controls |= CONTROL_FIRE;
-    if (key_down(binding[BIND_N])) controls |= CONTROL_LEFT_DEVICE;
-    if (key_down(binding[BIND_M])) controls |= CONTROL_RIGHT_DEVICE;
+    if (key_down(binding[BIND_LEFT]) || (touch & CONTROL_LEFT)) controls = CONTROL_LEFT;
+    else if (key_down(binding[BIND_RIGHT]) || (touch & CONTROL_RIGHT)) controls = CONTROL_RIGHT;
+    if (key_down(binding[BIND_UP]) || (touch & CONTROL_UP)) controls |= CONTROL_UP;
+    else if (key_down(binding[BIND_DOWN]) || (touch & CONTROL_DOWN)) controls |= CONTROL_DOWN;
+    if (key_down(binding[BIND_FIRE]) || (touch & CONTROL_FIRE)) controls |= CONTROL_FIRE;
+    if (key_down(binding[BIND_N]) || (touch & CONTROL_LEFT_DEVICE)) controls |= CONTROL_LEFT_DEVICE;
+    if (key_down(binding[BIND_M]) || (touch & CONTROL_RIGHT_DEVICE)) controls |= CONTROL_RIGHT_DEVICE;
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) controls |= CONTROL_FIRE;
     if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) controls |= CONTROL_RIGHT_DEVICE;
     if (controls & direction) return controls;
