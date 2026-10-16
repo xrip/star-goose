@@ -579,7 +579,21 @@ static void advance_spawns(unsigned camera) {
     last_spawn_row = row;
 }
 
-static int cull_after(const Actor *actor, unsigned camera) {
+static void sprite_name(const Actor *actor, char *name, size_t size);
+
+static void sync_frame(Actor *actor) {
+    if (!actor->animated) return;
+    char name[24];
+    sprite_name(actor, name, sizeof name);
+    int height = 0;
+    int anchor_y = 0;
+    if (!pictures_metrics(name, &height, &anchor_y)) return;
+    actor->height = (uint8_t)height;
+    actor->anchor_y = (int8_t)anchor_y;
+}
+
+static int cull_after(Actor *actor, unsigned camera) {
+    sync_frame(actor);
     int zsum = signed_byte((unsigned)actor->z + (unsigned)actor->anchor_y);
     int ax = ((int)actor->y - zsum) & WORLD_MASK;
     int bx = (int)((camera + CULL_AHEAD) & WORLD_MASK);
@@ -587,7 +601,8 @@ static int cull_after(const Actor *actor, unsigned camera) {
     return (ax - bx) < CULL_SPAN;
 }
 
-static int cull_before(const Actor *actor, unsigned camera) {
+static int cull_before(Actor *actor, unsigned camera) {
+    sync_frame(actor);
     unsigned mixed = (unsigned)actor->height - (unsigned)(uint8_t)actor->z - (unsigned)(uint8_t)actor->anchor_y;
     int ax = ((int)actor->y + signed_byte(mixed)) & WORLD_MASK;
     int bx = (int)(camera & WORLD_MASK);

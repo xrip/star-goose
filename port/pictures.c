@@ -211,6 +211,14 @@ void pictures_anchor(const char *name, int *anchor_x, int *anchor_y) {
     if (anchor_y) *anchor_y = sprite ? sprite->anchor_y : 0;
 }
 
+int pictures_metrics(const char *name, int *height, int *anchor_y) {
+    const AtlasSprite *sprite = find_sprite(name);
+    if (!sprite) return 0;
+    if (height) *height = sprite->h;
+    if (anchor_y) *anchor_y = sprite->anchor_y;
+    return 1;
+}
+
 void pictures_bank_sprite(int bank, unsigned offset, int width, int height,
                           int anchor_x, int anchor_y,
                           int world_x, int world_y, int z, int camera_y) {
