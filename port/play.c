@@ -36,6 +36,7 @@ enum {
     HANDLER_SIDE_FOLLOW = 24,
     HANDLER_SIDE_GROUND = 25,
     HANDLER_MOBILE = 26,
+    HANDLER_ACCEL = 27,
     HANDLER_LEVEL_EXIT = 28,
     HANDLER_GROUND_ENEMY = 29,
     HANDLER_ARC = 30,
@@ -55,6 +56,7 @@ enum {
     HIT_Y = 16,
     HIT_Z = 16,
     SHOT_HALF_INSET = 14,
+    ACCEL_STEP_MAX = 8,
     PLAYER_HIT_X = 12,
     ENEMY_OFF_LEFT = 4,
     ENEMY_OFF_RIGHT = 252,
@@ -1374,6 +1376,12 @@ static void update_actor(Game *game, Actor *actor) {
             score_add(game, 0, 1, 5, 0);
             sound_trigger(SOUND_COLLECT);
         }
+    } else if (actor->handler == HANDLER_ACCEL) {
+        actor->state[3]++;
+        unsigned step = actor->state[3];
+        if (step > ACCEL_STEP_MAX) step = ACCEL_STEP_MAX;
+        actor->y = (actor->y - step) & WORLD_MASK;
+        if (cull_before(actor, game->flight.camera_y)) actor->flags = 0;
     } else if (cull_after(actor, game->flight.camera_y)) {
         actor->flags = 0;
     }
@@ -1755,6 +1763,23 @@ static void begin_level(Game *game) {
     remember(game);
 }
 
+static void spawn_respawn_effect(const Game *game) {
+    Actor *actor = spawn();
+    if (!actor) return;
+    *actor = (Actor){0};
+    actor->object_index = -1;
+    actor->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    actor->handler = HANDLER_ACCEL;
+    actor->layer = 1;
+    actor->height = 42;
+    actor->anchor_y = 21;
+    actor->x = START_X;
+    actor->y = player_y(game);
+    TerrainSample ground = terrain_sample(game->flight.tiles, (unsigned)actor->x, actor->y);
+    actor->z = (int8_t)ground.height;
+    snprintf(actor->sprite, sizeof actor->sprite, "respawn_effect");
+}
+
 static void respawn(Game *game) {
     death_hold = 0;
     dying = 0;
@@ -1778,6 +1803,7 @@ static void respawn(Game *game) {
     place_map(game, game->flight.camera_y);
     reset_history(game);
     remember(game);
+    spawn_respawn_effect(game);
 }
 
 static void load_scores(void) {
