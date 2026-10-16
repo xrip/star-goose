@@ -22,7 +22,7 @@ FetchContent_Declare(raylib
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(raylib)
 
-add_executable(goose port/main.c port/pictures.c)
+add_executable(goose port/main.c port/pictures.c port/atlas_data.c)
 target_link_libraries(goose PRIVATE goose_surface raylib)
 if (WIN32)
     target_link_libraries(goose PRIVATE winmm gdi32)
