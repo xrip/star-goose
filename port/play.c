@@ -619,6 +619,12 @@ static int absolute(int value) {
     return value < 0 ? -value : value;
 }
 
+static int byte_gap(int a, int b) {
+    unsigned diff = ((unsigned)a - (unsigned)b) & 255u;
+    if (diff & 0x80u) diff = (0u - diff) & 255u;
+    return (int)diff;
+}
+
 static int near_player(const Game *game, const Actor *actor, int xlim, int ylim) {
     int dx = absolute(game->flight.x - actor->x);
     int dy = absolute((int)player_y(game) - (int)actor->y);
@@ -833,8 +839,8 @@ static void update_shot(Game *game, Actor *shot) {
         return;
     }
     shot->y = (shot->y - SHOT_STEP) & WORLD_MASK;
-    if (shot->frame == 1 && (uint8_t)shot->z > SHOT_Z_HIGH) shot->z = (int8_t)((uint8_t)shot->z - SHOT_Z_STEP);
-    if (shot->frame == 2 && (uint8_t)shot->z < SHOT_Z_LOW) shot->z = (int8_t)((uint8_t)shot->z + SHOT_Z_STEP);
+    if (shot->frame == 1 && shot->z > (int8_t)SHOT_Z_HIGH) shot->z = (int8_t)(shot->z - SHOT_Z_STEP);
+    if (shot->frame == 2 && shot->z < SHOT_Z_LOW) shot->z = (int8_t)(shot->z + SHOT_Z_STEP);
     TerrainSample ground = terrain_sample(game->flight.tiles, (unsigned)shot->x, shot->y);
     if (ground.height >= shot->z) {
         become_impact(shot);
@@ -862,10 +868,10 @@ static void update_enemy_shot(Game *game, Actor *shot) {
         shot->flags = 0;
         return;
     }
-    if (shot->frame == 1 && (uint8_t)shot->z < SHOT_Z_LOW)
-        shot->z = (int8_t)((uint8_t)shot->z + ENEMY_Z_STEP);
-    if (shot->frame == 2 && (uint8_t)shot->z > SHOT_Z_HIGH)
-        shot->z = (int8_t)((uint8_t)shot->z - ENEMY_Z_STEP);
+    if (shot->frame == 1 && shot->z < SHOT_Z_LOW)
+        shot->z = (int8_t)(shot->z + ENEMY_Z_STEP);
+    if (shot->frame == 2 && shot->z > (int8_t)SHOT_Z_HIGH)
+        shot->z = (int8_t)(shot->z - ENEMY_Z_STEP);
     TerrainSample ground = terrain_sample(game->flight.tiles, (unsigned)shot->x, shot->y);
     if (ground.height >= shot->z) {
         become_impact(shot);
@@ -874,7 +880,7 @@ static void update_enemy_shot(Game *game, Actor *shot) {
     if (dying) return;
     int dx = absolute(shot->x - game->flight.x);
     int dy = absolute((int)shot->y - (int)player_y(game));
-    int dz = absolute(goose_signed8((unsigned)shot->z) - game->flight.z);
+    int dz = byte_gap(shot->z, game->flight.z);
     if (dx < PLAYER_HIT_X && dy < ENEMY_HIT_Y && dz < HIT_Z) {
         hurt(game, TOUCH_HURT);
         sound_trigger(SOUND_SHIELD_TAP);
@@ -907,7 +913,7 @@ static void update_mobile(Game *game, Actor *actor) {
             shot->flags = 0;
             continue;
         }
-        int dz = absolute(goose_signed8((unsigned)shot->z) - goose_signed8((unsigned)actor->z));
+        int dz = byte_gap(shot->z, actor->z);
         if (dz >= HIT_Z) continue;
         actor->state[2]--;
         become_impact(shot);
@@ -1141,10 +1147,10 @@ static void update_arcing(Game *game, Actor *shot) {
         return;
     }
     shot->z = (int8_t)((uint8_t)shot->z + (uint8_t)ARC_DZ[shot->state[3]]);
-    if (!game->flight.alive) return;
+    if (dying) return;
     int dx = absolute(shot->x - game->flight.x);
     int dy = absolute(wrapped_delta(shot->y, player_y(game)));
-    int dz = absolute(goose_signed8((unsigned)shot->z) - game->flight.z);
+    int dz = byte_gap(shot->z, game->flight.z);
     if (dx >= ARC_HIT_X || dy >= ARC_HIT_Y || dz >= HIT_Z) return;
     hurt(game, ARC_HURT);
     sound_trigger(SOUND_HEAVY_HIT);
@@ -1470,7 +1476,7 @@ static int strike_map(Game *game, Actor *shot, unsigned row) {
         break;
     }
     if (!target) return 0;
-    int dz = absolute(goose_signed8((unsigned)target->z) - goose_signed8((unsigned)shot->z));
+    int dz = byte_gap(target->z, shot->z);
     if (dz >= HIT_Z) return 0;
     target->state[2]--;
     if (target->state[2] & HP_DEPLETED) {
