@@ -686,9 +686,39 @@ static void fire(Game *game) {
     }
 }
 
-static void spawn_enemy_shot(Actor *from, int direction) {
+static void update_enemy_shot(Game *game, Actor *shot);
+
+static const char *AIMED_FLASH[5] = {"fs_105A", "fs_107B", "fs_1039", "fs_109C", "fs_10BD"};
+static const uint8_t AIMED_H[5] = {3, 4, 4, 4, 3};
+
+static void spawn_aimed(Game *game, Actor *from, int fire) {
+    int direction = from->frame;
     if (direction < 0) direction = 0;
     if (direction > 4) direction = 4;
+    variation = (uint8_t)((variation + 1u) & BYTE_MASK);
+    int x = from->x + AIM_DX[direction];
+    unsigned y = (from->y + (unsigned)AIM_DY[direction]) & WORLD_MASK;
+    int z = signed_byte((unsigned)from->z + 4u);
+    int slot = (int)(from - actors);
+    Actor *flash = spawn();
+    if (flash) {
+        *flash = (Actor){0};
+        flash->object_index = -1;
+        flash->flags = GOOSE_RENDER | GOOSE_UPDATE;
+        flash->handler = HANDLER_COUNTDOWN;
+        flash->layer = 5;
+        flash->animated = 1;
+        flash->frame = VARIATION[variation & VARIATION_MASK];
+        flash->x = x;
+        flash->y = y;
+        flash->z = (int8_t)z;
+        snprintf(flash->sprite, sizeof flash->sprite, "%s", AIMED_FLASH[direction]);
+        if ((int)(flash - actors) < slot) {
+            if (flash->frame == 0) flash->flags = 0;
+            else flash->frame--;
+        }
+    }
+    if (!fire) return;
     Actor *shot = spawn();
     if (!shot) return;
     *shot = (Actor){0};
@@ -696,11 +726,12 @@ static void spawn_enemy_shot(Actor *from, int direction) {
     shot->flags = GOOSE_RENDER | GOOSE_UPDATE;
     shot->handler = HANDLER_ENEMY_SHOT;
     shot->param = (uint8_t)direction;
-    shot->x = from->x + AIM_DX[direction];
-    shot->y = (from->y + (unsigned)AIM_DY[direction]) & 1023u;
-    shot->z = (int8_t)signed_byte((unsigned)from->z + 4u);
-    shot->height = 4;
+    shot->height = AIMED_H[direction];
+    shot->x = x;
+    shot->y = y;
+    shot->z = (int8_t)z;
     snprintf(shot->sprite, sizeof shot->sprite, "enemy_shot");
+    if ((int)(shot - actors) < slot) update_enemy_shot(game, shot);
 }
 
 static int aim(Game *game, Actor *actor) {
@@ -726,13 +757,12 @@ static int aim(Game *game, Actor *actor) {
     }
     int dx = (int)((int16_t)((uint16_t)game->flight.x - (uint16_t)actor->x));
     if (dx < 0) {
-        actor->frame = (uint8_t)(dx > -AIM_BAND ? 2 : 0);
+        if (dx > -AIM_BAND) actor->frame = 2;
+        else actor->frame = (uint8_t)(dy > AIM_BAND ? 1 : 0);
     } else if (dx < AIM_BAND) {
         actor->frame = 2;
-    } else if (dx == AIM_BAND) {
-        actor->frame = 4;
     } else {
-        actor->frame = 3;
+        actor->frame = (uint8_t)(dy > AIM_BAND ? 3 : 4);
     }
     return 1;
 }
@@ -1008,15 +1038,11 @@ static void update_emitter(Game *game, Actor *actor, int period, int shot) {
         if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
         return;
     }
-    int8_t timer = (int8_t)actor->state[3];
-    timer = (int8_t)(timer - 1);
-    if (timer < 0) {
-        actor->state[3] = (uint8_t)period;
-        if (shot == HANDLER_ENEMY_SHOT) spawn_enemy_shot(actor, actor->frame);
-        else spawn_lobbed(actor, actor->frame, shot);
-    } else {
-        actor->state[3] = (uint8_t)timer;
-    }
+    int8_t timer = (int8_t)((int8_t)actor->state[3] - 1);
+    int fire = timer < 0;
+    actor->state[3] = fire ? (uint8_t)period : (uint8_t)timer;
+    if (shot == HANDLER_ENEMY_SHOT) spawn_aimed(game, actor, fire);
+    else if (fire) spawn_lobbed(actor, actor->frame, shot);
     if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
 }
 
