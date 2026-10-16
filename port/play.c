@@ -299,6 +299,7 @@ static uint8_t collected[6];
 static uint8_t score_digits[6];
 static int hud_frame;
 static int side_charges;
+static int side_charge_delta;
 static uint8_t left_device;
 static uint8_t right_device;
 static int hist_x[4];
@@ -1095,11 +1096,8 @@ static void update_refill(Game *game, Actor *actor) {
         game->flight.x--;
     }
     if (dy > REFILL_CLOSE) return;
-    if (ax <= REFILL_CORE) {
-        side_charges++;
-        if (side_charges > SIDE_CHARGES_FULL) side_charges = SIDE_CHARGES_FULL;
-        else sound_trigger(SOUND_CHARGE);
-    } else if (ax < REFILL_KILL) {
+    if (ax <= REFILL_CORE) side_charge_delta++;
+    else if (ax < REFILL_KILL) {
         game->flight.shield = 0;
         sound_trigger(SOUND_IMPACT);
     }
@@ -1320,9 +1318,29 @@ static int arm_surface_side(int side) {
     return 1;
 }
 
+static void apply_side_charges(void) {
+    /* CS:228A. Refill and launch only change the delta. The count moves after the entities. */
+    if (side_charge_delta > 0) {
+        for (int i = 0; i < side_charge_delta; i++) {
+            side_charges++;
+            if (side_charges > SIDE_CHARGES_FULL) side_charges = SIDE_CHARGES_FULL;
+            else {
+                sound_context(side_charges, ship_angle);
+                sound_trigger(SOUND_CHARGE);
+            }
+        }
+    } else {
+        for (int i = 0; i > side_charge_delta; i--) {
+            side_charges--;
+            if (side_charges < 0) side_charges = 0;
+        }
+    }
+    side_charge_delta = 0;
+}
+
 static int launch_side(int side) {
-    if (!arm_surface_side(side)) return 0;
-    side_charges--;
+    arm_surface_side(side);
+    side_charge_delta--;
     sound_trigger(SOUND_SIDE_LAUNCH);
     return 1;
 }
@@ -1982,6 +2000,7 @@ static void begin_level(Game *game) {
     level_part = 0;
     stage_counter = 1;
     side_charges = SIDE_CHARGES_FULL;
+    side_charge_delta = 0;
     left_device = 0;
     right_device = 0;
     tunnel_pattern_index = 0;
@@ -2029,6 +2048,7 @@ static void respawn(Game *game) {
     game->flight.frame = 1;
     game->flight.zero_frame_age = 0;
     side_charges = SIDE_CHARGES_FULL;
+    side_charge_delta = 0;
     left_device = 0;
     right_device = 0;
     if (level_part != 0) level_part = 0;
@@ -2236,6 +2256,7 @@ void game_boot(Game *game) {
     memset(score_digits, 0, sizeof score_digits);
     hud_frame = 0;
     side_charges = SIDE_CHARGES_FULL;
+    side_charge_delta = 0;
     sound_reset();
     ensure_scores();
     sound_music_start(pending_name);
@@ -2287,23 +2308,27 @@ void game_tick(Game *game, unsigned controls) {
     sound_context(side_charges, ship_angle);
     if (game->mode == MODE_TUNNEL) {
         tunnel_tick(game, controls);
+        apply_side_charges();
         return;
     }
     if (dying) {
         if (death_hold >= DEATH_TICKS) {
             finish_death(game);
+            apply_side_charges();
             return;
         }
         surface_coast(&game->flight);
         advance_spawns(game->flight.camera_y);
         update_surface_actors(game);
         death_hold++;
+        apply_side_charges();
         return;
     }
     if (forced_stop) {
         if (surface_brake(&game->flight)) begin_surface_death(game);
         advance_spawns(game->flight.camera_y);
         update_surface_actors(game);
+        apply_side_charges();
         return;
     }
     int was_alive = game->flight.alive;
@@ -2314,6 +2339,7 @@ void game_tick(Game *game, unsigned controls) {
     if (dying) {
         advance_spawns(game->flight.camera_y);
         update_surface_actors(game);
+        apply_side_charges();
         return;
     }
     update_devices(game, controls);
@@ -2322,6 +2348,7 @@ void game_tick(Game *game, unsigned controls) {
         fire(game);
     }
     update_surface_actors(game);
+    apply_side_charges();
 }
 
 static void draw_surface_actor(const Actor *actor, int camera) {
