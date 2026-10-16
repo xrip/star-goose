@@ -1,4 +1,4 @@
-var CACHE = "star-goose-v3";
+var CACHE = "star-goose-v4";
 var FILES = [
   "./",
   "./index.html",
@@ -8,7 +8,8 @@ var FILES = [
   "./manifest.json",
   "./touch_controls.js",
   "./icon-192.png",
-  "./icon-512.png"
+  "./icon-512.png",
+  "./og.png"
 ];
 
 self.addEventListener("install", function (event) {
