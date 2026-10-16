@@ -301,6 +301,7 @@ static uint8_t score_digits[6];
 static int hud_frame;
 static int side_charges;
 static int side_charge_delta;
+static int shield_delta;
 static uint8_t left_device;
 static uint8_t right_device;
 static int hist_x[4];
@@ -651,8 +652,9 @@ static int near_player(const Game *game, const Actor *actor, int xlim, int ylim)
 }
 
 static void hurt(Game *game, int amount) {
-    game->flight.shield -= amount;
-    if (game->flight.shield < 0) game->flight.shield = 0;
+    (void)game;
+    /* CS:14DA, CS:153F, CS:16C8, CS:189E. Hits subtract from the delta. */
+    shield_delta -= amount;
 }
 
 static void spawn_shot(Game *game, int x, unsigned y, int z, int frame, int height) {
@@ -1319,8 +1321,26 @@ static int arm_surface_side(int side) {
     return 1;
 }
 
-static void apply_side_charges(void) {
-    /* CS:228A. Refill and launch only change the delta. The count moves after the entities. */
+static void apply_shield_delta(Game *game) {
+    /* CS:2264. Each unit is one decrease_shield or increase_shield call. */
+    int delta = shield_delta;
+    shield_delta = 0;
+    if (delta < 0) {
+        for (int i = 0; i > delta; i--) {
+            if (game->flight.shield <= 0) break;
+            game->flight.shield--;
+        }
+    } else {
+        for (int i = 0; i < delta; i++) {
+            if (game->flight.shield >= SHIELD_FULL) break;
+            game->flight.shield++;
+        }
+    }
+}
+
+static void apply_side_charges(Game *game) {
+    /* CS:2264 then CS:228A. Shield and charges move after the entities. */
+    apply_shield_delta(game);
     if (side_charge_delta > 0) {
         for (int i = 0; i < side_charge_delta; i++) {
             side_charges++;
@@ -1466,7 +1486,8 @@ static void explode_map(const Actor *actor) {
 }
 
 static void apply_map_hit(Game *game, int damage, int column, unsigned row) {
-    hurt(game, damage);
+    /* CS:1C58 assigns the delta. It does not subtract from a hit already stored. */
+    shield_delta = -damage;
     sound_trigger(SOUND_IMPACT);
     int expect_x = COLUMN_SPAN * column - COLUMN_BIAS;
     for (int i = 0; i < ACTORS; i++) {
@@ -1565,7 +1586,6 @@ static void collide_player_map(Game *game) {
     }
     if (damage == 0) return;
     apply_map_hit(game, damage, column, hit_row);
-    if (game->flight.shield <= 0) game->flight.alive = 0;
 }
 
 static void step_frames(Game *game, Actor *actor, unsigned limit) {
@@ -1740,7 +1760,7 @@ static void collect_tunnel_pickup(Game *game, Actor *actor) {
     actor->flags = 0;
     if (game->tunnel_reward == REWARD_AMMO) gain_capped(&game->ammo, PICKUP_AMMO, AMMO_FULL);
     else if (game->tunnel_reward == REWARD_FUEL) gain_capped(&game->flight.fuel, PICKUP_FUEL, FUEL_FULL);
-    else if (game->tunnel_reward == REWARD_SHIELD) gain_capped(&game->flight.shield, PICKUP_SHIELD, SHIELD_FULL);
+    else if (game->tunnel_reward == REWARD_SHIELD) shield_delta += PICKUP_SHIELD;
     else score_add(game, 2, 5, 0, 0);
 }
 
@@ -2002,6 +2022,7 @@ static void begin_level(Game *game) {
     stage_counter = 1;
     side_charges = SIDE_CHARGES_FULL;
     side_charge_delta = 0;
+    shield_delta = 0;
     left_device = 0;
     right_device = 0;
     tunnel_pattern_index = 0;
@@ -2050,6 +2071,7 @@ static void respawn(Game *game) {
     game->flight.zero_frame_age = 0;
     side_charges = SIDE_CHARGES_FULL;
     side_charge_delta = 0;
+    shield_delta = 0;
     left_device = 0;
     right_device = 0;
     if (level_part != 0) level_part = 0;
@@ -2258,6 +2280,7 @@ void game_boot(Game *game) {
     hud_frame = 0;
     side_charges = SIDE_CHARGES_FULL;
     side_charge_delta = 0;
+    shield_delta = 0;
     sound_reset();
     ensure_scores();
     sound_music_start(pending_name);
@@ -2309,27 +2332,27 @@ void game_tick(Game *game, unsigned controls) {
     sound_context(side_charges, ship_angle);
     if (game->mode == MODE_TUNNEL) {
         tunnel_tick(game, controls);
-        apply_side_charges();
+        apply_side_charges(game);
         return;
     }
     if (dying) {
         if (death_hold >= DEATH_TICKS) {
             finish_death(game);
-            apply_side_charges();
+            apply_side_charges(game);
             return;
         }
         surface_coast(&game->flight);
         advance_spawns(game->flight.camera_y);
         update_surface_actors(game);
         death_hold++;
-        apply_side_charges();
+        apply_side_charges(game);
         return;
     }
     if (forced_stop) {
         if (surface_brake(&game->flight)) begin_surface_death(game);
         advance_spawns(game->flight.camera_y);
         update_surface_actors(game);
-        apply_side_charges();
+        apply_side_charges(game);
         return;
     }
     int was_alive = game->flight.alive;
@@ -2340,7 +2363,7 @@ void game_tick(Game *game, unsigned controls) {
     if (dying) {
         advance_spawns(game->flight.camera_y);
         update_surface_actors(game);
-        apply_side_charges();
+        apply_side_charges(game);
         return;
     }
     update_devices(game, controls);
@@ -2349,7 +2372,7 @@ void game_tick(Game *game, unsigned controls) {
         fire(game);
     }
     update_surface_actors(game);
-    apply_side_charges();
+    apply_side_charges(game);
 }
 
 /* DS:0F3F. Kind 12 rolls on the terrain. Its clear color is 13, so the atlas left the pink in. */
