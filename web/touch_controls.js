@@ -138,15 +138,38 @@ var gooseTouch = (function () {
 
     var portraitPhone = matchMedia("(orientation: portrait) and ((pointer: coarse) or (hover: none))");
 
+    var phone = matchMedia("(pointer: coarse), (hover: none)");
+
+    function installed() {
+        return matchMedia("(display-mode: fullscreen)").matches
+            || matchMedia("(display-mode: standalone)").matches
+            || navigator.standalone === true;
+    }
+
+    function lockOrientation() {
+        if (screen.orientation && screen.orientation.lock)
+            return screen.orientation.lock("landscape").catch(function () {});
+        return Promise.resolve();
+    }
+
+    // A browser tab may lock orientation only while it is fullscreen. An
+    // installed PWA may lock immediately. Both calls stay in the user gesture.
     function lockLandscape() {
-        if (screen.orientation && screen.orientation.lock) {
-            screen.orientation.lock("landscape").catch(function () {});
+        if (!phone.matches) return;
+        var root = document.documentElement;
+        var request = root.requestFullscreen || root.webkitRequestFullscreen;
+        if (!installed() && !document.fullscreenElement && request) {
+            var pending = request.call(root);
+            if (pending && pending.then) pending.then(lockOrientation, lockOrientation);
         }
+        lockOrientation();
     }
 
     return {
         lock: lockLandscape,
-        // The game fixes its canvas when it starts, so a phone must be turned first.
+        canLock: !!(screen.orientation && screen.orientation.lock),
+        // The canvas is created after the viewport is landscape, whether the
+        // phone was turned or the orientation lock rotated it.
         landscape: function () {
             return new Promise(function (resolve) {
                 function check() {

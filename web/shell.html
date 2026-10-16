@@ -42,6 +42,8 @@
     #install { cursor: pointer; z-index: 4; }
     #ios-install { max-width: 16em; z-index: 4; }
     #touch, #rotate { display: none; }
+    #rotate { width: 100%; height: 100%; margin: 0; border: 0; background: #000; color: #fff;
+              font: 18px/1.4 sans-serif; }
     body.touch #touch { display: block; }
     #touch { position: fixed; inset: 0; z-index: 3; pointer-events: none; user-select: none;
              -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -80,7 +82,7 @@
   <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
   <button id="install" type="button" hidden>Установить</button>
   <p id="ios-install" hidden>В Safari: Поделиться, затем «На экран Домой».</p>
-  <div id="rotate">Поверните устройство горизонтально.</div>
+  <button id="rotate" type="button">Нажмите, чтобы играть горизонтально</button>
   <script src="touch_controls.js"></script>
   <script>
     var installEvent = null;
@@ -116,8 +118,13 @@
 
     if (!installed() && /iphone|ipad|ipod/i.test(navigator.userAgent)) iosHint.hidden = false;
 
+    var rotate = document.getElementById("rotate");
+    if (!gooseTouch.canLock) rotate.textContent = "Поверните устройство горизонтально";
+    rotate.addEventListener("pointerdown", function (event) {
+        event.preventDefault();
+        gooseTouch.lock();
+    });
     gooseTouch.lock();
-    window.addEventListener("pointerdown", function () { gooseTouch.lock(); }, { once: true });
 
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", function () {
