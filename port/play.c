@@ -528,7 +528,36 @@ static void update_mobile(Game *game, Actor *actor) {
     if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
 }
 
-static void update_emitter(Game *game, Actor *actor, int period) {
+static void spawn_explosion(int x, unsigned y, int z);
+
+static const int8_t ARC_DZ[16] = {
+    0, 6, 5, 4, 3, 2, 1, 0, 0, -1, -2, -3, -4, -5, -7, -9
+};
+static const char *GROUND_SET[5] = {"fs_1109", "fs_115A", "fs_11AB", "fs_11FC", "fs_124D"};
+
+static void spawn_lobbed(Actor *from, int direction, int handler) {
+    if (direction < 0) direction = 0;
+    if (direction > 4) direction = 4;
+    static const int8_t ground_dx[5] = {-12, -4, 0, 4, 12};
+    static const int8_t ground_dy[5] = {6, 7, 7, 7, 6};
+    static const int8_t arc_dx[5] = {-9, -5, 0, 6, 10};
+    static const int8_t arc_dy[5] = {4, 4, 1, 4, 4};
+    int arc = handler == 30;
+    Actor *shot = spawn();
+    if (!shot) return;
+    *shot = (Actor){0};
+    shot->object_index = -1;
+    shot->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    shot->handler = (uint8_t)handler;
+    shot->param = (uint8_t)direction;
+    shot->animated = arc ? 0 : 1;
+    shot->x = from->x + (arc ? arc_dx[direction] : ground_dx[direction]);
+    shot->y = (from->y + (unsigned)(arc ? arc_dy[direction] : ground_dy[direction])) & 1023u;
+    shot->z = (int8_t)signed_byte((unsigned)from->z + 8u);
+    snprintf(shot->sprite, sizeof shot->sprite, "%s", arc ? "arc_shot" : GROUND_SET[direction]);
+}
+
+static void update_emitter(Game *game, Actor *actor, int period, int shot) {
     if (!aim(game, actor)) {
         if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
         return;
@@ -537,11 +566,121 @@ static void update_emitter(Game *game, Actor *actor, int period) {
     timer = (int8_t)(timer - 1);
     if (timer < 0) {
         actor->state[3] = (uint8_t)period;
-        spawn_enemy_shot(actor, actor->frame);
+        if (shot == 20) spawn_enemy_shot(actor, actor->frame);
+        else spawn_lobbed(actor, actor->frame, shot);
     } else {
         actor->state[3] = (uint8_t)timer;
     }
     if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
+}
+
+/* CS:1A9E. The center adds a charge. The ring around it wipes the shield. */
+static void update_refill(Game *game, Actor *actor) {
+    if (cull_after(actor, game->flight.camera_y)) {
+        actor->flags = 0;
+        return;
+    }
+    int dy = (int)(int16_t)((uint16_t)player_y(game) - (uint16_t)actor->y);
+    if (dy < 0) {
+        if (dy < -16) actor->layer = 1;
+        return;
+    }
+    if (dy > 0x20) return;
+    int ax = game->flight.x - actor->x - 12;
+    if (ax < 0) {
+        ax = -ax;
+        if (ax < 0x18) game->flight.x++;
+    } else if (ax != 0 && ax < 0x18) {
+        game->flight.x--;
+    }
+    if (dy > 8) return;
+    if (ax <= 2) {
+        side_charges++;
+        if (side_charges > 6) side_charges = 6;
+        else sound_trigger(8);
+    } else if (ax < 0x24) {
+        game->flight.shield = 0;
+        sound_trigger(6);
+    }
+}
+
+static int wrapped_delta(unsigned a, unsigned b) {
+    return (int)(int16_t)((uint16_t)a - (uint16_t)b);
+}
+
+static void update_ground_enemy_shot(Game *game, Actor *shot) {
+    if (cull_after(shot, game->flight.camera_y)) {
+        shot->flags = 0;
+        return;
+    }
+    if (shot->param == 2) shot->y = (shot->y + 5u) & 1023u;
+    else if (shot->param == 0) shot->x -= 5;
+    else if (shot->param == 1) {
+        shot->x -= 3;
+        shot->y = (shot->y + 2u) & 1023u;
+    } else if (shot->param == 3) {
+        shot->x += 3;
+        shot->y = (shot->y + 2u) & 1023u;
+    } else shot->x += 5;
+    shot->y &= 1023u;
+    if (shot->x < 12 || shot->x > 0xf4) {
+        shot->flags = 0;
+        return;
+    }
+    TerrainSample ground = terrain_sample(game->flight.tiles, (unsigned)shot->x, shot->y);
+    shot->z = (int8_t)(ground.height + 8);
+    shot->frame = ground.frame < 10 ? ground.frame : 0;
+    if (!game->flight.alive) return;
+    int dx = shot->x - game->flight.x;
+    if (dx < 0) dx = -dx;
+    int dy = wrapped_delta(shot->y, player_y(game)) - 8;
+    if (dy < 0) dy = -dy;
+    if (dx >= 0x10 || dy >= 0x10) return;
+    sound_trigger(5);
+    hurt(game, 100);
+    spawn_explosion(shot->x, shot->y, shot->z);
+    shot->flags = 0;
+}
+
+static void update_arcing(Game *game, Actor *shot) {
+    if (cull_after(shot, game->flight.camera_y)) {
+        shot->flags = 0;
+        return;
+    }
+    if (shot->param == 2) shot->y = (shot->y + 3u) & 1023u;
+    else if (shot->param == 0) shot->x -= 4;
+    else if (shot->param == 1) {
+        shot->x -= 4;
+        shot->y = (shot->y + 3u) & 1023u;
+    } else if (shot->param == 3) {
+        shot->x += 4;
+        shot->y = (shot->y + 3u) & 1023u;
+    } else shot->x += 4;
+    shot->y &= 1023u;
+    if (shot->x < 8 || shot->x > 0xf8) {
+        shot->flags = 0;
+        return;
+    }
+    shot->state[3]++;
+    if (shot->state[3] >= 16) {
+        shot->handler = 31;
+        shot->animated = 1;
+        shot->frame = 0;
+        shot->state[3] = 0;
+        snprintf(shot->sprite, sizeof shot->sprite, "fs_12F5");
+        return;
+    }
+    shot->z = (int8_t)((uint8_t)shot->z + (uint8_t)ARC_DZ[shot->state[3]]);
+    if (!game->flight.alive) return;
+    int dx = shot->x - game->flight.x;
+    int dy = wrapped_delta(shot->y, player_y(game));
+    int dz = signed_byte((unsigned)shot->z) - game->flight.z;
+    if (dx < 0) dx = -dx;
+    if (dy < 0) dy = -dy;
+    if (dz < 0) dz = -dz;
+    if (dx >= 0x0e || dy >= 0x0a || dz >= 0x10) return;
+    hurt(game, 10);
+    sound_trigger(5);
 }
 
 static void nudge_x(Game *game, int dx) {
@@ -865,9 +1004,21 @@ static void update_actor(Game *game, Actor *actor) {
         }
         actor->frame = PINGPONG[step];
         if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
-    } else if (actor->handler == 5) update_emitter(game, actor, 8);
-    else if (actor->handler == 6) update_emitter(game, actor, 0x12);
-    else if (actor->handler == 7) update_emitter(game, actor, 0x28);
+    } else if (actor->handler == 5) update_emitter(game, actor, 8, 20);
+    else if (actor->handler == 6) update_emitter(game, actor, 0x12, 30);
+    else if (actor->handler == 7) update_emitter(game, actor, 0x28, 29);
+    else if (actor->handler == 8) update_refill(game, actor);
+    else if (actor->handler == 29) update_ground_enemy_shot(game, actor);
+    else if (actor->handler == 30) update_arcing(game, actor);
+    else if (actor->handler == 31) {
+        actor->state[3]++;
+        unsigned frame = (actor->state[3] >> 2) & 7u;
+        if (frame >= 6) actor->flags = 0;
+        else {
+            actor->frame = (uint8_t)frame;
+            if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
+        }
+    }
     else if (actor->handler == 26) update_mobile(game, actor);
     else if (actor->handler == 10) update_gate(game, actor, 0);
     else if (actor->handler == 11) update_gate(game, actor, 1);
