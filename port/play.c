@@ -31,6 +31,7 @@ enum {
     HANDLER_ENEMY_SHOT = 20,
     HANDLER_IMPACT = 21,
     HANDLER_COUNTDOWN = 22,
+    HANDLER_SIDE_IMPACT = 23,
     HANDLER_SIDE_FOLLOW = 24,
     HANDLER_SIDE_GROUND = 25,
     HANDLER_MOBILE = 26,
@@ -52,6 +53,7 @@ enum {
     HIT_X = 20,
     HIT_Y = 16,
     HIT_Z = 16,
+    SHOT_HALF_INSET = 14,
     PLAYER_HIT_X = 12,
     ENEMY_OFF_LEFT = 4,
     ENEMY_OFF_RIGHT = 252,
@@ -272,6 +274,7 @@ static const uint8_t *map_tiles;
 static int death_hold;
 static int dying;
 static int forced_stop;
+static uint8_t side_impact_mask;
 static int tunnel_pending;
 static unsigned last_spawn_row;
 static uint8_t pending_reward;
@@ -612,6 +615,38 @@ static void become_impact(Actor *shot) {
     shot->animated = 0;
 }
 
+static void become_side_impact(Actor *shot) {
+    int right = (shot->flags & GOOSE_SIDE) != 0;
+    uint8_t bit = right ? 0x80 : 0x01;
+    if (side_impact_mask & bit) {
+        shot->flags = 0;
+        return;
+    }
+    side_impact_mask = (uint8_t)(side_impact_mask | bit);
+    shot->flags = (uint8_t)(GOOSE_RENDER | GOOSE_UPDATE | (right ? GOOSE_SIDE : 0));
+    shot->handler = HANDLER_SIDE_IMPACT;
+    shot->layer = 5;
+    shot->frame = 0;
+    shot->state[3] = 0;
+    shot->animated = 1;
+    shot->height = 15;
+    shot->anchor_y = 7;
+    snprintf(shot->sprite, sizeof shot->sprite, "fs_133D");
+    sound_trigger(SOUND_HULL_HIT);
+}
+
+static void update_side_impact(Actor *actor) {
+    actor->state[3]++;
+    uint8_t frame = (uint8_t)(actor->state[3] & 7u);
+    if (frame >= IMPACT_FRAMES) {
+        if (actor->flags & GOOSE_SIDE) side_impact_mask = (uint8_t)(side_impact_mask & 0x7f);
+        else side_impact_mask = (uint8_t)(side_impact_mask & 0xfe);
+        actor->flags = 0;
+        return;
+    }
+    actor->frame = frame;
+}
+
 static void update_impact(Game *game, Actor *actor) {
     uint8_t shown = actor->frame;
     actor->frame++;
@@ -622,6 +657,8 @@ static void update_impact(Game *game, Actor *actor) {
     actor->state[0] = shown;
     if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
 }
+
+static int strike_map(Game *game, Actor *shot, unsigned row);
 
 static void update_shot(Game *game, Actor *shot) {
     if (cull_before(shot, game->flight.camera_y)) {
@@ -636,6 +673,7 @@ static void update_shot(Game *game, Actor *shot) {
         become_impact(shot);
         return;
     }
+    if (strike_map(game, shot, ground.row)) return;
     for (int i = 0; i < ACTORS; i++) {
         Actor *target = &actors[i];
         if (target == shot || target->flags == 0 || target->handler != HANDLER_MOBILE) continue;
@@ -1153,6 +1191,59 @@ static void apply_map_hit(Game *game, int damage, int column, unsigned row) {
     }
 }
 
+static int query_shot_row(int shot_x, unsigned row, int *column) {
+    unsigned mask = map_row_mask(row);
+    if (mask == 0) return 0;
+    unsigned kind = mask >> 10;
+    if (kind >= DAMAGE_KINDS || MAP_DAMAGE[kind] == 0) return 0;
+    int x = MAP_RIGHT[kind];
+    int half = MAP_HALF[kind] - SHOT_HALF_INSET;
+    int at = 10;
+    for (int i = 0; i < 10; i++) {
+        if (mask & 1u) {
+            if (x - half <= shot_x && shot_x <= x + half) {
+                *column = at;
+                return 1;
+            }
+        }
+        mask >>= 1;
+        x -= COLUMN_SPAN;
+        at--;
+    }
+    return 0;
+}
+
+static int strike_map(Game *game, Actor *shot, unsigned row) {
+    int column = 0;
+    if (!query_shot_row(shot->x, row, &column)) return 0;
+    int expect_x = COLUMN_SPAN * column - COLUMN_BIAS;
+    Actor *target = 0;
+    for (int i = 0; i < ACTORS; i++) {
+        Actor *actor = &actors[i];
+        if (actor->flags == 0 || actor->object_index < 0) continue;
+        if ((actor->y >> 4) != row || actor->x != expect_x) continue;
+        if (actor->flags & GOOSE_SENTINEL) return 0;
+        target = actor;
+        break;
+    }
+    if (!target) return 0;
+    int dz = signed_byte((unsigned)target->z) - signed_byte((unsigned)shot->z);
+    if (dz < 0) dz = -dz;
+    if (dz >= HIT_Z) return 0;
+    target->state[2]--;
+    if (target->state[2] & HP_DEPLETED) {
+        score_add(game, 0, 1, 5, 0);
+        spawn_explosion(target->x, target->y, target->z);
+        consume_actor(target);
+        target->flags = 0;
+        sound_trigger(SOUND_IMPACT);
+    } else {
+        score_add(game, 0, 0, 1, 0);
+    }
+    become_side_impact(shot);
+    return 1;
+}
+
 /* CS:1192 checks this row, then the next row, and a hit is applied before weapons. */
 static void collide_player_map(Game *game) {
     if (!game->flight.alive || game->flight.tiles == 0) return;
@@ -1173,6 +1264,7 @@ static void update_actor(Game *game, Actor *actor) {
     if (actor->flags == 0) return;
     if (actor->handler == HANDLER_PLAYER_SHOT) update_shot(game, actor);
     else if (actor->handler == HANDLER_IMPACT) update_impact(game, actor);
+    else if (actor->handler == HANDLER_SIDE_IMPACT) update_side_impact(actor);
     else if (actor->handler == HANDLER_EXPLOSION) {
         actor->state[3]++;
         unsigned frame = (actor->state[3] >> 2) & 7u;
@@ -1589,6 +1681,7 @@ static void begin_level(Game *game) {
     death_hold = 0;
     dying = 0;
     forced_stop = 0;
+    side_impact_mask = 0;
     tunnel_pending = 0;
     level_index = 0;
     level_part = 0;
@@ -1612,6 +1705,7 @@ static void respawn(Game *game) {
     death_hold = 0;
     dying = 0;
     forced_stop = 0;
+    side_impact_mask = 0;
     game->flight.alive = 1;
     game->flight.fuel = FUEL_FULL;
     game->flight.shield = SHIELD_FULL;
