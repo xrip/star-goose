@@ -114,8 +114,18 @@ static void service_keys(void) {
     if (key_down(binding[BIND_QUIT])) ui_mode = UI_QUIT;
 }
 
+static float mouse_x;
+static float mouse_y;
+
+static void sample_mouse(void) {
+    Vector2 delta = GetMouseDelta();
+    mouse_x += delta.x;
+    mouse_y += delta.y;
+}
+
 static unsigned read_controls(void) {
     unsigned controls = 0;
+    unsigned direction = CONTROL_LEFT | CONTROL_RIGHT | CONTROL_UP | CONTROL_DOWN;
     if (key_down(binding[BIND_LEFT])) controls = CONTROL_LEFT;
     else if (key_down(binding[BIND_RIGHT])) controls = CONTROL_RIGHT;
     if (key_down(binding[BIND_UP])) controls |= CONTROL_UP;
@@ -123,6 +133,15 @@ static unsigned read_controls(void) {
     if (key_down(binding[BIND_FIRE])) controls |= CONTROL_FIRE;
     if (key_down(binding[BIND_N])) controls |= CONTROL_LEFT_DEVICE;
     if (key_down(binding[BIND_M])) controls |= CONTROL_RIGHT_DEVICE;
+    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) controls |= CONTROL_FIRE;
+    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) controls |= CONTROL_RIGHT_DEVICE;
+    if (controls & direction) return controls;
+    if (mouse_x < -5.0f) controls |= CONTROL_LEFT;
+    else if (mouse_x > 5.0f) controls |= CONTROL_RIGHT;
+    if (mouse_y < -10.0f) controls |= CONTROL_UP;
+    else if (mouse_y > 10.0f) controls |= CONTROL_DOWN;
+    mouse_x = 0.0f;
+    mouse_y = 0.0f;
     return controls;
 }
 
@@ -159,6 +178,7 @@ int main(void) {
     while (!WindowShouldClose() && !leave_game) {
         if (!shot) {
             float frame = GetFrameTime();
+            sample_mouse();
             service_keys();
             game_hold_input(ui_mode != UI_PLAY);
             if (ui_mode == UI_PLAY) {
