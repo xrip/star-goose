@@ -62,6 +62,8 @@ enum {
     ENEMY_OFF_RIGHT = 252,
     MOBILE_HIT_X = 26,
     MOBILE_HIT_Y = 18,
+    MOBILE_AIM_X = 32,
+    MOBILE_RELOAD = 7,
     COLLECT_X = 18,
     COLLECT_Y = 16,
     HP_MARK = 0xff,
@@ -261,6 +263,7 @@ extern const uint8_t goose_height_delta[42];
 static Actor actors[ACTORS];
 static unsigned ammo_use;
 static uint8_t variation;
+static int mobile_gate;
 static int angular;
 static unsigned resume_y;
 static int resume_x;
@@ -783,30 +786,6 @@ static void update_shot(Game *game, Actor *shot) {
         return;
     }
     if (strike_map(game, shot, ground.row)) return;
-    for (int i = 0; i < ACTORS; i++) {
-        Actor *target = &actors[i];
-        if (target == shot || target->flags == 0 || target->handler != HANDLER_MOBILE) continue;
-        int dx = shot->x - target->x;
-        int dy = (int)shot->y - (int)target->y;
-        int dz = signed_byte((unsigned)shot->z) - signed_byte((unsigned)target->z);
-        if (dx < 0) dx = -dx;
-        if (dy < 0) dy = -dy;
-        if (dz < 0) dz = -dz;
-        if (dx >= HIT_X || dy >= HIT_Y || dz >= HIT_Z) continue;
-        if (target->state[2] == 0) target->state[2] = HP_MARK;
-        else target->state[2]--;
-        sound_trigger(SOUND_HULL_HIT);
-        if (target->state[2] & HP_DEPLETED) {
-            consume_actor(target);
-            target->flags = 0;
-            score_add(game, 0, 1, 5, 0);
-            sound_trigger(SOUND_KILL);
-        } else {
-            score_add(game, 0, 0, 1, 0);
-        }
-        become_impact(shot);
-        return;
-    }
 }
 
 static void update_enemy_shot(Game *game, Actor *shot) {
@@ -846,26 +825,132 @@ static void update_enemy_shot(Game *game, Actor *shot) {
     }
 }
 
+static void spawn_explosion(int x, unsigned y, int z);
+static void fire_mobile(Game *game, Actor *actor);
+
 static void update_mobile(Game *game, Actor *actor) {
     actor->y = (actor->y + 1u) & WORLD_MASK;
     TerrainSample ground = terrain_sample(game->flight.tiles, (unsigned)actor->x, actor->y);
     actor->z = (int8_t)ground.height;
+    actor->state[1] = (uint8_t)ground.frame;
     if (ground.frame < 10) actor->frame = ground.frame;
-    if (game->flight.frame != 0 && near_player(game, actor, MOBILE_HIT_X, MOBILE_HIT_Y)) {
+    if (!dying && near_player(game, actor, MOBILE_HIT_X, MOBILE_HIT_Y)) {
         hurt(game, MOBILE_HURT);
         actor->state[2] = HP_MARK;
     }
+    for (int i = 0; i < ACTORS; i++) {
+        Actor *shot = &actors[i];
+        if (shot == actor || (shot->flags & GOOSE_PROJECTILE) == 0) continue;
+        int dx = shot->x - actor->x;
+        int dy = (int)shot->y - (int)actor->y;
+        if (dx < 0) dx = -dx;
+        if (dy < 0) dy = -dy;
+        if (dx >= HIT_X || dy >= HIT_Y) continue;
+        if (shot->handler == HANDLER_PLAYER_SHOT) {
+            actor->state[2] = HP_MARK;
+            shot->flags = 0;
+            continue;
+        }
+        int dz = signed_byte((unsigned)shot->z) - signed_byte((unsigned)actor->z);
+        if (dz < 0) dz = -dz;
+        if (dz >= HIT_Z) continue;
+        actor->state[2]--;
+        become_impact(shot);
+        sound_trigger(SOUND_HULL_HIT);
+        score_add(game, 0, 0, 1, 0);
+    }
     if (actor->state[2] & HP_DEPLETED) {
-        consume_actor(actor);
+        sound_trigger(SOUND_KILL);
+        spawn_explosion(actor->x, actor->y, actor->z);
         actor->flags = 0;
         score_add(game, 0, 1, 5, 0);
-        sound_trigger(SOUND_KILL);
         return;
+    }
+    if (!dying) {
+        int dx = game->flight.x - actor->x;
+        if (dx < 0) dx = -dx;
+        if (player_y(game) > actor->y && dx < MOBILE_AIM_X) {
+            uint8_t next = (uint8_t)(actor->state[3] - 1u);
+            if (next & HP_DEPLETED) {
+                actor->state[3] = MOBILE_RELOAD;
+                mobile_gate = 1;
+            } else {
+                actor->state[3] = next;
+                mobile_gate = 0;
+            }
+            fire_mobile(game, actor);
+        }
     }
     if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
 }
 
-static void spawn_explosion(int x, unsigned y, int z);
+static const uint8_t MUZZLE_A_LEFT[10] = {0, 4, 4, 1, 5, 4, 6, 5, 2, 1};
+static const uint8_t MUZZLE_A_RIGHT[10] = {0, 4, 4, 1, 4, 5, 5, 6, 1, 2};
+static const uint8_t MUZZLE_B[10] = {0, 4, 8, 1, 6, 6, 8, 8, 1, 1};
+static const uint8_t MUZZLE_C_LEFT[10] = {0, 4, 4, 8, 7, 4, 4, 1, 8, 8};
+static const uint8_t MUZZLE_C_CENTER[10] = {0, 4, 4, 8, 3, 4, 4, 4, 8, 8};
+static const uint8_t MUZZLE_C_RIGHT[10] = {0, 4, 5, 1, 4, 6, 1, 4, 1, 1};
+static const uint8_t SHOT_FRAME_MAP[10] = {0, 0, 1, 2, 0, 0, 1, 1, 2, 2};
+static const uint8_t SHOT_HEIGHTS[3] = {4, 3, 5};
+
+static void catch_countdown(Actor *actor) {
+    if (actor->frame == 0) actor->flags = 0;
+    else actor->frame--;
+}
+
+static void emit_mobile_shot(Game *game, Actor *from, int dx, int dy, int dz) {
+    variation = (uint8_t)((variation + 1u) & BYTE_MASK);
+    int x = from->x + dx;
+    unsigned y = (from->y + (unsigned)dy) & WORLD_MASK;
+    int z = signed_byte((unsigned)from->z + (unsigned)dz);
+    int slot = (int)(from - actors);
+    Actor *flash = spawn();
+    if (flash) {
+        *flash = (Actor){0};
+        flash->object_index = -1;
+        flash->flags = GOOSE_RENDER | GOOSE_UPDATE;
+        flash->handler = HANDLER_COUNTDOWN;
+        flash->layer = 5;
+        flash->animated = 1;
+        flash->frame = VARIATION[variation & VARIATION_MASK];
+        flash->x = x;
+        flash->y = y;
+        flash->z = (int8_t)z;
+        flash->height = 7;
+        snprintf(flash->sprite, sizeof flash->sprite, "fs_1039");
+        if ((int)(flash - actors) < slot) catch_countdown(flash);
+    }
+    if (!mobile_gate) return;
+    Actor *shot = spawn();
+    if (!shot) return;
+    unsigned frame = from->frame < 10 ? SHOT_FRAME_MAP[from->frame] : 0;
+    *shot = (Actor){0};
+    shot->object_index = -1;
+    shot->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    shot->handler = HANDLER_ENEMY_SHOT;
+    shot->param = 2;
+    shot->frame = (uint8_t)frame;
+    shot->height = SHOT_HEIGHTS[frame];
+    shot->x = x;
+    shot->y = y;
+    shot->z = (int8_t)z;
+    snprintf(shot->sprite, sizeof shot->sprite, "enemy_shot");
+    if ((int)(shot - actors) < slot) update_enemy_shot(game, shot);
+}
+
+static void fire_mobile(Game *game, Actor *actor) {
+    unsigned frame = actor->frame < 10 ? actor->frame : 0;
+    if (actor->param == 0) {
+        emit_mobile_shot(game, actor, -3, 8, MUZZLE_A_LEFT[frame]);
+        emit_mobile_shot(game, actor, 3, 8, MUZZLE_A_RIGHT[frame]);
+    } else if (actor->param == 1) {
+        emit_mobile_shot(game, actor, 0, 8, MUZZLE_B[frame]);
+    } else {
+        emit_mobile_shot(game, actor, -7, 8, MUZZLE_C_LEFT[frame]);
+        emit_mobile_shot(game, actor, 0, 11, MUZZLE_C_CENTER[frame]);
+        emit_mobile_shot(game, actor, 7, 8, MUZZLE_C_RIGHT[frame]);
+    }
+}
 
 static const int8_t ARC_DZ[16] = {
     0, 6, 5, 4, 3, 2, 1, 0, 0, -1, -2, -3, -4, -5, -7, -9
