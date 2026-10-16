@@ -3,6 +3,9 @@
 #include "tunnel.h"
 #include "atlas.h"
 #include "raylib.h"
+#if defined(__SWITCH__)
+#include <switch.h>
+#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -414,17 +417,54 @@ void pictures_fill(int x, int y, int width, int height, int color) {
     }
 }
 
+#if defined(__SWITCH__)
+/* Handheld is 1280x720, a docked TV is 1920x1080. Both are 16:9. */
+static int panel_w = 1280;
+static int panel_h = 720;
+
+void pictures_prepare_screen(void) {
+    AppletOperationMode mode = appletGetOperationMode();
+    int width = (mode == AppletOperationMode_Console) ? 1920 : 1280;
+    int height = (mode == AppletOperationMode_Console) ? 1080 : 720;
+    if (width != panel_w || height != panel_h)
+        nwindowSetDimensions(nwindowGetDefault(), (u32)width, (u32)height);
+    panel_w = width;
+    panel_h = height;
+    rlViewport(0, 0, width, height);
+    rlMatrixMode(RL_PROJECTION);
+    rlLoadIdentity();
+    rlOrtho(0, width, height, 0, 0.0f, 1.0f);
+    rlMatrixMode(RL_MODELVIEW);
+    rlLoadIdentity();
+}
+#else
+void pictures_prepare_screen(void) {}
+#endif
+
 void pictures_present(void) {
-    /* Windowed play stays at 3x. A maximized desktop window, the web canvas,
-     * and the Switch screen use the largest whole factor of 320x200 that fits. */
+    /* Windowed play stays at 3x. A maximized desktop window and the web
+     * canvas use the largest whole factor of 320x200 that fits. */
     int scale = PRESENT_SCALE;
     int origin_x = 0;
     int origin_y = 0;
-#if defined(__EMSCRIPTEN__) || defined(__SWITCH__)
+#if defined(__SWITCH__)
+    /* 16:9 is wider than 320x200, so the whole-pixel scale that covers the
+     * panel crops the top. The gauges sit on the bottom and stay on screen. */
+    int width = panel_w;
+    int height = panel_h;
+    int fit_x = width / SCREEN_W;
+    int fit_y = height / SCREEN_H;
+    scale = fit_x > fit_y ? fit_x : fit_y;
+    if (scale < 1) scale = 1;
+    origin_x = (width - SCREEN_W * scale) / 2;
+    origin_y = height - SCREEN_H * scale;
+    if (origin_y > 0) origin_y /= 2;
+#elif defined(__EMSCRIPTEN__)
     int fit = 1;
 #else
     int fit = IsWindowMaximized();
 #endif
+#if !defined(__SWITCH__)
     if (fit) {
         int width = GetScreenWidth();
         int height = GetScreenHeight();
@@ -435,6 +475,7 @@ void pictures_present(void) {
         origin_x = (width - SCREEN_W * scale) / 2;
         origin_y = (height - SCREEN_H * scale) / 2;
     }
+#endif
     DrawTextureEx(frame, (Vector2){(float)origin_x, (float)origin_y}, 0, (float)scale, WHITE);
 }
 

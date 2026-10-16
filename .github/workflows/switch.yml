@@ -28,6 +28,7 @@ jobs:
 
       - name: Build raylib
         run: |
+          python3 switch/fit_screen.py build/raylib-nx/src/platforms/rcore_nx.c
           cd build/raylib-nx/src
           make PLATFORM=PLATFORM_NX CUSTOM_CFLAGS=-DNX_DISABLE_GAMEPAD_EMULATION -j"$(nproc)"
 

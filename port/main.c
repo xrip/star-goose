@@ -340,6 +340,7 @@ int main(void) {
         }
         pictures_finish();
         BeginDrawing();
+        pictures_prepare_screen();
         ClearBackground(BLACK);
         pictures_present();
         if (shot) {

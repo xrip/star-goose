@@ -32,6 +32,8 @@ void pictures_fill(int x, int y, int width, int height, int color);
 void pictures_bank_sprite(int bank, unsigned offset, int width, int height,
                           int anchor_x, int anchor_y,
                           int world_x, int world_y, int z, int camera_y);
+/* Switch: size the GL view to the handheld or docked panel. No-op elsewhere. */
+void pictures_prepare_screen(void);
 void pictures_present(void);
 void pictures_save(const char *path);
 void pictures_shutdown(void);
