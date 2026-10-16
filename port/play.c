@@ -118,6 +118,7 @@ enum {
     LAYER_PLAYER = 4,
     LAYER_SHOT = 3,
     LAYER_SHIP = 2,
+    PINK_KEY = 13,
     TILE_ROWS = 64,
     MAP_COLS = 12,
     HEIGHT_TILES = 42,
@@ -2351,6 +2352,26 @@ void game_tick(Game *game, unsigned controls) {
     apply_side_charges();
 }
 
+/* DS:0F3F. Kind 12 rolls on the terrain. Its clear color is 13, so the atlas left the pink in. */
+static const uint16_t MOBILE_B_OFFSET[10] = {
+    0x4286, 0x4286, 0x4d50, 0x308c, 0x4296, 0x4cce, 0x51c0, 0x5ef2, 0x2d62, 0x31dc
+};
+
+/* DS:10FF. Ground bombs use the same pink key, one frameset per direction. */
+static const uint16_t GROUND_OFFSET[5][10] = {
+    {0x10d0, 0x10d0, 0x15c0, 0x08b8, 0x0ee8, 0x0da0, 0x1848, 0x17b0, 0x0098, 0x10d8},
+    {0x27ec, 0x27ec, 0x2f66, 0x1e8e, 0x27e4, 0x27f4, 0x2ec0, 0x300e, 0x1e84, 0x1df6},
+    {0x3794, 0x3794, 0x3f02, 0x35a6, 0x3016, 0x3db6, 0x3dbc, 0x3f0a, 0x3460, 0x35ae},
+    {0x4910, 0x4910, 0x4b98, 0x4536, 0x4548, 0x3f18, 0x45f8, 0x4d68, 0x3f10, 0x449e},
+    {0x62ae, 0x62ae, 0x6996, 0x5272, 0x5a92, 0x62b6, 0x6dee, 0x742e, 0x526a, 0x5a8a}
+};
+
+static void draw_keyed(const Actor *actor, int camera, int bank, unsigned offset) {
+    char name[24];
+    sprite_name(actor, name, sizeof name);
+    pictures_sprite_bank(name, bank, offset, PINK_KEY, actor->x, (int)actor->y, actor->z, camera);
+}
+
 static void draw_surface_actor(const Actor *actor, int camera) {
     if ((actor->flags & GOOSE_RENDER) == 0 || actor->waiting) return;
     if (actor->handler == HANDLER_GATE_A || actor->handler == HANDLER_GATE_B) {
@@ -2372,6 +2393,17 @@ static void draw_surface_actor(const Actor *actor, int camera) {
         if (index >= IMPACT_FRAMES) index = IMPACT_FRAMES - 1;
         pictures_bank_sprite(BANK_BIRD1, IMPACT_SPRITE[index], IMPACT_W, IMPACT_H,
                              IMPACT_ANCHOR, IMPACT_ANCHOR, actor->x, (int)actor->y, actor->z, camera);
+        return;
+    }
+    if (actor->handler == HANDLER_MOBILE && actor->param == 1) {
+        unsigned frame = actor->frame < 10 ? actor->frame : 0;
+        draw_keyed(actor, camera, BANK_BIRD2, MOBILE_B_OFFSET[frame]);
+        return;
+    }
+    if (actor->handler == HANDLER_GROUND_ENEMY) {
+        unsigned dir = actor->param > 4 ? 4 : actor->param;
+        unsigned frame = actor->frame < 10 ? actor->frame : 0;
+        draw_keyed(actor, camera, BANK_BIRD1, GROUND_OFFSET[dir][frame]);
         return;
     }
     char name[24];

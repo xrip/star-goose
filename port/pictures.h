@@ -9,6 +9,10 @@ void pictures_clear(void);
 void pictures_draw_tiles(const Surface *game);
 void pictures_draw_ship(const Surface *game);
 void pictures_sprite(const char *name, int world_x, int world_y, int z, int camera_y);
+/* Same placement as pictures_sprite, but the pixels come from a graphics bank.
+ * key is the original transparent color, 0..15. */
+void pictures_sprite_bank(const char *name, int bank, unsigned offset, int key,
+                          int world_x, int world_y, int z, int camera_y);
 /* Stamps a high-score name or digit row onto a drifting title sprite. */
 void pictures_score_text(const char *sprite, int world_x, int world_y, int z, int camera_y,
                          const uint8_t *chars, int count, int digits);

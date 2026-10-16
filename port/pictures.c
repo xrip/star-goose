@@ -239,6 +239,37 @@ void pictures_sprite(const char *name, int world_x, int world_y, int z, int came
     blit_sprite(sprite, 0, sprite->w, dest_x, dest_y);
 }
 
+void pictures_sprite_bank(const char *name, int bank_offset, unsigned offset, int key,
+                          int world_x, int world_y, int z, int camera_y) {
+    const AtlasSprite *sprite = find_sprite(name);
+    if (!sprite || sprite->w == 0 || sprite->h == 0) return;
+    const uint8_t *bank = bank_bird2;
+    int bank_ready = bank_bird2_ready;
+    if (bank_offset == 0) {
+        bank = bank_bird1;
+        bank_ready = bank_bird1_ready;
+    } else if (bank_offset == BANK_BLOX) {
+        bank = bank_blox;
+        bank_ready = bank_blox_ready;
+    }
+    if (!bank_ready) return;
+    int dest_x, dest_y;
+    sprite_dest(world_x, world_y, z, sprite->anchor_x, sprite->anchor_y, camera_y, &dest_x, &dest_y);
+    int src_y = (int)(offset / PACKED_STRIDE);
+    int src_x = (int)(offset % PACKED_STRIDE) * 2;
+    for (int dy = 0; dy < sprite->h; dy++) {
+        int y = dest_y + dy;
+        if (y < VIEW_Y || y >= VIEW_Y + VIEW_H || src_y + dy < 0 || src_y + dy >= SCREEN_H) continue;
+        for (int dx = 0; dx < sprite->w; dx++) {
+            int x = dest_x + dx;
+            if (x < VIEW_X || x >= VIEW_X + VIEW_W || src_x + dx < 0 || src_x + dx >= SCREEN_W) continue;
+            int color = bank[(src_y + dy) * SCREEN_W + src_x + dx];
+            if (color == key) continue;
+            screen[y * SCREEN_W + x] = (uint8_t)color;
+        }
+    }
+}
+
 void pictures_score_text(const char *sprite, int world_x, int world_y, int z, int camera_y,
                          const uint8_t *chars, int count, int digits) {
     enum {
