@@ -21,6 +21,10 @@ void pictures_finish(void);
  * that index are the emptied gauge cells from CS:25E3. */
 void pictures_blit_bank(int bank_offset, unsigned offset, int width, int height,
                         int dest_x, int dest_y, int live_columns);
+/* Draws one packed sprite from a graphics bank. Bank 0 is BIRD1. */
+void pictures_bank_sprite(int bank, unsigned offset, int width, int height,
+                          int anchor_x, int anchor_y,
+                          int world_x, int world_y, int z, int camera_y);
 void pictures_present(void);
 void pictures_save(const char *path);
 void pictures_shutdown(void);

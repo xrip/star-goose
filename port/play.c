@@ -29,6 +29,7 @@ enum {
     HANDLER_EXPLOSION = 16,
     HANDLER_PLAYER_SHOT = 19,
     HANDLER_ENEMY_SHOT = 20,
+    HANDLER_IMPACT = 21,
     HANDLER_COUNTDOWN = 22,
     HANDLER_SIDE_FOLLOW = 24,
     HANDLER_SIDE_GROUND = 25,
@@ -155,6 +156,11 @@ enum {
     DEATH_TICKS = 40,
     FORCE_STOP_LO = 0x28,
     FORCE_STOP_HI = 0x58,
+    IMPACT_W = 8,
+    IMPACT_H = 5,
+    IMPACT_ANCHOR = 2,
+    IMPACT_FRAMES = 4,
+    BANK_BIRD1 = 0,
     GROUND_LIFE = 5,
     EXPLOSION_FRAMES = 5,
     BURST_FRAMES = 6
@@ -593,6 +599,30 @@ static int aim(Game *game, Actor *actor) {
     return 1;
 }
 
+static const unsigned IMPACT_SPRITE[IMPACT_FRAMES] = {0x3b06, 0x3b0a, 0x3b0e, 0x3b12};
+
+static void become_impact(Actor *shot) {
+    shot->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    shot->handler = HANDLER_IMPACT;
+    shot->layer = 3;
+    shot->frame = 0;
+    shot->state[0] = 0;
+    shot->height = IMPACT_H;
+    shot->anchor_y = IMPACT_ANCHOR;
+    shot->animated = 0;
+}
+
+static void update_impact(Game *game, Actor *actor) {
+    uint8_t shown = actor->frame;
+    actor->frame++;
+    if (shown >= IMPACT_FRAMES) {
+        actor->flags = 0;
+        return;
+    }
+    actor->state[0] = shown;
+    if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
+}
+
 static void update_shot(Game *game, Actor *shot) {
     if (cull_before(shot, game->flight.camera_y)) {
         shot->flags = 0;
@@ -603,8 +633,7 @@ static void update_shot(Game *game, Actor *shot) {
     if (shot->frame == 2 && (uint8_t)shot->z < SHOT_Z_LOW) shot->z = (int8_t)((uint8_t)shot->z + SHOT_Z_STEP);
     TerrainSample ground = terrain_sample(game->flight.tiles, (unsigned)shot->x, shot->y);
     if (ground.height >= shot->z) {
-        shot->flags = 0;
-        sound_trigger(SOUND_IMPACT);
+        become_impact(shot);
         return;
     }
     for (int i = 0; i < ACTORS; i++) {
@@ -628,7 +657,7 @@ static void update_shot(Game *game, Actor *shot) {
         } else {
             score_add(game, 0, 0, 1, 0);
         }
-        shot->flags = 0;
+        become_impact(shot);
         return;
     }
 }
@@ -654,8 +683,7 @@ static void update_enemy_shot(Game *game, Actor *shot) {
     }
     TerrainSample ground = terrain_sample(game->flight.tiles, (unsigned)shot->x, shot->y);
     if (ground.height >= shot->z) {
-        shot->flags = 0;
-        sound_trigger(SOUND_IMPACT);
+        become_impact(shot);
         return;
     }
     int dx = shot->x - game->flight.x;
@@ -667,7 +695,7 @@ static void update_enemy_shot(Game *game, Actor *shot) {
     if (dx < PLAYER_HIT_X && dy < ENEMY_HIT_Y && dz < HIT_Z) {
         hurt(game, TOUCH_HURT);
         sound_trigger(SOUND_SHIELD_TAP);
-        shot->flags = 0;
+        become_impact(shot);
     }
 }
 
@@ -1144,6 +1172,7 @@ static void collide_player_map(Game *game) {
 static void update_actor(Game *game, Actor *actor) {
     if (actor->flags == 0) return;
     if (actor->handler == HANDLER_PLAYER_SHOT) update_shot(game, actor);
+    else if (actor->handler == HANDLER_IMPACT) update_impact(game, actor);
     else if (actor->handler == HANDLER_EXPLOSION) {
         actor->state[3]++;
         unsigned frame = (actor->state[3] >> 2) & 7u;
@@ -1929,6 +1958,14 @@ void game_draw(Game *game) {
         pictures_draw_tiles(&game->flight);
         for (int i = 0; i < ACTORS; i++) {
             if (actors[i].flags == 0) continue;
+            if (actors[i].handler == HANDLER_IMPACT) {
+                unsigned index = actors[i].state[0];
+                if (index >= IMPACT_FRAMES) index = IMPACT_FRAMES - 1;
+                pictures_bank_sprite(BANK_BIRD1, IMPACT_SPRITE[index], IMPACT_W, IMPACT_H,
+                                     IMPACT_ANCHOR, IMPACT_ANCHOR, actors[i].x, (int)actors[i].y,
+                                     actors[i].z, (int)game->flight.camera_y);
+                continue;
+            }
             char name[24];
             sprite_name(&actors[i], name, sizeof name);
             pictures_sprite(name, actors[i].x, (int)actors[i].y, actors[i].z, (int)game->flight.camera_y);

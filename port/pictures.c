@@ -58,8 +58,10 @@ static uint8_t screen[SCREEN_W * SCREEN_H];
 static Color upload[SCREEN_W * SCREEN_H];
 static Texture2D frame;
 static int ready;
+static uint8_t bank_bird1[SCREEN_W * SCREEN_H];
 static uint8_t bank_bird2[SCREEN_W * SCREEN_H];
 static uint8_t bank_blox[SCREEN_W * SCREEN_H];
+static int bank_bird1_ready;
 static int bank_bird2_ready;
 static int bank_blox_ready;
 
@@ -161,6 +163,7 @@ int pictures_load(void) {
     frame = LoadTextureFromImage(blank);
     UnloadImage(blank);
     SetTextureFilter(frame, TEXTURE_FILTER_POINT);
+    load_bank("assets/BIRD1.X", bank_bird1, &bank_bird1_ready);
     load_bank("assets/BIRD2.X", bank_bird2, &bank_bird2_ready);
     load_bank("assets/BLOX.X", bank_blox, &bank_blox_ready);
     ready = 1;
@@ -206,6 +209,15 @@ void pictures_anchor(const char *name, int *anchor_x, int *anchor_y) {
     const AtlasSprite *sprite = find_sprite(name);
     if (anchor_x) *anchor_x = sprite ? sprite->anchor_x : 0;
     if (anchor_y) *anchor_y = sprite ? sprite->anchor_y : 0;
+}
+
+void pictures_bank_sprite(int bank, unsigned offset, int width, int height,
+                          int anchor_x, int anchor_y,
+                          int world_x, int world_y, int z, int camera_y) {
+    int z_sum = (z + anchor_y) & BYTE_MASK;
+    int dest_x = VIEW_X + world_x - anchor_x;
+    int dest_y = screen_y(world_y - signed8((unsigned)z_sum), camera_y);
+    pictures_blit_bank(bank, offset, width, height, dest_x, dest_y, width);
 }
 
 void pictures_sprite(const char *name, int world_x, int world_y, int z, int camera_y) {
@@ -325,8 +337,15 @@ void pictures_draw_surface(const Surface *game) {
 
 void pictures_blit_bank(int bank_offset, unsigned offset, int width, int height,
                         int dest_x, int dest_y, int live_columns) {
-    const uint8_t *bank = bank_offset == BANK_BLOX ? bank_blox : bank_bird2;
-    int bank_ready = bank_offset == BANK_BLOX ? bank_blox_ready : bank_bird2_ready;
+    const uint8_t *bank = bank_bird2;
+    int bank_ready = bank_bird2_ready;
+    if (bank_offset == 0) {
+        bank = bank_bird1;
+        bank_ready = bank_bird1_ready;
+    } else if (bank_offset == BANK_BLOX) {
+        bank = bank_blox;
+        bank_ready = bank_blox_ready;
+    }
     if (!bank_ready || width <= 0 || height <= 0) return;
     int src_y = (int)(offset / PACKED_STRIDE);
     int src_x = (int)(offset % PACKED_STRIDE) * 2;
