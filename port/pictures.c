@@ -1,4 +1,5 @@
 #include "pictures.h"
+#include "goose_model.h"
 #include "tunnel.h"
 #include "atlas.h"
 #include "raylib.h"
@@ -64,10 +65,6 @@ static uint8_t bank_blox[SCREEN_W * SCREEN_H];
 static int bank_bird1_ready;
 static int bank_bird2_ready;
 static int bank_blox_ready;
-
-static int signed8(unsigned bits) {
-    return bits < 128u ? (int)bits : (int)bits - 256;
-}
 
 static int ega_index(unsigned char r, unsigned char g, unsigned char b) {
     for (int i = 0; i < 16; i++) {
@@ -193,6 +190,13 @@ static int screen_y(int world_y, int camera_y) {
     return VIEW_Y + relative;
 }
 
+static void sprite_dest(int world_x, int world_y, int z, int anchor_x, int anchor_y,
+                        int camera_y, int *dest_x, int *dest_y) {
+    int z_sum = (z + anchor_y) & BYTE_MASK;
+    *dest_x = VIEW_X + world_x - anchor_x;
+    *dest_y = screen_y(world_y - goose_signed8((unsigned)z_sum), camera_y);
+}
+
 static const AtlasSprite *find_sprite(const char *name) {
     if (!name) return 0;
     for (int i = 0; i < atlas_sprite_count; i++) {
@@ -222,18 +226,16 @@ int pictures_metrics(const char *name, int *height, int *anchor_y) {
 void pictures_bank_sprite(int bank, unsigned offset, int width, int height,
                           int anchor_x, int anchor_y,
                           int world_x, int world_y, int z, int camera_y) {
-    int z_sum = (z + anchor_y) & BYTE_MASK;
-    int dest_x = VIEW_X + world_x - anchor_x;
-    int dest_y = screen_y(world_y - signed8((unsigned)z_sum), camera_y);
+    int dest_x, dest_y;
+    sprite_dest(world_x, world_y, z, anchor_x, anchor_y, camera_y, &dest_x, &dest_y);
     pictures_blit_bank(bank, offset, width, height, dest_x, dest_y, width);
 }
 
 void pictures_sprite(const char *name, int world_x, int world_y, int z, int camera_y) {
     const AtlasSprite *sprite = find_sprite(name);
     if (!sprite) return;
-    int z_sum = (z + sprite->anchor_y) & BYTE_MASK;
-    int dest_x = VIEW_X + world_x - sprite->anchor_x;
-    int dest_y = screen_y(world_y - signed8((unsigned)z_sum), camera_y);
+    int dest_x, dest_y;
+    sprite_dest(world_x, world_y, z, sprite->anchor_x, sprite->anchor_y, camera_y, &dest_x, &dest_y);
     blit_sprite(sprite, 0, sprite->w, dest_x, dest_y);
 }
 
@@ -251,9 +253,8 @@ void pictures_score_text(const char *sprite, int world_x, int world_y, int z, in
     };
     const AtlasSprite *frame = find_sprite(sprite);
     if (!frame || !chars || count <= 0) return;
-    int z_sum = (z + frame->anchor_y) & BYTE_MASK;
-    int dest_x = VIEW_X + world_x - frame->anchor_x;
-    int dest_y = screen_y(world_y - signed8((unsigned)z_sum), camera_y);
+    int dest_x, dest_y;
+    sprite_dest(world_x, world_y, z, frame->anchor_x, frame->anchor_y, camera_y, &dest_x, &dest_y);
     int leading = 1;
     for (int i = 0; i < count; i++) {
         unsigned char ch = chars[i];
@@ -320,7 +321,7 @@ void pictures_draw_tiles(const Surface *game) {
                 width = EDGE_W;
                 dest_x = VIEW_X + VIEW_W - EDGE_W;
             }
-            int world_y = world_row * ROW_H + TILE_Y_ADJUST[tile] - signed8(z);
+            int world_y = world_row * ROW_H + TILE_Y_ADJUST[tile] - goose_signed8(z);
             blit_sprite(sprite, src_dx, width, dest_x, screen_y(world_y, camera));
         }
     }
@@ -330,10 +331,11 @@ void pictures_draw_ship(const Surface *game) {
     int frame_index = game->frame;
     if (frame_index < 0 || frame_index > SHIP_LAST) return;
     const AtlasSprite *sprite = &atlas_ship[frame_index];
-    int z_sum = (game->z + sprite->anchor_y) & BYTE_MASK;
-    int world_y = (int)((game->camera_y + PLAYER_AHEAD) & WORLD_MASK) - signed8((unsigned)z_sum);
-    int dest_x = VIEW_X + game->x - sprite->anchor_x;
-    blit_sprite(sprite, 0, sprite->w, dest_x, screen_y(world_y, (int)game->camera_y));
+    int world_y = (int)((game->camera_y + PLAYER_AHEAD) & WORLD_MASK);
+    int dest_x, dest_y;
+    sprite_dest(game->x, world_y, game->z, sprite->anchor_x, sprite->anchor_y,
+                (int)game->camera_y, &dest_x, &dest_y);
+    blit_sprite(sprite, 0, sprite->w, dest_x, dest_y);
 }
 
 void pictures_blit_bank(int bank_offset, unsigned offset, int width, int height,

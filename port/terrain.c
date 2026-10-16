@@ -1,4 +1,5 @@
 #include "terrain.h"
+#include "goose_model.h"
 
 enum { TILE_COLUMNS = 12, TILE_COUNT = 42, PROFILE_BYTES = 1600 };
 
@@ -7,10 +8,6 @@ extern const uint8_t goose_variant_a[TILE_COUNT];
 extern const uint8_t goose_variant_b[TILE_COUNT];
 extern const uint16_t goose_profile_offset[TILE_COUNT];
 extern const uint8_t goose_profiles[PROFILE_BYTES];
-
-static int signed8(unsigned bits) {
-    return bits < 128u ? (int)bits : (int)bits - 256;
-}
 
 TerrainSample terrain_sample(const uint8_t *tiles, unsigned x, unsigned y) {
     TerrainSample sample = {0, 0, 0};
@@ -34,7 +31,7 @@ TerrainSample terrain_sample(const uint8_t *tiles, unsigned x, unsigned y) {
     for (unsigned i = 0; i < column; i++)
         height = (height + goose_height_delta[tiles[stored_row * TILE_COLUMNS + i]]) & 0xffu;
 
-    sample.height = signed8(height);
+    sample.height = goose_signed8(height);
     sample.frame = (profile & 0x80u) ? goose_variant_b[tile] : goose_variant_a[tile];
     sample.row = (uint8_t)world_row;
     return sample;

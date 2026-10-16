@@ -130,8 +130,6 @@ enum {
     SHIP_FIRE_FRAME = 9,
     AIM_LAST = 4,
     VARIATION_MASK = 15,
-    DIGIT_BASE = 10,
-    SCORE_PHASE = 3,
     ENEMY_STEP = 8,
     ENEMY_DIAG_X = 6,
     ENEMY_DIAG_Y = 4,
@@ -150,7 +148,6 @@ enum {
     LOB_Z = 8,
     ARC_STEP_X = 4,
     ARC_STEP_Y = 3,
-    HISTORY = 4,
     SIDE_OFFSET = 8,
     SIDE_TRAIL = 6,
     TUNNEL_SIDE_OFFSET = 8,
@@ -332,11 +329,6 @@ static uint8_t tunnel_last_section = NO_SECTION;
 static int tunnel_exit_spawned;
 static int tunnel_min_radius = 3;
 
-static int signed_byte(unsigned bits) {
-    bits &= 255u;
-    return bits < 128u ? (int)bits : (int)bits - 256;
-}
-
 /* CS:269E adds one place at a time and carries at most once. A carry out of
  * the 10000 digit grants a life. The 100000 digit wraps without a further life. */
 static void score_sync(Game *game) {
@@ -397,7 +389,7 @@ static int column_z(int tile_row, int count) {
         if (tile >= HEIGHT_TILES) tile = 0;
         z = (z + goose_height_delta[tile]) & BYTE_MASK;
     }
-    return signed_byte(z);
+    return goose_signed8(z);
 }
 
 static int map_object_x(int stream_column) {
@@ -602,7 +594,7 @@ static void sync_frame(Actor *actor) {
 
 static int cull_after(Actor *actor, unsigned camera) {
     sync_frame(actor);
-    int zsum = signed_byte((unsigned)actor->z + (unsigned)actor->anchor_y);
+    int zsum = goose_signed8((unsigned)actor->z + (unsigned)actor->anchor_y);
     int ax = ((int)actor->y - zsum) & WORLD_MASK;
     int bx = (int)((camera + CULL_AHEAD) & WORLD_MASK);
     if (ax < bx) ax += WORLD_MASK + 1;
@@ -612,7 +604,7 @@ static int cull_after(Actor *actor, unsigned camera) {
 static int cull_before(Actor *actor, unsigned camera) {
     sync_frame(actor);
     unsigned mixed = (unsigned)actor->height - (unsigned)(uint8_t)actor->z - (unsigned)(uint8_t)actor->anchor_y;
-    int ax = ((int)actor->y + signed_byte(mixed)) & WORLD_MASK;
+    int ax = ((int)actor->y + goose_signed8(mixed)) & WORLD_MASK;
     int bx = (int)(camera & WORLD_MASK);
     if (ax < bx) ax += WORLD_MASK + 1;
     return (ax - bx) > CULL_SPAN;
@@ -647,7 +639,7 @@ static void spawn_shot(Game *game, int x, unsigned y, int z, int frame, int heig
     shot->height = (uint8_t)height;
     shot->x = x;
     shot->y = y & 1023u;
-    shot->z = (int8_t)signed_byte((unsigned)z);
+    shot->z = (int8_t)goose_signed8((unsigned)z);
     snprintf(shot->sprite, sizeof shot->sprite, "player_shot");
 }
 
@@ -670,7 +662,7 @@ static void fire(Game *game) {
         flash->animated = 1;
         flash->x = game->flight.x + LEFT_DX[frame];
         flash->y = y;
-        flash->z = (int8_t)signed_byte((unsigned)(z + LEFT_DZ[frame]));
+        flash->z = (int8_t)goose_signed8((unsigned)(z + LEFT_DZ[frame]));
         snprintf(flash->sprite, sizeof flash->sprite, "fs_100E");
     }
     spawn_shot(game, game->flight.x + RIGHT_DX[frame], y, z + RIGHT_DZ[frame], shot_frame, SHOT_HEIGHT[shot_frame]);
@@ -684,7 +676,7 @@ static void fire(Game *game) {
         flash->animated = 1;
         flash->x = game->flight.x + RIGHT_DX[frame];
         flash->y = y;
-        flash->z = (int8_t)signed_byte((unsigned)(z + RIGHT_DZ[frame]));
+        flash->z = (int8_t)goose_signed8((unsigned)(z + RIGHT_DZ[frame]));
         snprintf(flash->sprite, sizeof flash->sprite, "fs_100E");
     }
     ammo_use = (ammo_use + (variation & VARIATION_MASK)) & 0xffffu;
@@ -706,7 +698,7 @@ static void spawn_aimed(Game *game, Actor *from, int fire) {
     variation = (uint8_t)((variation + 1u) & BYTE_MASK);
     int x = from->x + AIM_DX[direction];
     unsigned y = (from->y + (unsigned)AIM_DY[direction]) & WORLD_MASK;
-    int z = signed_byte((unsigned)from->z + 4u);
+    int z = goose_signed8((unsigned)from->z + 4u);
     int slot = (int)(from - actors);
     Actor *flash = spawn();
     if (flash) {
@@ -880,7 +872,7 @@ static void update_enemy_shot(Game *game, Actor *shot) {
     if (dying) return;
     int dx = shot->x - game->flight.x;
     int dy = (int)shot->y - (int)player_y(game);
-    int dz = signed_byte((unsigned)shot->z) - game->flight.z;
+    int dz = goose_signed8((unsigned)shot->z) - game->flight.z;
     if (dx < 0) dx = -dx;
     if (dy < 0) dy = -dy;
     if (dz < 0) dz = -dz;
@@ -918,7 +910,7 @@ static void update_mobile(Game *game, Actor *actor) {
             shot->flags = 0;
             continue;
         }
-        int dz = signed_byte((unsigned)shot->z) - signed_byte((unsigned)actor->z);
+        int dz = goose_signed8((unsigned)shot->z) - goose_signed8((unsigned)actor->z);
         if (dz < 0) dz = -dz;
         if (dz >= HIT_Z) continue;
         actor->state[2]--;
@@ -969,7 +961,7 @@ static void emit_mobile_shot(Game *game, Actor *from, int dx, int dy, int dz) {
     variation = (uint8_t)((variation + 1u) & BYTE_MASK);
     int x = from->x + dx;
     unsigned y = (from->y + (unsigned)dy) & WORLD_MASK;
-    int z = signed_byte((unsigned)from->z + (unsigned)dz);
+    int z = goose_signed8((unsigned)from->z + (unsigned)dz);
     int slot = (int)(from - actors);
     Actor *flash = spawn();
     if (flash) {
@@ -1042,7 +1034,7 @@ static void spawn_lobbed(Actor *from, int direction, int handler) {
     shot->animated = arc ? 0 : 1;
     shot->x = from->x + (arc ? arc_dx[direction] : ground_dx[direction]);
     shot->y = (from->y + (unsigned)(arc ? arc_dy[direction] : ground_dy[direction])) & WORLD_MASK;
-    shot->z = (int8_t)signed_byte((unsigned)from->z + LOB_Z);
+    shot->z = (int8_t)goose_signed8((unsigned)from->z + LOB_Z);
     snprintf(shot->sprite, sizeof shot->sprite, "%s", arc ? "arc_shot" : GROUND_SET[direction]);
 }
 
@@ -1159,7 +1151,7 @@ static void update_arcing(Game *game, Actor *shot) {
     if (!game->flight.alive) return;
     int dx = shot->x - game->flight.x;
     int dy = wrapped_delta(shot->y, player_y(game));
-    int dz = signed_byte((unsigned)shot->z) - game->flight.z;
+    int dz = goose_signed8((unsigned)shot->z) - game->flight.z;
     if (dx < 0) dx = -dx;
     if (dy < 0) dy = -dy;
     if (dz < 0) dz = -dz;
@@ -1280,7 +1272,7 @@ static void position_side(Actor *actor) {
     actor->x = hist_x[HISTORY_LAG] + (side ? SIDE_OFFSET : -SIDE_OFFSET);
     actor->y = (hist_y[HISTORY_LAG] + SIDE_TRAIL) & WORLD_MASK;
     actor->frame = frame <= SHIP_FIRE_FRAME ? (uint8_t)frame : SHIP_FIRE_FRAME;
-    actor->z = (int8_t)signed_byte((unsigned)(side ? z - zoff : z + zoff));
+    actor->z = (int8_t)goose_signed8((unsigned)(side ? z - zoff : z + zoff));
 }
 
 static int arm_surface_side(int side) {
@@ -1492,7 +1484,7 @@ static int strike_map(Game *game, Actor *shot, unsigned row) {
         break;
     }
     if (!target) return 0;
-    int dz = signed_byte((unsigned)target->z) - signed_byte((unsigned)shot->z);
+    int dz = goose_signed8((unsigned)target->z) - goose_signed8((unsigned)shot->z);
     if (dz < 0) dz = -dz;
     if (dz >= HIT_Z) return 0;
     target->state[2]--;

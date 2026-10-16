@@ -1,5 +1,9 @@
 #include "goose_model.h"
 
+int goose_signed8(unsigned bits) {
+    bits &= 255u;
+    return bits < 128u ? (int)bits : (int)bits - 256;
+}
 int16_t goose_signed16(uint16_t bits) {
     return (int16_t)(bits < UINT16_C(0x8000)
                     ? (int32_t)bits : (int32_t)bits - INT32_C(65536));

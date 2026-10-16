@@ -22,10 +22,15 @@ def main():
         subprocess.run([cc,'-std=c11','-O2','-Wall','-Wextra','-Werror','-pedantic','-shared','-fPIC',
             str(ROOT/'port/goose_model.c'),'-o',str(lib)],check=True)
         api=C.CDLL(str(lib))
+        api.goose_signed8.argtypes=[C.c_uint];api.goose_signed8.restype=C.c_int
         api.goose_surface_dx.argtypes=[C.c_int16];api.goose_surface_dx.restype=C.c_int16
         api.goose_sar16.argtypes=[C.c_uint16,C.c_uint];api.goose_sar16.restype=C.c_uint16
         api.goose_tunnel_angle_force.argtypes=[C.c_uint8];api.goose_tunnel_angle_force.restype=C.c_int16
         counts={}
+        for bits in range(512):
+            wrapped=bits&255
+            assert api.goose_signed8(bits)==(wrapped if wrapped<128 else wrapped-256)
+        counts['signed8_cases']=512
         for bits in range(65536):
             signed=bits if bits<32768 else bits-65536
             for shift in (0,1,2,7,8,15,16,17):
