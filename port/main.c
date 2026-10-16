@@ -156,6 +156,8 @@ static unsigned read_controls(void) {
 }
 
 int main(void) {
+    /* The maximize box is what delivers WM_MAXIMIZE. The restored size stays 960x600. */
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(SCREEN_W * SCALE, SCREEN_H * SCALE, "Star Goose");
     SetTargetFPS(60);
     SetExitKey(KEY_NULL);

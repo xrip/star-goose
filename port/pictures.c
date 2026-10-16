@@ -415,7 +415,22 @@ void pictures_fill(int x, int y, int width, int height, int color) {
 }
 
 void pictures_present(void) {
-    DrawTextureEx(frame, (Vector2){0, 0}, 0, PRESENT_SCALE, WHITE);
+    /* Windowed play stays at 3x. WM_MAXIMIZE (IsWindowMaximized) picks the
+     * largest integer factor of 320x200 that fits the client area. */
+    int scale = PRESENT_SCALE;
+    int origin_x = 0;
+    int origin_y = 0;
+    if (IsWindowMaximized()) {
+        int width = GetScreenWidth();
+        int height = GetScreenHeight();
+        int fit_x = width / SCREEN_W;
+        int fit_y = height / SCREEN_H;
+        scale = fit_x < fit_y ? fit_x : fit_y;
+        if (scale < 1) scale = 1;
+        origin_x = (width - SCREEN_W * scale) / 2;
+        origin_y = (height - SCREEN_H * scale) / 2;
+    }
+    DrawTextureEx(frame, (Vector2){(float)origin_x, (float)origin_y}, 0, (float)scale, WHITE);
 }
 
 void pictures_save(const char *path) {
