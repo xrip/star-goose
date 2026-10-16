@@ -24,5 +24,6 @@ void tunnel_build_bitmap(uint8_t *bits, unsigned distance, int min_radius);
 int tunnel_line_color(uint8_t reward_kind);
 uint8_t tunnel_player_frame(uint8_t angle);
 void tunnel_player_position(uint8_t angle, int *x, int *y);
+void tunnel_side_position(uint8_t angle, int *x, int *y);
 
 #endif

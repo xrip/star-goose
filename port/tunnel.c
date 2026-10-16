@@ -1,4 +1,5 @@
 #include "tunnel.h"
+#include "goose_model.h"
 #include <string.h>
 
 /* DS:1FDC radius, DS:201C / DS:2029 edge curves, DS:1675 circle, DS:1775 frames. */
@@ -193,4 +194,13 @@ void tunnel_player_position(uint8_t angle, int *x, int *y) {
     int cy = (int8_t)CIRCLE_Y[angle & 127u];
     *x = cx * 2 + CENTER;
     *y = scale_y(cy * 2 + CENTER);
+}
+
+void tunnel_side_position(uint8_t angle, int *x, int *y) {
+    int cx = (int8_t)CIRCLE_X[angle & 127u];
+    int cy = (int8_t)CIRCLE_Y[angle & 127u];
+    int hx = goose_signed16(goose_sar16((uint16_t)(int16_t)cx, 1));
+    int hy = goose_signed16(goose_sar16((uint16_t)(int16_t)cy, 1));
+    *x = cx + hx + CENTER;
+    *y = scale_y(cy + hy + CENTER);
 }

@@ -37,6 +37,7 @@ enum {
     HANDLER_ARC = 30,
     HANDLER_ARC_BURST = 31,
     HANDLER_COLLECTIBLE = 32,
+    HANDLER_TUNNEL_SIDE = 34,
     DIRECT_RELOAD = 8,
     ARC_RELOAD = 18,
     GROUND_RELOAD = 40,
@@ -131,6 +132,10 @@ enum {
     HISTORY = 4,
     SIDE_OFFSET = 8,
     SIDE_TRAIL = 6,
+    TUNNEL_SIDE_OFFSET = 8,
+    ANGLE_HISTORY = 3,
+    FLASH_HOT = 15,
+    FLASH_DIM = 7,
     GROUND_LIFE = 5,
     EXPLOSION_FRAMES = 5,
     BURST_FRAMES = 6
@@ -245,6 +250,8 @@ static unsigned last_spawn_row;
 static uint8_t pending_reward;
 static unsigned pending_resume;
 static uint8_t ship_angle;
+static uint8_t angle_hist[ANGLE_HISTORY];
+static uint8_t tunnel_flash;
 static uint8_t tunnel_pattern_index;
 static uint8_t tunnel_pattern;
 static uint8_t tunnel_last_section = NO_SECTION;
@@ -922,7 +929,7 @@ static void position_side(Actor *actor) {
     actor->z = (int8_t)signed_byte((unsigned)(side ? z - zoff : z + zoff));
 }
 
-static int launch_side(int side) {
+static int arm_surface_side(int side) {
     Actor *actor = spawn();
     if (!actor) return 0;
     *actor = (Actor){0};
@@ -931,9 +938,14 @@ static int launch_side(int side) {
     if (side) actor->flags |= GOOSE_SIDE;
     actor->handler = HANDLER_SIDE_FOLLOW;
     actor->animated = 1;
-    actor->state[2] = 5;
+    actor->state[2] = GROUND_LIFE;
     snprintf(actor->sprite, sizeof actor->sprite, "fs_0DDA");
     position_side(actor);
+    return 1;
+}
+
+static int launch_side(int side) {
+    if (!arm_surface_side(side)) return 0;
     side_charges--;
     sound_trigger(SOUND_SIDE_LAUNCH);
     return 1;
@@ -1172,6 +1184,16 @@ static const uint8_t TUNNEL_PICKUP_RADIUS[48] = {
     7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 22, 24, 26,
     28, 30, 32, 34, 36, 38, 40, 44, 46, 49, 52, 56, 60, 64, 69, 75
 };
+static const uint8_t TUNNEL_SIDE_FRAME[128] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 2,
+    2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4,
+    4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6,
+    6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8,
+    8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 10, 10, 10, 10,
+    10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12,
+    12, 12, 12, 12, 13, 13, 13, 13, 13, 13, 13, 13, 14, 14, 14, 14,
+    14, 14, 14, 14, 15, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
 static const uint8_t TUNNEL_PICKUP_LAYER[24] = {
     7, 7, 7, 7, 6, 6, 6, 6, 5, 5, 5, 5, 4, 4, 4, 4, 3, 2, 2, 2, 1, 1, 1, 1
 };
@@ -1301,6 +1323,79 @@ static void advance_tunnel_objects(Game *game) {
     if (direction) spawn_tunnel_pickup(game, direction);
 }
 
+static void collect_visible_pickups(Game *game) {
+    for (int i = 0; i < ACTORS; i++) {
+        if ((actors[i].flags & GOOSE_RENDER) == 0) continue;
+        if (actors[i].handler == HANDLER_TUNNEL_PICKUP) collect_tunnel_pickup(game, &actors[i]);
+    }
+}
+
+static void update_tunnel_side(Game *game, Actor *actor) {
+    int right = (actor->flags & GOOSE_SIDE) != 0;
+    uint8_t state = right ? right_device : left_device;
+    if (state == 0 || state == 3) {
+        actor->flags = 0;
+        collect_visible_pickups(game);
+        return;
+    }
+    int offset = right ? TUNNEL_SIDE_OFFSET : -TUNNEL_SIDE_OFFSET;
+    uint8_t angle = (uint8_t)((uint8_t)offset + angle_hist[ANGLE_HISTORY - 1]) & ANGLE_MASK;
+    int x, y;
+    tunnel_side_position(angle, &x, &y);
+    actor->x = x;
+    actor->y = (unsigned)y;
+    actor->frame = TUNNEL_SIDE_FRAME[ship_angle & ANGLE_MASK];
+}
+
+static void spawn_tunnel_side(Game *game, int side) {
+    Actor *actor = spawn();
+    if (!actor) return;
+    *actor = (Actor){0};
+    actor->object_index = -1;
+    actor->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    if (side) actor->flags |= GOOSE_SIDE;
+    actor->handler = HANDLER_TUNNEL_SIDE;
+    actor->layer = LAYER_SHIP;
+    actor->animated = 1;
+    snprintf(actor->sprite, sizeof actor->sprite, "fs_1811");
+    update_tunnel_side(game, actor);
+}
+
+static void shift_angle_history(void) {
+    for (int i = ANGLE_HISTORY - 1; i > 0; i--) angle_hist[i] = angle_hist[i - 1];
+    angle_hist[0] = ship_angle;
+}
+
+static void tunnel_device_button(uint8_t *state, int held) {
+    if (held) {
+        if (*state == 2) {
+            *state = 3;
+            sound_trigger(SOUND_SIDE_RELEASE);
+            tunnel_flash = 2;
+        }
+    } else if (*state == 1) {
+        *state = 2;
+    } else if (*state == 3) {
+        *state = 0;
+    }
+}
+
+static void fade_tunnel_flash(void) {
+    if (tunnel_flash == 1) tunnel_flash = 0;
+    else if (tunnel_flash != 0) tunnel_flash = 1;
+}
+
+static void carry_surface_sides(void) {
+    if (left_device) {
+        left_device = 1;
+        arm_surface_side(0);
+    }
+    if (right_device) {
+        right_device = 1;
+        arm_surface_side(1);
+    }
+}
+
 static void enter_tunnel(Game *game) {
     sound_trigger(SOUND_TUNNEL);
     if (pending_object >= 0 && pending_part >= 0 && pending_part < PARTS) {
@@ -1316,8 +1411,16 @@ static void enter_tunnel(Game *game) {
     tunnel_player_position(ship_angle, &game->tunnel_x, &game->tunnel_y);
     game->tunnel_frame = tunnel_player_frame(ship_angle);
     clear_actors();
-    left_device = 0;
-    right_device = 0;
+    tunnel_flash = 0;
+    memset(angle_hist, 0, sizeof angle_hist);
+    if (left_device) {
+        left_device = 1;
+        spawn_tunnel_side(game, 0);
+    }
+    if (right_device) {
+        right_device = 1;
+        spawn_tunnel_side(game, 1);
+    }
     select_tunnel_pattern();
     tunnel_pending = 0;
 }
@@ -1330,8 +1433,7 @@ static void leave_tunnel(Game *game) {
     game->flight.frame = 1;
     game->flight.zero_frame_age = 0;
     game->flight.alive = 1;
-    left_device = 0;
-    right_device = 0;
+    tunnel_flash = 0;
     if (game->tunnel_reward == REWARD_ADVANCE) {
         stage_counter++;
         int base = BASE_SCROLL;
@@ -1353,10 +1455,13 @@ static void leave_tunnel(Game *game) {
         reload_pending = 0;
     }
     place_map(game, game->flight.camera_y);
+    reset_history(game);
+    carry_surface_sides();
     remember(game);
 }
 
 static void tunnel_tick(Game *game, unsigned controls) {
+    fade_tunnel_flash();
     surface_update_speed(&game->flight, controls);
     int step = ((game->flight.scroll_speed + 7) >> 3) + 2;
     game->tunnel_distance += step;
@@ -1397,10 +1502,14 @@ static void tunnel_tick(Game *game, unsigned controls) {
     ship_angle = (uint8_t)(ship_angle + (uint8_t)goose_signed16(goose_sar16((uint16_t)(int16_t)angular, 2)));
     tunnel_player_position(ship_angle, &game->tunnel_x, &game->tunnel_y);
     game->tunnel_frame = tunnel_player_frame(ship_angle);
+    shift_angle_history();
+    tunnel_device_button(&left_device, (controls & CONTROL_LEFT_DEVICE) != 0);
+    tunnel_device_button(&right_device, (controls & CONTROL_RIGHT_DEVICE) != 0);
     for (int i = 0; i < ACTORS; i++) {
         if (actors[i].flags == 0) continue;
         if (actors[i].handler == HANDLER_TUNNEL_EXIT) update_tunnel_exit(game, &actors[i]);
         else if (actors[i].handler == HANDLER_TUNNEL_PICKUP) update_tunnel_pickup(game, &actors[i]);
+        else if (actors[i].handler == HANDLER_TUNNEL_SIDE) update_tunnel_side(game, &actors[i]);
     }
 }
 
@@ -1527,7 +1636,10 @@ void game_draw(Game *game) {
     } else if (game->mode == MODE_TUNNEL) {
         uint8_t bits[TUNNEL_BYTES];
         tunnel_build_bitmap(bits, (unsigned)game->tunnel_distance, tunnel_min_radius);
-        pictures_tunnel(bits, tunnel_line_color(game->tunnel_reward));
+        int color = tunnel_line_color(game->tunnel_reward);
+        if (tunnel_flash == 2) color = FLASH_HOT;
+        else if (tunnel_flash == 1) color = FLASH_DIM;
+        pictures_tunnel(bits, color);
         for (int layer = 7; layer >= 3; layer--) draw_tunnel_layer(layer);
         char name[24];
         snprintf(name, sizeof name, "fs_1594_%02u", game->tunnel_frame);
