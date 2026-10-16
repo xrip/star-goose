@@ -16,6 +16,7 @@ typedef struct Actor {
     uint8_t handler;
     uint8_t kind;
     uint8_t param;
+    uint8_t layer;
     uint8_t frame;
     uint8_t height;
     uint8_t state[4];
@@ -119,6 +120,11 @@ static unsigned last_spawn_row;
 static uint8_t pending_reward;
 static unsigned pending_resume;
 static uint8_t ship_angle;
+static uint8_t tunnel_pattern_index;
+static uint8_t tunnel_pattern;
+static uint8_t tunnel_last_section = 0xff;
+static int tunnel_exit_spawned;
+static int tunnel_min_radius = 3;
 
 static int signed_byte(unsigned bits) {
     bits &= 255u;
@@ -779,6 +785,147 @@ static void update_actor(Game *game, Actor *actor) {
     }
 }
 
+/* DS:1A32. Four streams, one section every 64 distance units. 0 spawns nothing. */
+static const uint8_t TUNNEL_PATTERN[4][14] = {
+    {5, 6, 7, 8, 1, 2, 3, 4, 5, 0, 0, 0, 0, 0},
+    {5, 4, 3, 2, 1, 8, 7, 6, 5, 0, 0, 0, 0, 0},
+    {1, 2, 3, 4, 5, 6, 7, 8, 1, 0, 0, 0, 0, 0},
+    {1, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0}
+};
+static const uint8_t TUNNEL_PICKUP_RADIUS[48] = {
+    0, 0, 0, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6,
+    7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 22, 24, 26,
+    28, 30, 32, 34, 36, 38, 40, 44, 46, 49, 52, 56, 60, 64, 69, 75
+};
+static const uint8_t TUNNEL_PICKUP_LAYER[24] = {
+    7, 7, 7, 7, 6, 6, 6, 6, 5, 5, 5, 5, 4, 4, 4, 4, 3, 2, 2, 2, 1, 1, 1, 1
+};
+static const uint8_t TUNNEL_EXIT_FRAME[32] = {
+    0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08,
+    0x07, 0x07, 0x06, 0x06, 0x05, 0x05, 0x04, 0x04, 0x03, 0x03, 0x02, 0x02, 0x01, 0x01, 0x00, 0x00
+};
+static const uint8_t TUNNEL_EXIT_RADIUS[32] = {
+    0x2e, 0x2a, 0x26, 0x22, 0x1d, 0x1a, 0x17, 0x14, 0x12, 0x10, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09,
+    0x08, 0x08, 0x07, 0x07, 0x06, 0x06, 0x05, 0x05, 0x04, 0x04, 0x04, 0x03, 0x03, 0x03, 0x03, 0x03
+};
+static const uint8_t TUNNEL_FRAME_SECTOR[28] = {
+    5, 5, 5, 5, 5, 5, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 8, 8, 7, 7, 6, 6, 6, 6, 5, 5, 5, 5
+};
+
+static void select_tunnel_pattern(void) {
+    tunnel_pattern = (uint8_t)(tunnel_pattern_index & 3u);
+    tunnel_pattern_index++;
+    tunnel_last_section = 0xff;
+    tunnel_exit_spawned = 0;
+    tunnel_min_radius = 3;
+}
+
+static void gain_capped(int *value, int amount, int cap) {
+    while (amount > 0 && *value < cap) {
+        (*value)++;
+        amount--;
+    }
+}
+
+static void place_tunnel_pickup(Actor *actor, int radius) {
+    int x = 128;
+    int y = 106;
+    switch (actor->param) {
+    case 1: y = 0x6a - radius; break;
+    case 2: y = 0x6a - radius; x = 0x80 + radius; break;
+    case 3: x = 0x80 + radius; break;
+    case 4: x = 0x80 + radius; y = 0x6a + radius; break;
+    case 5: y = 0x6a + radius; break;
+    case 6: y = 0x6a + radius; x = 0x80 - radius; break;
+    case 7: x = 0x80 - radius; break;
+    case 8: x = 0x80 - radius; y = 0x6a - radius; break;
+    default: break;
+    }
+    actor->x = x;
+    actor->y = (unsigned)y;
+}
+
+static void spawn_tunnel_pickup(const Game *game, uint8_t direction) {
+    Actor *actor = spawn();
+    if (!actor) return;
+    *actor = (Actor){0};
+    actor->object_index = -1;
+    actor->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    actor->handler = 15;
+    actor->param = direction;
+    actor->layer = 6;
+    actor->animated = 1;
+    actor->x = 128;
+    actor->y = 106;
+    actor->state[0] = (uint8_t)game->tunnel_distance;
+    actor->state[1] = (uint8_t)((unsigned)game->tunnel_distance >> 8);
+    snprintf(actor->sprite, sizeof actor->sprite, "fs_1AC9");
+}
+
+static void spawn_tunnel_exit(void) {
+    Actor *actor = spawn();
+    if (!actor) return;
+    *actor = (Actor){0};
+    actor->object_index = -1;
+    actor->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    actor->handler = 14;
+    actor->layer = 7;
+    actor->animated = 1;
+    actor->x = 128;
+    actor->y = 106;
+    snprintf(actor->sprite, sizeof actor->sprite, "fs_1929");
+}
+
+/* CS:3059. Green adds ammo, red fuel, blue shield, and the exit color adds 2500. */
+static void collect_tunnel_pickup(Game *game, Actor *actor) {
+    actor->flags = 0;
+    if (game->tunnel_reward == 0x40) gain_capped(&game->ammo, 6, AMMO_FULL);
+    else if (game->tunnel_reward == 0x80) gain_capped(&game->flight.fuel, 4, 44);
+    else if (game->tunnel_reward == 0xc0) gain_capped(&game->flight.shield, 8, 56);
+    else score_add(game, 2, 5, 0, 0);
+}
+
+static void update_tunnel_pickup(Game *game, Actor *actor) {
+    unsigned spawned = (unsigned)actor->state[0] | ((unsigned)actor->state[1] << 8);
+    unsigned age = ((unsigned)game->tunnel_distance - spawned) & 0xffffu;
+    age >>= 3;
+    if (age > 0x2du) {
+        actor->flags = 0;
+        return;
+    }
+    place_tunnel_pickup(actor, TUNNEL_PICKUP_RADIUS[age]);
+    actor->frame = (uint8_t)(age >> 1);
+    actor->layer = TUNNEL_PICKUP_LAYER[actor->frame];
+    if (actor->layer != 2 || game->tunnel_frame >= 28) return;
+    if (TUNNEL_FRAME_SECTOR[game->tunnel_frame] != actor->param) return;
+    sound_trigger(9);
+    collect_tunnel_pickup(game, actor);
+}
+
+static void update_tunnel_exit(const Game *game, Actor *actor) {
+    unsigned remaining = game->tunnel_distance >= 0x380 ? 0u : (unsigned)(0x380 - game->tunnel_distance);
+    unsigned index = (remaining >> 3) & 31u;
+    tunnel_min_radius = TUNNEL_EXIT_RADIUS[index];
+    actor->frame = TUNNEL_EXIT_FRAME[index];
+}
+
+static void advance_tunnel_objects(Game *game) {
+    if (game->tunnel_distance >= 0x380) return;
+    int remaining = 0x380 - game->tunnel_distance;
+    if (remaining < 0x100) {
+        if (!tunnel_exit_spawned) {
+            spawn_tunnel_exit();
+            tunnel_exit_spawned = 1;
+        }
+        return;
+    }
+    uint8_t section = (uint8_t)((unsigned)game->tunnel_distance >> 6);
+    if (section == tunnel_last_section || section >= 14) return;
+    tunnel_last_section = section;
+    uint8_t direction = TUNNEL_PATTERN[tunnel_pattern][section];
+    if (direction) spawn_tunnel_pickup(game, direction);
+}
+
 static void enter_tunnel(Game *game) {
     sound_trigger(0x0b);
     if (pending_object >= 0 && pending_part >= 0 && pending_part < 3) {
@@ -796,6 +943,7 @@ static void enter_tunnel(Game *game) {
     clear_actors();
     left_device = 0;
     right_device = 0;
+    select_tunnel_pattern();
     tunnel_pending = 0;
 }
 
@@ -848,6 +996,7 @@ static void tunnel_tick(Game *game, unsigned controls) {
         leave_tunnel(game);
         return;
     }
+    advance_tunnel_objects(game);
     int force = 0;
     int speed = game->flight.scroll_speed >> 3;
     if (controls & CONTROL_LEFT) force = -speed - 3;
@@ -873,6 +1022,11 @@ static void tunnel_tick(Game *game, unsigned controls) {
     ship_angle = (uint8_t)(ship_angle + (uint8_t)goose_signed16(goose_sar16((uint16_t)(int16_t)angular, 2)));
     tunnel_player_position(ship_angle, &game->tunnel_x, &game->tunnel_y);
     game->tunnel_frame = tunnel_player_frame(ship_angle);
+    for (int i = 0; i < ACTORS; i++) {
+        if (actors[i].flags == 0) continue;
+        if (actors[i].handler == 14) update_tunnel_exit(game, &actors[i]);
+        else if (actors[i].handler == 15) update_tunnel_pickup(game, &actors[i]);
+    }
 }
 
 static void begin_level(Game *game) {
@@ -892,6 +1046,7 @@ static void begin_level(Game *game) {
     side_charges = 6;
     left_device = 0;
     right_device = 0;
+    tunnel_pattern_index = 0;
     reload_pending = 0;
     pending_object = -1;
     memset(collected, 0, sizeof collected);
@@ -979,17 +1134,29 @@ void game_tick(Game *game, unsigned controls) {
     if (tunnel_pending) enter_tunnel(game);
 }
 
+static void draw_tunnel_layer(int layer) {
+    for (int i = 0; i < ACTORS; i++) {
+        if (actors[i].flags == 0 || actors[i].layer != (uint8_t)layer) continue;
+        char name[24];
+        sprite_name(&actors[i], name, sizeof name);
+        pictures_sprite(name, actors[i].x, (int)actors[i].y, 0, 0x1a);
+    }
+}
+
 void game_draw(Game *game) {
     pictures_clear();
     if (game->mode == MODE_TITLE) {
         pictures_intro();
     } else if (game->mode == MODE_TUNNEL) {
         uint8_t bits[TUNNEL_BYTES];
-        tunnel_build_bitmap(bits, (unsigned)game->tunnel_distance, 3);
+        tunnel_build_bitmap(bits, (unsigned)game->tunnel_distance, tunnel_min_radius);
         pictures_tunnel(bits, tunnel_line_color(game->tunnel_reward));
+        for (int layer = 7; layer >= 3; layer--) draw_tunnel_layer(layer);
         char name[24];
         snprintf(name, sizeof name, "fs_1594_%02u", game->tunnel_frame);
         pictures_sprite(name, game->tunnel_x, game->tunnel_y, 0, 0x1a);
+        draw_tunnel_layer(2);
+        draw_tunnel_layer(1);
     } else {
         pictures_draw_tiles(&game->flight);
         for (int i = 0; i < ACTORS; i++) {
