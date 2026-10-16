@@ -294,8 +294,6 @@ static int level_index;
 static int level_part;
 static int stage_counter;
 static int reload_pending;
-static int pending_object;
-static int pending_part;
 static uint8_t collected[6];
 static uint8_t score_digits[6];
 static int hud_frame;
@@ -1215,8 +1213,6 @@ static void update_gate(Game *game, Actor *actor, int entrance_b) {
         nudge_x(game, game->flight.x - actor->x - GATE_INSET);
         if (!dying && pull <= PULL_LIMIT && dy <= PULL_LIMIT) {
             resume_x = game->flight.x;
-            pending_object = actor->object_index;
-            pending_part = level_part;
             unsigned index = (unsigned)(level_index * PARTS + level_part);
             if (index >= LEVELS * PARTS) index = 0;
             uint16_t dest = entrance_b ? DEST_B[index] : DEST_A[index];
@@ -1257,8 +1253,6 @@ static void update_exit(Game *game, Actor *actor) {
         nudge_x(game, game->flight.x - actor->x - GATE_INSET);
         if (!dying && open == GATE_OPEN && pull <= PULL_LIMIT && dy <= PULL_LIMIT) {
             if (game->flight.frame == 0) {
-                pending_object = actor->object_index;
-                pending_part = level_part;
                 pending_reward = REWARD_ADVANCE;
                 pending_resume = resume_y;
                 tunnel_pending = 1;
@@ -1879,10 +1873,8 @@ static void carry_surface_sides(void) {
 }
 
 static void enter_tunnel(Game *game) {
+    /* CS:0F3C does not consume the gate. A later rebuild, including respawn, must spawn it again. */
     sound_trigger(SOUND_TUNNEL);
-    if (pending_object >= 0 && pending_part >= 0 && pending_part < PARTS) {
-        consumed[pending_part] |= 1u << pending_object;
-    }
     game->mode = MODE_TUNNEL;
     game->tunnel_distance = 0;
     game->tunnel_reward = pending_reward;
@@ -2027,7 +2019,6 @@ static void begin_level(Game *game) {
     right_device = 0;
     tunnel_pattern_index = 0;
     reload_pending = 0;
-    pending_object = -1;
     reset_collectibles();
     game->flight.base_scroll_speed = BASE_SCROLL;
     resume_y = 0;
@@ -2067,6 +2058,7 @@ static void respawn(Game *game) {
     game->flight.camera_y = START_CAMERA;
     game->flight.scroll_speed = game->flight.base_scroll_speed;
     game->flight.fuel_distance = 0;
+    game->flight.fuel_delta = 0;
     game->flight.frame = 1;
     game->flight.zero_frame_age = 0;
     side_charges = SIDE_CHARGES_FULL;
@@ -2074,6 +2066,10 @@ static void respawn(Game *game) {
     shield_delta = 0;
     left_device = 0;
     right_device = 0;
+    /* CS:0E3D. The new life returns to part 0 and drops a pending tunnel transition. */
+    ammo_use = 0;
+    reload_pending = 0;
+    resume_x = START_X;
     if (level_part != 0) level_part = 0;
     place_map(game, game->flight.camera_y);
     reset_history(game);
