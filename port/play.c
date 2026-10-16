@@ -129,6 +129,7 @@ enum {
     ENEMY_DIAG_X = 6,
     ENEMY_DIAG_Y = 4,
     ENEMY_HIT_Y = 8,
+    ENEMY_Z_STEP = 4,
     TOUCH_HURT = 1,
     MOBILE_HURT = 12,
     GATE_INSET = 12,
@@ -860,11 +861,16 @@ static void update_enemy_shot(Game *game, Actor *shot) {
         shot->flags = 0;
         return;
     }
+    if (shot->frame == 1 && (uint8_t)shot->z < SHOT_Z_LOW)
+        shot->z = (int8_t)((uint8_t)shot->z + ENEMY_Z_STEP);
+    if (shot->frame == 2 && (uint8_t)shot->z > SHOT_Z_HIGH)
+        shot->z = (int8_t)((uint8_t)shot->z - ENEMY_Z_STEP);
     TerrainSample ground = terrain_sample(game->flight.tiles, (unsigned)shot->x, shot->y);
     if (ground.height >= shot->z) {
         become_impact(shot);
         return;
     }
+    if (dying) return;
     int dx = shot->x - game->flight.x;
     int dy = (int)shot->y - (int)player_y(game);
     int dz = signed_byte((unsigned)shot->z) - game->flight.z;
