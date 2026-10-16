@@ -281,6 +281,14 @@ static unsigned hist_y[4];
 static uint8_t hist_frame[4];
 static uint8_t hist_z[4];
 static uint32_t consumed[3];
+static uint16_t spawn_rows[TILE_ROWS];
+static uint16_t available_masks[PARTS][TILE_ROWS];
+static const uint16_t COLUMN_BIT[10] = {
+    0x0200, 0x0100, 0x0080, 0x0040, 0x0020, 0x0010, 0x0008, 0x0004, 0x0002, 0x0001
+};
+static const uint16_t COLUMN_CLEAR[11] = {
+    0xffff, 0xfdff, 0xfeff, 0xff7f, 0xffbf, 0xffdf, 0xffef, 0xfff7, 0xfffb, 0xfffd, 0xfffe
+};
 static const uint8_t *map_tiles;
 static int death_hold;
 static int dying;
@@ -419,7 +427,7 @@ static void spawn_replaced(int index, const GooseMapObject *object, int active) 
     if (!actor) return;
     *actor = (Actor){0};
     actor->object_index = index;
-    actor->kind = object->kind;
+    actor->kind = 0xff;
     actor->handler = HANDLER_CULL;
     actor->height = REPLACEMENT_H[handler];
     actor->anchor_y = REPLACEMENT_ANCHOR[handler];
@@ -429,6 +437,44 @@ static void spawn_replaced(int index, const GooseMapObject *object, int active) 
     snprintf(actor->sprite, sizeof actor->sprite, "%s", REPLACEMENT_SPRITE[handler]);
     actor->waiting = active ? 0 : 1;
     if (active) actor->flags = GOOSE_RENDER | GOOSE_UPDATE;
+}
+
+static void apply_replacement(Actor *actor) {
+    if (actor->kind >= sizeof KINDS / sizeof KINDS[0]) {
+        actor->flags = 0;
+        return;
+    }
+    unsigned handler = KINDS[actor->kind].handler;
+    if (handler >= sizeof REPLACEMENT_SPRITE / sizeof REPLACEMENT_SPRITE[0]) {
+        actor->flags = 0;
+        return;
+    }
+    int x = actor->x;
+    unsigned y = actor->y;
+    int8_t z = actor->z;
+    int index = actor->object_index;
+    actor->kind = 0xff;
+    actor->handler = HANDLER_CULL;
+    actor->animated = 0;
+    actor->frame = 0;
+    actor->height = REPLACEMENT_H[handler];
+    actor->anchor_y = REPLACEMENT_ANCHOR[handler];
+    actor->x = x;
+    actor->y = y;
+    actor->z = z;
+    actor->object_index = index;
+    actor->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    actor->waiting = 0;
+    snprintf(actor->sprite, sizeof actor->sprite, "%s", REPLACEMENT_SPRITE[handler]);
+}
+
+static void destroy_map_actor(Actor *actor) {
+    unsigned row = actor->y >> 4;
+    int column = (actor->x + COLUMN_BIAS) / COLUMN_SPAN;
+    consume_actor(actor);
+    if (level_part >= 0 && level_part < PARTS && row < TILE_ROWS && column >= 0 && column <= 10)
+        available_masks[level_part][row] &= COLUMN_CLEAR[column];
+    apply_replacement(actor);
 }
 
 static int replacement_present(int index) {
@@ -505,6 +551,13 @@ static void place_map(Game *game, unsigned camera) {
     }
     last_spawn_row = spawn_row(camera);
     for (unsigned n = 0; n < SPAWN_AHEAD; n++) activate_row((last_spawn_row + n) & (TILE_ROWS - 1));
+    memset(spawn_rows, 0, sizeof spawn_rows);
+    for (int i = 0; i < map->object_count; i++) {
+        unsigned column = map->objects[i].column;
+        unsigned row = map->objects[i].stored_row;
+        if (column >= 10 || row >= TILE_ROWS) continue;
+        spawn_rows[row] |= (uint16_t)(((unsigned)map->objects[i].kind << 10) | COLUMN_BIT[column]);
+    }
 }
 
 static void advance_spawns(unsigned camera) {
@@ -1165,8 +1218,7 @@ static void update_ground_shot(Game *game, Actor *actor) {
         if (dx > GROUND_HALF[target->kind]) continue;
         score_add(game, 0, 1, 5, 0);
         spawn_explosion(target->x, target->y, target->z);
-        consume_actor(target);
-        target->flags = 0;
+        destroy_map_actor(target);
         sound_trigger(SOUND_IMPACT);
         actor->flags = 0;
         return;
@@ -1181,17 +1233,10 @@ static const int MAP_RIGHT[6] = {0xec, 0xec, 0xe0, 0xec, 0xec, 0xec};
 
 /* CS:06C7. A row word is kind<<10 ORed with the column bit. Column 0 is bit 9. */
 static unsigned map_row_mask(unsigned row) {
-    unsigned mask = 0;
-    for (int i = 0; i < ACTORS; i++) {
-        const Actor *actor = &actors[i];
-        if (actor->object_index < 0 || actor->object_index >= OBJECT_SLOTS) continue;
-        if (level_part >= 0 && level_part < PARTS && (consumed[level_part] & (1u << actor->object_index))) continue;
-        if ((actor->y >> 4) != row || actor->kind >= 21) continue;
-        int grid = (actor->x + COLUMN_BIAS) / COLUMN_SPAN;
-        if (grid < 1 || grid > 10) continue;
-        mask |= ((unsigned)actor->kind << 10) | (1u << (9 - (grid - 1)));
-    }
-    return mask;
+    if (row >= TILE_ROWS) return 0;
+    int part = level_part;
+    if (part < 0 || part >= PARTS) part = 0;
+    return (unsigned)spawn_rows[row] & available_masks[part][row];
 }
 
 /* CS:0A51. Inclusive window around the column cursor. Returns damage, or 0. */
@@ -1241,8 +1286,7 @@ static void apply_map_hit(Game *game, int damage, int column, unsigned row) {
         if ((actor->y >> 4) != row || actor->x != expect_x) continue;
         score_add(game, 0, 1, 5, 0);
         spawn_explosion(actor->x, actor->y, actor->z);
-        consume_actor(actor);
-        actor->flags = 0;
+        destroy_map_actor(actor);
         return;
     }
 }
@@ -1290,8 +1334,7 @@ static int strike_map(Game *game, Actor *shot, unsigned row) {
     if (target->state[2] & HP_DEPLETED) {
         score_add(game, 0, 1, 5, 0);
         spawn_explosion(target->x, target->y, target->z);
-        consume_actor(target);
-        target->flags = 0;
+        destroy_map_actor(target);
         sound_trigger(SOUND_IMPACT);
     } else {
         score_add(game, 0, 0, 1, 0);
@@ -1658,6 +1701,7 @@ static void leave_tunnel(Game *game) {
         if (level_index > LEVELS - 1) level_index = 1;
         memset(collected, 0, sizeof collected);
         memset(consumed, 0, sizeof consumed);
+        memset(available_masks, 0xff, sizeof available_masks);
         game->flight.base_scroll_speed = base;
         game->flight.scroll_speed = base;
         game->flight.camera_y = START_CAMERA;
@@ -1756,6 +1800,7 @@ static void begin_level(Game *game) {
     pending_object = -1;
     memset(collected, 0, sizeof collected);
     memset(consumed, 0, sizeof consumed);
+    memset(available_masks, 0xff, sizeof available_masks);
     game->flight.base_scroll_speed = BASE_SCROLL;
     resume_y = 0;
     place_map(game, game->flight.camera_y);
