@@ -58,11 +58,6 @@ int main(void) {
         BeginDrawing();
         ClearBackground(BLACK);
         pictures_present();
-        if (game.mode != MODE_TITLE) {
-            DrawText(TextFormat("score %d   fuel %d   shield %d   ammo %d   lives %d",
-                                game.score, game.flight.fuel, game.flight.shield, game.ammo, game.lives),
-                     8, SCREEN_H * SCALE - 28, 20, WHITE);
-        }
         if (shot) {
             pictures_save("shot.png");
             printf("mode %d level %d part %d score %d ammo %d lives %d tunnel %d fuel %d shield %d\n",

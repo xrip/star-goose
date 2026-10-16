@@ -41,6 +41,10 @@ static uint8_t screen[SCREEN_W * SCREEN_H];
 static Color upload[SCREEN_W * SCREEN_H];
 static Texture2D frame;
 static int ready;
+static uint8_t bank_bird2[SCREEN_W * SCREEN_H];
+static uint8_t bank_blox[SCREEN_W * SCREEN_H];
+static int bank_bird2_ready;
+static int bank_blox_ready;
 
 static int signed8(unsigned bits) {
     return bits < 128u ? (int)bits : (int)bits - 256;
@@ -64,6 +68,31 @@ static const char *find_file(const char *relative) {
         }
     }
     return 0;
+}
+
+static void decode_packed(const unsigned char *data, uint8_t *pixels) {
+    for (int y = 0; y < SCREEN_H; y++) {
+        const unsigned char *row = data + y * 160;
+        for (int x = 0; x < SCREEN_W; x++) {
+            unsigned byte = row[x >> 1];
+            pixels[y * SCREEN_W + x] = (uint8_t)((x & 1) ? (byte & 15) : (byte >> 4));
+        }
+    }
+}
+
+static void load_bank(const char *relative, uint8_t *pixels, int *flag) {
+    const char *path = find_file(relative);
+    *flag = 0;
+    if (!path) return;
+    int bytes = 0;
+    unsigned char *data = LoadFileData(path, &bytes);
+    if (!data || bytes != 32000) {
+        if (data) UnloadFileData(data);
+        return;
+    }
+    decode_packed(data, pixels);
+    UnloadFileData(data);
+    *flag = 1;
 }
 
 int pictures_load(void) {
@@ -115,6 +144,8 @@ int pictures_load(void) {
     frame = LoadTextureFromImage(blank);
     UnloadImage(blank);
     SetTextureFilter(frame, TEXTURE_FILTER_POINT);
+    load_bank("assets/BIRD2.X", bank_bird2, &bank_bird2_ready);
+    load_bank("assets/BLOX.X", bank_blox, &bank_blox_ready);
     ready = 1;
     return 1;
 }
@@ -235,6 +266,31 @@ void pictures_draw_surface(const Surface *game) {
     pictures_draw_tiles(game);
     pictures_draw_ship(game);
     pictures_finish();
+}
+
+void pictures_blit_bank(int bank_offset, unsigned offset, int width, int height,
+                        int dest_x, int dest_y, int live_columns) {
+    const uint8_t *bank = bank_offset == 4 ? bank_blox : bank_bird2;
+    int bank_ready = bank_offset == 4 ? bank_blox_ready : bank_bird2_ready;
+    if (!bank_ready || width <= 0 || height <= 0) return;
+    int src_y = (int)(offset / 160u);
+    int src_x = (int)(offset % 160u) * 2;
+    int live = live_columns < 0 ? width : live_columns;
+    for (int dy = 0; dy < height; dy++) {
+        int y = dest_y + dy;
+        if (y < 0 || y >= SCREEN_H || src_y + dy < 0 || src_y + dy >= SCREEN_H) continue;
+        for (int dx = 0; dx < width; dx++) {
+            int x = dest_x + dx;
+            if (x < 0 || x >= SCREEN_W || src_x + dx < 0 || src_x + dx >= SCREEN_W) continue;
+            int color = bank[(src_y + dy) * SCREEN_W + src_x + dx];
+            if (dx >= live) {
+                if (color == 2 || (color & 1) == 0) color = (color == 2 ? 0 : color) ^ 7;
+            } else if (color == 2) {
+                continue;
+            }
+            screen[y * SCREEN_W + x] = (uint8_t)color;
+        }
+    }
 }
 
 void pictures_present(void) {

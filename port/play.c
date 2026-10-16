@@ -1,6 +1,7 @@
 #include "play.h"
 #include "goose_model.h"
 #include "maps.h"
+#include "hud.h"
 #include "pictures.h"
 #include "terrain.h"
 #include "tunnel.h"
@@ -99,6 +100,9 @@ static int reload_pending;
 static int pending_object;
 static int pending_part;
 static uint8_t collected[6];
+static uint8_t score_digits[6];
+static int hud_frame;
+static int side_charges;
 static uint32_t consumed[3];
 static const uint8_t *map_tiles;
 static int death_hold;
@@ -111,6 +115,53 @@ static uint8_t ship_angle;
 static int signed_byte(unsigned bits) {
     bits &= 255u;
     return bits < 128u ? (int)bits : (int)bits - 256;
+}
+
+/* CS:269E adds one place at a time and carries at most once. A carry out of
+ * the 10000 digit grants a life. The 100000 digit wraps without a further life. */
+static void score_sync(Game *game) {
+    int value = 0;
+    for (int i = 0; i < 6; i++) value = value * 10 + score_digits[i];
+    game->score = value;
+}
+
+static void score_add(Game *game, int thousands, int hundreds, int tens, int units) {
+    unsigned ones = score_digits[5] + (unsigned)(units & 255);
+    if (ones > 9) {
+        ones -= 10;
+        score_digits[4]++;
+    }
+    score_digits[5] = (uint8_t)ones;
+    unsigned ten = score_digits[4] + (unsigned)(tens & 255);
+    if (ten > 9) {
+        ten -= 10;
+        score_digits[3]++;
+    }
+    score_digits[4] = (uint8_t)ten;
+    unsigned hundred = score_digits[3] + (unsigned)(hundreds & 255);
+    if (hundred > 9) {
+        hundred -= 10;
+        score_digits[2]++;
+    }
+    score_digits[3] = (uint8_t)hundred;
+    unsigned thousand = score_digits[2] + (unsigned)(thousands & 255);
+    if (thousand > 9) {
+        thousand -= 10;
+        score_digits[1]++;
+    }
+    score_digits[2] = (uint8_t)thousand;
+    if (score_digits[1] > 9) {
+        score_digits[1] = (uint8_t)(score_digits[1] - 10);
+        score_digits[0]++;
+        if (game->lives < LIVES_FULL) game->lives++;
+    }
+    if (score_digits[0] > 9) score_digits[0] = (uint8_t)(score_digits[0] - 10);
+    score_sync(game);
+}
+
+static void hud_tick(Game *game) {
+    hud_frame++;
+    if ((hud_frame & 3) == 0) score_add(game, 0, 0, 0, stage_counter);
 }
 
 static unsigned player_y(const Game *game) {
@@ -393,9 +444,9 @@ static void update_shot(Game *game, Actor *shot) {
         if (target->state[2] & 0x80) {
             consume_actor(target);
             target->flags = 0;
-            game->score += 150;
+            score_add(game, 0, 1, 5, 0);
         } else {
-            game->score += 10;
+            score_add(game, 0, 0, 1, 0);
         }
         shot->flags = 0;
         return;
@@ -450,7 +501,7 @@ static void update_mobile(Game *game, Actor *actor) {
     if (actor->state[2] & 0x80) {
         consume_actor(actor);
         actor->flags = 0;
-        game->score += 150;
+        score_add(game, 0, 1, 5, 0);
         return;
     }
     if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
@@ -585,7 +636,7 @@ static void update_actor(Game *game, Actor *actor) {
             if (actor->param < 6) collected[actor->param] = 1;
             consume_actor(actor);
             actor->flags = 0;
-            game->score += 150;
+            score_add(game, 0, 1, 5, 0);
         }
     } else if (cull_after(actor, game->flight.camera_y)) {
         actor->flags = 0;
@@ -696,6 +747,7 @@ static void begin_level(Game *game) {
     level_index = 0;
     level_part = 0;
     stage_counter = 1;
+    side_charges = 6;
     reload_pending = 0;
     pending_object = -1;
     memset(collected, 0, sizeof collected);
@@ -719,6 +771,7 @@ static void respawn(Game *game) {
     game->flight.fuel_distance = 0;
     game->flight.frame = 1;
     game->flight.zero_frame_age = 0;
+    side_charges = 6;
     if (level_part != 0) level_part = 0;
     place_map(game, game->flight.camera_y);
     remember(game);
@@ -728,6 +781,9 @@ void game_boot(Game *game) {
     memset(game, 0, sizeof *game);
     game->mode = MODE_TITLE;
     game->lives = LIVES_FULL;
+    memset(score_digits, 0, sizeof score_digits);
+    hud_frame = 0;
+    side_charges = 6;
     surface_start(&game->flight);
 }
 
@@ -744,6 +800,7 @@ void game_tick(Game *game, unsigned controls) {
         if (controls & CONTROL_FIRE) game_play(game);
         return;
     }
+    hud_tick(game);
     if (game->mode == MODE_TUNNEL) {
         tunnel_tick(game, controls);
         return;
@@ -788,6 +845,10 @@ void game_draw(Game *game) {
             pictures_sprite(name, actors[i].x, (int)actors[i].y, actors[i].z, (int)game->flight.camera_y);
         }
         pictures_draw_ship(&game->flight);
+    }
+    if (game->mode != MODE_TITLE) {
+        hud_draw(game->flight.fuel, game->ammo, game->flight.shield, game->lives, side_charges,
+                 collected, score_digits);
     }
     pictures_finish();
 }
