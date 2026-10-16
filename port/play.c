@@ -10,7 +10,14 @@
 #include <stdio.h>
 #include <string.h>
 
-enum { ACTORS = GOOSE_ENTITY_CAPACITY };
+enum { ACTORS = 48 };
+enum {
+    GOOSE_RENDER = 0x01,
+    GOOSE_MAP_OBJECT = 0x08,
+    GOOSE_LARGE_ANCHOR = 0x10,
+    GOOSE_SIDE = 0x20,
+    GOOSE_PROJECTILE = 0x40
+};
 
 enum {
     HANDLER_LOOP = 2,
@@ -423,7 +430,7 @@ static void activate_row(unsigned row) {
         if (!actors[i].waiting || (actors[i].y >> 4) != row) continue;
         uint8_t kept = (uint8_t)(actors[i].flags & (GOOSE_MAP_OBJECT | GOOSE_LARGE_ANCHOR));
         actors[i].waiting = 0;
-        actors[i].flags = (uint8_t)(GOOSE_RENDER | GOOSE_UPDATE | kept);
+        actors[i].flags = (uint8_t)(GOOSE_RENDER | kept);
     }
 }
 
@@ -444,7 +451,7 @@ static void spawn_replaced(int index, const GooseMapObject *object, int active) 
     actor->z = (int8_t)column_z(TILE_ROWS - 1 - object->stored_row, object->column + 1);
     snprintf(actor->sprite, sizeof actor->sprite, "%s", REPLACEMENT_SPRITE[handler]);
     actor->waiting = active ? 0 : 1;
-    if (active) actor->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    if (active) actor->flags = GOOSE_RENDER;
 }
 
 static void apply_replacement(Actor *actor) {
@@ -471,7 +478,7 @@ static void apply_replacement(Actor *actor) {
     actor->y = y;
     actor->z = z;
     actor->object_index = index;
-    actor->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    actor->flags = GOOSE_RENDER;
     actor->waiting = 0;
     snprintf(actor->sprite, sizeof actor->sprite, "%s", REPLACEMENT_SPRITE[handler]);
 }
@@ -634,7 +641,7 @@ static void spawn_shot(Game *game, int x, unsigned y, int z, int frame, int heig
     if (!shot) return;
     *shot = (Actor){0};
     shot->object_index = -1;
-    shot->flags = GOOSE_RENDER | GOOSE_UPDATE | GOOSE_PROJECTILE;
+    shot->flags = GOOSE_RENDER | GOOSE_PROJECTILE;
     shot->handler = HANDLER_PLAYER_SHOT;
     shot->frame = (uint8_t)frame;
     shot->height = (uint8_t)height;
@@ -657,7 +664,7 @@ static void fire(Game *game) {
     if (flash) {
         *flash = (Actor){0};
         flash->object_index = -1;
-        flash->flags = GOOSE_RENDER | GOOSE_UPDATE;
+        flash->flags = GOOSE_RENDER;
         flash->handler = HANDLER_COUNTDOWN;
         flash->frame = VARIATION[variation & VARIATION_MASK];
         flash->animated = 1;
@@ -671,7 +678,7 @@ static void fire(Game *game) {
     if (flash) {
         *flash = (Actor){0};
         flash->object_index = -1;
-        flash->flags = GOOSE_RENDER | GOOSE_UPDATE;
+        flash->flags = GOOSE_RENDER;
         flash->handler = HANDLER_COUNTDOWN;
         flash->frame = VARIATION[variation & VARIATION_MASK];
         flash->animated = 1;
@@ -705,7 +712,7 @@ static void spawn_aimed(Game *game, Actor *from, int fire) {
     if (flash) {
         *flash = (Actor){0};
         flash->object_index = -1;
-        flash->flags = GOOSE_RENDER | GOOSE_UPDATE;
+        flash->flags = GOOSE_RENDER;
         flash->handler = HANDLER_COUNTDOWN;
         flash->layer = 5;
         flash->animated = 1;
@@ -724,7 +731,7 @@ static void spawn_aimed(Game *game, Actor *from, int fire) {
     if (!shot) return;
     *shot = (Actor){0};
     shot->object_index = -1;
-    shot->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    shot->flags = GOOSE_RENDER;
     shot->handler = HANDLER_ENEMY_SHOT;
     shot->param = (uint8_t)direction;
     shot->height = AIMED_H[direction];
@@ -771,7 +778,7 @@ static int aim(Game *game, Actor *actor) {
 static const unsigned IMPACT_SPRITE[IMPACT_FRAMES] = {0x3b06, 0x3b0a, 0x3b0e, 0x3b12};
 
 static void become_impact(Actor *shot) {
-    shot->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    shot->flags = GOOSE_RENDER;
     shot->handler = HANDLER_IMPACT;
     shot->layer = 3;
     shot->frame = 0;
@@ -789,7 +796,7 @@ static void become_side_impact(Actor *shot) {
         return;
     }
     side_impact_mask = (uint8_t)(side_impact_mask | bit);
-    shot->flags = (uint8_t)(GOOSE_RENDER | GOOSE_UPDATE | (right ? GOOSE_SIDE : 0));
+    shot->flags = (uint8_t)(GOOSE_RENDER | (right ? GOOSE_SIDE : 0));
     shot->handler = HANDLER_SIDE_IMPACT;
     shot->layer = 5;
     shot->frame = 0;
@@ -968,7 +975,7 @@ static void emit_mobile_shot(Game *game, Actor *from, int dx, int dy, int dz) {
     if (flash) {
         *flash = (Actor){0};
         flash->object_index = -1;
-        flash->flags = GOOSE_RENDER | GOOSE_UPDATE;
+        flash->flags = GOOSE_RENDER;
         flash->handler = HANDLER_COUNTDOWN;
         flash->layer = 5;
         flash->animated = 1;
@@ -986,7 +993,7 @@ static void emit_mobile_shot(Game *game, Actor *from, int dx, int dy, int dz) {
     unsigned frame = from->frame < 10 ? SHOT_FRAME_MAP[from->frame] : 0;
     *shot = (Actor){0};
     shot->object_index = -1;
-    shot->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    shot->flags = GOOSE_RENDER;
     shot->handler = HANDLER_ENEMY_SHOT;
     shot->param = 2;
     shot->frame = (uint8_t)frame;
@@ -1029,7 +1036,7 @@ static void spawn_lobbed(Actor *from, int direction, int handler) {
     if (!shot) return;
     *shot = (Actor){0};
     shot->object_index = -1;
-    shot->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    shot->flags = GOOSE_RENDER;
     shot->handler = (uint8_t)handler;
     shot->param = (uint8_t)direction;
     shot->animated = arc ? 0 : 1;
@@ -1281,7 +1288,7 @@ static int arm_surface_side(int side) {
     if (!actor) return 0;
     *actor = (Actor){0};
     actor->object_index = -1;
-    actor->flags = GOOSE_RENDER | GOOSE_UPDATE | GOOSE_PROJECTILE;
+    actor->flags = GOOSE_RENDER | GOOSE_PROJECTILE;
     if (side) actor->flags |= GOOSE_SIDE;
     actor->handler = HANDLER_SIDE_FOLLOW;
     actor->animated = 1;
@@ -1394,7 +1401,7 @@ static void spawn_explosion(int x, unsigned y, int z) {
     if (!boom) return;
     *boom = (Actor){0};
     boom->object_index = -1;
-    boom->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    boom->flags = GOOSE_RENDER;
     boom->handler = HANDLER_EXPLOSION;
     boom->animated = 1;
     boom->x = x;
@@ -1481,7 +1488,6 @@ static int strike_map(Game *game, Actor *shot, unsigned row) {
         Actor *actor = &actors[i];
         if (actor->flags == 0 || actor->object_index < 0) continue;
         if ((actor->y >> 4) != row || actor->x != expect_x) continue;
-        if (actor->flags & GOOSE_SENTINEL) return 0;
         target = actor;
         break;
     }
@@ -1664,7 +1670,7 @@ static void spawn_tunnel_pickup(const Game *game, uint8_t direction) {
     if (!actor) return;
     *actor = (Actor){0};
     actor->object_index = -1;
-    actor->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    actor->flags = GOOSE_RENDER;
     actor->handler = HANDLER_TUNNEL_PICKUP;
     actor->param = direction;
     actor->layer = 6;
@@ -1681,7 +1687,7 @@ static void spawn_tunnel_exit(void) {
     if (!actor) return;
     *actor = (Actor){0};
     actor->object_index = -1;
-    actor->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    actor->flags = GOOSE_RENDER;
     actor->handler = HANDLER_TUNNEL_EXIT;
     actor->layer = LAYER_TOP;
     actor->animated = 1;
@@ -1769,7 +1775,7 @@ static void spawn_tunnel_side(Game *game, int side) {
     if (!actor) return;
     *actor = (Actor){0};
     actor->object_index = -1;
-    actor->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    actor->flags = GOOSE_RENDER;
     if (side) actor->flags |= GOOSE_SIDE;
     actor->handler = HANDLER_TUNNEL_SIDE;
     actor->layer = LAYER_SHIP;
@@ -1972,7 +1978,7 @@ static void spawn_respawn_effect(const Game *game) {
     if (!actor) return;
     *actor = (Actor){0};
     actor->object_index = -1;
-    actor->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    actor->flags = GOOSE_RENDER;
     actor->handler = HANDLER_ACCEL;
     actor->layer = 1;
     actor->height = 42;
@@ -2149,7 +2155,7 @@ static void spawn_attract(int frame) {
     if (!actor) return;
     *actor = (Actor){0};
     actor->object_index = -1;
-    actor->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    actor->flags = GOOSE_RENDER;
     actor->handler = HANDLER_DRIFT;
     actor->waiting = 1;
     actor->animated = 1;

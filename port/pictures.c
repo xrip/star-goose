@@ -336,13 +336,6 @@ void pictures_draw_ship(const Surface *game) {
     blit_sprite(sprite, 0, sprite->w, dest_x, screen_y(world_y, (int)game->camera_y));
 }
 
-void pictures_draw_surface(const Surface *game) {
-    pictures_clear();
-    pictures_draw_tiles(game);
-    pictures_draw_ship(game);
-    pictures_finish();
-}
-
 void pictures_blit_bank(int bank_offset, unsigned offset, int width, int height,
                         int dest_x, int dest_y, int live_columns) {
     const uint8_t *bank = bank_bird2;
