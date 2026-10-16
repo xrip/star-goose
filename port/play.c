@@ -1,12 +1,13 @@
 #include "play.h"
 #include "goose_model.h"
+#include "maps.h"
 #include "pictures.h"
 #include "terrain.h"
 #include "tunnel.h"
 #include <stdio.h>
 #include <string.h>
 
-enum { ACTORS = 40, AMMO_FULL = 48, LIVES_FULL = 3 };
+enum { ACTORS = 48, AMMO_FULL = 48, LIVES_FULL = 3 };
 
 typedef struct Actor {
     uint8_t flags;
@@ -19,6 +20,7 @@ typedef struct Actor {
     int8_t anchor_y;
     int animated;
     int waiting;
+    int object_index;
     int x;
     unsigned y;
     char sprite[16];
@@ -32,7 +34,7 @@ typedef struct Kind {
     const char *sprite;
 } Kind;
 
-/* Handlers from the map templates. Kind 15 and 16 are collectibles. */
+/* Handlers from the map templates. Kinds 15..20 share the collectible handler. */
 static const Kind KINDS[] = {
     {2, 0, 0, 1, "fs_0E2B"},
     {3, 0, 0, 1, "fs_0E52"},
@@ -50,15 +52,23 @@ static const Kind KINDS[] = {
     {28, 0, 0, 0, "map_kind_13"},
     {26, 2, 0x3c, 1, "fs_0F90"},
     {32, 0, 0, 0, "collectible_00"},
-    {32, 1, 0, 0, "collectible_00"}
+    {32, 1, 0, 0, "collectible_00"},
+    {32, 2, 0, 0, "collectible_00"},
+    {32, 3, 0, 0, "collectible_03"},
+    {32, 4, 0, 0, "collectible_04"},
+    {32, 5, 0, 0, "collectible_05"}
 };
 
-/* Level 1, part 1. y = stored_row * 16, x = 24 * column - 4. */
-static const uint8_t LEVEL_OBJECTS[][3] = {
-    {13, 4, 59}, {9, 4, 10}, {7, 4, 3}, {1, 1, 51}, {1, 8, 51},
-    {2, 6, 28}, {2, 9, 28}, {0, 3, 37}, {0, 2, 14}, {1, 8, 21},
-    {1, 7, 19}, {3, 0, 43}, {3, 9, 43}, {3, 2, 24}, {12, 0, 25},
-    {12, 4, 13}, {15, 2, 29}, {16, 4, 12}
+/* DS:1495 and DS:14C5. Low 10 bits are the resume camera, high 2 bits are the reward. */
+static const uint16_t DEST_A[24] = {
+    0x0380, 0xc0e0, 0x0380, 0x0380, 0x0380, 0xc180, 0x80d0, 0x0380,
+    0xc060, 0x0380, 0x0380, 0x0380, 0x0380, 0x0380, 0x0380, 0x0380,
+    0x0380, 0x0380, 0xc050, 0x0380, 0x0380, 0x0380, 0x0380, 0x0380
+};
+static const uint16_t DEST_B[24] = {
+    0x4310, 0x82f0, 0xc3c0, 0x4340, 0x8330, 0xc3a0, 0x43c0, 0xc370,
+    0x83a0, 0x8320, 0xc300, 0x43a0, 0x43a0, 0x83c0, 0xc3a0, 0x8350,
+    0x4330, 0xc3a0, 0x42f0, 0x8330, 0xc3a0, 0xc3a0, 0x4330, 0x8390
 };
 
 static const uint8_t PINGPONG[6] = {0, 1, 2, 3, 2, 1};
@@ -82,7 +92,15 @@ static uint8_t variation;
 static int angular;
 static unsigned resume_y;
 static int resume_x;
+static int level_index;
 static int level_part;
+static int stage_counter;
+static int reload_pending;
+static int pending_object;
+static int pending_part;
+static uint8_t collected[6];
+static uint32_t consumed[3];
+static const uint8_t *map_tiles;
 static int death_hold;
 static int tunnel_pending;
 static unsigned last_spawn_row;
@@ -102,7 +120,7 @@ static unsigned player_y(const Game *game) {
 static int column_z(int stored, int column) {
     unsigned z = 0;
     for (int c = 0; c < column; c++) {
-        int tile = goose_level0_tiles[stored * 12 + c];
+        int tile = map_tiles[stored * 12 + c];
         if (tile > 41) tile = 0;
         z = (z + goose_height_delta[tile]) & 255u;
     }
@@ -124,6 +142,12 @@ static unsigned spawn_row(unsigned camera) {
     return ((camera >> 4) - 3u) & 63u;
 }
 
+static void consume_actor(const Actor *actor) {
+    if (!actor || actor->object_index < 0 || actor->object_index >= 32) return;
+    if (level_part < 0 || level_part > 2) return;
+    consumed[level_part] |= 1u << actor->object_index;
+}
+
 static void activate_row(unsigned row) {
     for (int i = 0; i < ACTORS; i++) {
         if (!actors[i].waiting || (actors[i].y >> 4) != row) continue;
@@ -132,23 +156,44 @@ static void activate_row(unsigned row) {
     }
 }
 
-static void place_map(unsigned camera) {
+static int map_number(void) {
+    int level = level_index;
+    int part = level_part;
+    if (level < 0) level = 0;
+    if (level > 7) level = 7;
+    if (part < 0) part = 0;
+    if (part > 2) part = 2;
+    return level * 3 + part;
+}
+
+static void remember(Game *game) {
+    game->level = level_index;
+    game->part = level_part;
+}
+
+static void place_map(Game *game, unsigned camera) {
+    const GooseMap *map = &goose_maps[map_number()];
+    map_tiles = map->tiles;
+    game->flight.tiles = map->tiles;
     clear_actors();
-    for (unsigned i = 0; i < sizeof LEVEL_OBJECTS / sizeof LEVEL_OBJECTS[0]; i++) {
-        unsigned kind = LEVEL_OBJECTS[i][0];
+    for (int i = 0; i < map->object_count; i++) {
+        unsigned kind = map->objects[i].kind;
         if (kind >= sizeof KINDS / sizeof KINDS[0]) continue;
+        if (kind >= 15 && kind - 15 < 6 && collected[kind - 15]) continue;
+        if (level_part >= 0 && level_part < 3 && (consumed[level_part] & (1u << i))) continue;
         const Kind *info = &KINDS[kind];
         Actor *actor = spawn();
         if (!actor) return;
         *actor = (Actor){0};
+        actor->object_index = i;
         actor->waiting = 1;
         actor->handler = info->handler;
         actor->param = info->param;
         actor->animated = info->animated;
         actor->state[2] = info->hp;
-        actor->x = 24 * LEVEL_OBJECTS[i][1] - 4;
-        actor->y = (unsigned)LEVEL_OBJECTS[i][2] << 4;
-        actor->z = (int8_t)column_z(LEVEL_OBJECTS[i][2], LEVEL_OBJECTS[i][1]);
+        actor->x = 24 * map->objects[i].column - 4;
+        actor->y = (unsigned)map->objects[i].stored_row << 4;
+        actor->z = (int8_t)column_z(map->objects[i].stored_row, map->objects[i].column);
         snprintf(actor->sprite, sizeof actor->sprite, "%s", info->sprite);
         char name[24];
         if (actor->animated) snprintf(name, sizeof name, "%s_00", actor->sprite);
@@ -206,6 +251,7 @@ static void spawn_shot(Game *game, int x, unsigned y, int z, int frame, int heig
     Actor *shot = spawn();
     if (!shot) return;
     *shot = (Actor){0};
+    shot->object_index = -1;
     shot->flags = GOOSE_RENDER | GOOSE_UPDATE | GOOSE_PROJECTILE;
     shot->handler = 19;
     shot->frame = (uint8_t)frame;
@@ -228,6 +274,7 @@ static void fire(Game *game) {
     Actor *flash = spawn();
     if (flash) {
         *flash = (Actor){0};
+        flash->object_index = -1;
         flash->flags = GOOSE_RENDER | GOOSE_UPDATE;
         flash->handler = 22;
         flash->frame = VARIATION[variation & 15u];
@@ -241,6 +288,7 @@ static void fire(Game *game) {
     flash = spawn();
     if (flash) {
         *flash = (Actor){0};
+        flash->object_index = -1;
         flash->flags = GOOSE_RENDER | GOOSE_UPDATE;
         flash->handler = 22;
         flash->frame = VARIATION[variation & 15u];
@@ -263,6 +311,7 @@ static void spawn_enemy_shot(Actor *from, int direction) {
     Actor *shot = spawn();
     if (!shot) return;
     *shot = (Actor){0};
+    shot->object_index = -1;
     shot->flags = GOOSE_RENDER | GOOSE_UPDATE;
     shot->handler = 20;
     shot->param = (uint8_t)direction;
@@ -333,6 +382,7 @@ static void update_shot(Game *game, Actor *shot) {
         if (target->state[2] == 0) target->state[2] = 0xff;
         else target->state[2]--;
         if (target->state[2] & 0x80) {
+            consume_actor(target);
             target->flags = 0;
             game->score += 150;
         } else {
@@ -389,6 +439,7 @@ static void update_mobile(Game *game, Actor *actor) {
         actor->state[2] = 0xff;
     }
     if (actor->state[2] & 0x80) {
+        consume_actor(actor);
         actor->flags = 0;
         game->score += 150;
         return;
@@ -437,14 +488,15 @@ static void update_gate(Game *game, Actor *actor, int entrance_b) {
         nudge_x(game, game->flight.x - actor->x - 12);
         if (pull <= 8 && dy <= 8) {
             resume_x = game->flight.x;
+            pending_object = actor->object_index;
+            pending_part = level_part;
+            unsigned index = (unsigned)(level_index * 3 + level_part);
+            if (index > 23) index = 0;
+            uint16_t dest = entrance_b ? DEST_B[index] : DEST_A[index];
+            pending_resume = dest & 1023u;
+            pending_reward = (uint8_t)((dest >> 8) & 0xc0);
             if (entrance_b) {
-                static const uint16_t DEST_B[] = {
-                    0x4310, 0x82f0, 0xc3c0, 0x4340, 0x8330, 0xc3a0, 0x43c0, 0xc370
-                };
-                unsigned index = (unsigned)level_part;
-                if (index > 7) index = 0;
-                pending_resume = DEST_B[index] & 1023u;
-                pending_reward = (uint8_t)(DEST_B[index] >> 8) & 0xc0;
+                reload_pending = 1;
                 level_part++;
                 if (level_part > 2) level_part = 0;
             }
@@ -471,6 +523,8 @@ static void update_exit(Game *game, Actor *actor) {
         nudge_x(game, game->flight.x - actor->x - 12);
         if (pull <= 8 && dy <= 8) {
             if (game->flight.frame == 0) {
+                pending_object = actor->object_index;
+                pending_part = level_part;
                 pending_reward = 0xf0;
                 pending_resume = resume_y;
                 tunnel_pending = 1;
@@ -512,6 +566,8 @@ static void update_actor(Game *game, Actor *actor) {
     else if (actor->handler == 32) {
         if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
         else if (game->flight.frame != 0 && near_player(game, actor, 0x12, 0x10)) {
+            if (actor->param < 6) collected[actor->param] = 1;
+            consume_actor(actor);
             actor->flags = 0;
             game->score += 150;
         }
@@ -521,6 +577,9 @@ static void update_actor(Game *game, Actor *actor) {
 }
 
 static void enter_tunnel(Game *game) {
+    if (pending_object >= 0 && pending_part >= 0 && pending_part < 3) {
+        consumed[pending_part] |= 1u << pending_object;
+    }
     game->mode = MODE_TUNNEL;
     game->tunnel_distance = 0;
     game->tunnel_reward = pending_reward;
@@ -536,12 +595,33 @@ static void enter_tunnel(Game *game) {
 
 static void leave_tunnel(Game *game) {
     game->mode = MODE_SURFACE;
-    game->flight.camera_y = resume_y & 1023u;
-    game->flight.x = resume_x;
+    game->tunnel_distance = 0;
     game->flight.velocity = 0;
     game->flight.frame = 1;
     game->flight.zero_frame_age = 0;
-    game->tunnel_distance = 0;
+    game->flight.alive = 1;
+    if (game->tunnel_reward == 0xf0) {
+        stage_counter++;
+        int base = 16;
+        if (stage_counter >= 6) base = 0x30;
+        else if (stage_counter >= 3) base = 0x20;
+        level_index++;
+        if (level_index > 7) level_index = 1;
+        memset(collected, 0, sizeof collected);
+        memset(consumed, 0, sizeof consumed);
+        game->flight.base_scroll_speed = base;
+        game->flight.scroll_speed = base;
+        game->flight.camera_y = 0x350;
+        game->flight.x = 128;
+        game->flight.fuel_distance = 0;
+        reload_pending = 0;
+    } else {
+        game->flight.camera_y = resume_y & 1023u;
+        game->flight.x = resume_x;
+        reload_pending = 0;
+    }
+    place_map(game, game->flight.camera_y);
+    remember(game);
 }
 
 static void tunnel_tick(Game *game, unsigned controls) {
@@ -597,9 +677,35 @@ static void begin_level(Game *game) {
     variation = 0;
     death_hold = 0;
     tunnel_pending = 0;
+    level_index = 0;
     level_part = 0;
+    stage_counter = 1;
+    reload_pending = 0;
+    pending_object = -1;
+    memset(collected, 0, sizeof collected);
+    memset(consumed, 0, sizeof consumed);
+    game->flight.base_scroll_speed = 16;
     resume_y = 0;
-    place_map(game->flight.camera_y);
+    place_map(game, game->flight.camera_y);
+    remember(game);
+}
+
+static void respawn(Game *game) {
+    death_hold = 0;
+    game->flight.alive = 1;
+    game->flight.fuel = 44;
+    game->flight.shield = 56;
+    game->ammo = AMMO_FULL;
+    game->flight.x = 128;
+    game->flight.velocity = 0;
+    game->flight.camera_y = 0x350;
+    game->flight.scroll_speed = game->flight.base_scroll_speed;
+    game->flight.fuel_distance = 0;
+    game->flight.frame = 1;
+    game->flight.zero_frame_age = 0;
+    if (level_part != 0) level_part = 0;
+    place_map(game, game->flight.camera_y);
+    remember(game);
 }
 
 void game_boot(Game *game) {
@@ -630,13 +736,8 @@ void game_tick(Game *game, unsigned controls) {
         death_hold++;
         if (death_hold < 20) return;
         game->lives--;
-        if (game->lives > 0) {
-            int score = game->score;
-            int lives = game->lives;
-            begin_level(game);
-            game->score = score;
-            game->lives = lives;
-        } else {
+        if (game->lives > 0) respawn(game);
+        else {
             game_boot(game);
         }
         return;

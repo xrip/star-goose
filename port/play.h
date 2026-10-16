@@ -16,6 +16,8 @@ typedef struct Game {
     int tunnel_y;
     int tunnel_frame;
     uint8_t tunnel_reward;
+    int level;
+    int part;
 } Game;
 
 void game_boot(Game *game);

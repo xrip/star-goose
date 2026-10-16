@@ -65,9 +65,9 @@ int main(void) {
         }
         if (shot) {
             pictures_save("shot.png");
-            printf("mode %d score %d ammo %d lives %d tunnel %d fuel %d shield %d\n",
-                   game.mode, game.score, game.ammo, game.lives, game.tunnel_distance,
-                   game.flight.fuel, game.flight.shield);
+            printf("mode %d level %d part %d score %d ammo %d lives %d tunnel %d fuel %d shield %d\n",
+                   game.mode, game.level, game.part, game.score, game.ammo, game.lives,
+                   game.tunnel_distance, game.flight.fuel, game.flight.shield);
         }
         EndDrawing();
         if (shot) break;
