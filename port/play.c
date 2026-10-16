@@ -56,6 +56,9 @@ enum {
     HIT_Y = 16,
     HIT_Z = 16,
     SHOT_HALF_INSET = 14,
+    LARGE_SHIFT_X = 12,
+    LARGE_SHIFT_Y = 8,
+    KIND_LARGE = 2,
     ACCEL_STEP_MAX = 8,
     PLAYER_HIT_X = 12,
     ENEMY_OFF_LEFT = 4,
@@ -417,8 +420,9 @@ static void consume_actor(const Actor *actor) {
 static void activate_row(unsigned row) {
     for (int i = 0; i < ACTORS; i++) {
         if (!actors[i].waiting || (actors[i].y >> 4) != row) continue;
+        uint8_t kept = (uint8_t)(actors[i].flags & (GOOSE_MAP_OBJECT | GOOSE_LARGE_ANCHOR));
         actors[i].waiting = 0;
-        actors[i].flags = GOOSE_RENDER | GOOSE_UPDATE;
+        actors[i].flags = (uint8_t)(GOOSE_RENDER | GOOSE_UPDATE | kept);
     }
 }
 
@@ -536,6 +540,10 @@ static void place_map(Game *game, unsigned camera) {
         *actor = (Actor){0};
         actor->object_index = i;
         actor->waiting = 1;
+        if (kind < DAMAGE_KINDS) {
+            actor->flags = GOOSE_MAP_OBJECT;
+            if (kind == KIND_LARGE) actor->flags |= GOOSE_LARGE_ANCHOR;
+        }
         actor->handler = info->handler;
         actor->kind = (uint8_t)kind;
         actor->param = info->param;
@@ -827,6 +835,7 @@ static void update_enemy_shot(Game *game, Actor *shot) {
 
 static void spawn_explosion(int x, unsigned y, int z);
 static void fire_mobile(Game *game, Actor *actor);
+static int strike_ground(Game *game, Actor *shot, unsigned row);
 
 static void update_mobile(Game *game, Actor *actor) {
     actor->y = (actor->y + 1u) & WORLD_MASK;
@@ -1186,7 +1195,6 @@ static void update_exit(Game *game, Actor *actor) {
 }
 
 static const int8_t SIDE_Z[10] = {0, 0, 0, 0, 4, -4, 4, -4, 4, -4};
-static const int GROUND_HALF[6] = {14, 8, 8, 14, 10, 14};
 
 static void reset_history(const Game *game) {
     for (int i = 0; i < 4; i++) {
@@ -1294,20 +1302,7 @@ static void update_ground_shot(Game *game, Actor *actor) {
             return;
         }
     }
-    for (int i = 0; i < ACTORS; i++) {
-        Actor *target = &actors[i];
-        if (target->flags == 0 || target->object_index < 0 || target->kind >= DAMAGE_KINDS) continue;
-        if ((target->y >> 4) != row) continue;
-        int dx = actor->x - target->x;
-        if (dx < 0) dx = -dx;
-        if (dx > GROUND_HALF[target->kind]) continue;
-        score_add(game, 0, 1, 5, 0);
-        spawn_explosion(target->x, target->y, target->z);
-        destroy_map_actor(target);
-        sound_trigger(SOUND_IMPACT);
-        actor->flags = 0;
-        return;
-    }
+    strike_ground(game, actor, row);
 }
 
 static const uint8_t MAP_DAMAGE[21] = {
@@ -1361,6 +1356,16 @@ static void spawn_explosion(int x, unsigned y, int z) {
     snprintf(boom->sprite, sizeof boom->sprite, "fs_12B5");
 }
 
+static void explode_map(const Actor *actor) {
+    int x = actor->x;
+    unsigned y = actor->y;
+    if (actor->flags & GOOSE_LARGE_ANCHOR) {
+        x -= LARGE_SHIFT_X;
+        y = (y - LARGE_SHIFT_Y) & WORLD_MASK;
+    }
+    spawn_explosion(x, y, actor->z);
+}
+
 static void apply_map_hit(Game *game, int damage, int column, unsigned row) {
     hurt(game, damage);
     sound_trigger(SOUND_IMPACT);
@@ -1370,7 +1375,7 @@ static void apply_map_hit(Game *game, int damage, int column, unsigned row) {
         if (actor->flags == 0 || actor->object_index < 0) continue;
         if ((actor->y >> 4) != row || actor->x != expect_x) continue;
         score_add(game, 0, 1, 5, 0);
-        spawn_explosion(actor->x, actor->y, actor->z);
+        explode_map(actor);
         destroy_map_actor(actor);
         return;
     }
@@ -1398,6 +1403,28 @@ static int query_shot_row(int shot_x, unsigned row, int *column) {
     return 0;
 }
 
+/* CS:13F5. The shot query. A missing map actor leaves the shot in flight. */
+static int strike_ground(Game *game, Actor *shot, unsigned row) {
+    int column = 0;
+    if (!query_shot_row(shot->x, row, &column)) return 0;
+    int expect_x = COLUMN_SPAN * column - COLUMN_BIAS;
+    Actor *target = 0;
+    for (int i = 0; i < ACTORS; i++) {
+        Actor *actor = &actors[i];
+        if (actor->waiting || (actor->flags & GOOSE_MAP_OBJECT) == 0) continue;
+        if ((actor->y >> 4) != row || actor->x != expect_x) continue;
+        target = actor;
+        break;
+    }
+    if (!target) return 0;
+    score_add(game, 0, 1, 5, 0);
+    explode_map(target);
+    destroy_map_actor(target);
+    sound_trigger(SOUND_IMPACT);
+    shot->flags = 0;
+    return 1;
+}
+
 static int strike_map(Game *game, Actor *shot, unsigned row) {
     int column = 0;
     if (!query_shot_row(shot->x, row, &column)) return 0;
@@ -1418,7 +1445,7 @@ static int strike_map(Game *game, Actor *shot, unsigned row) {
     target->state[2]--;
     if (target->state[2] & HP_DEPLETED) {
         score_add(game, 0, 1, 5, 0);
-        spawn_explosion(target->x, target->y, target->z);
+        explode_map(target);
         destroy_map_actor(target);
         sound_trigger(SOUND_IMPACT);
     } else {
