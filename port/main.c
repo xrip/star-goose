@@ -277,6 +277,7 @@ static unsigned read_controls(void) {
 int main(void) {
     /* The maximize box is what delivers WM_MAXIMIZE. The restored size stays 960x600. */
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    pictures_switch_window();
     InitWindow(SCREEN_W * SCALE, SCREEN_H * SCALE, "Star Goose");
 #if defined(__SWITCH__)
     /* raylib mounts RomFS but leaves the working directory on the SD card. */

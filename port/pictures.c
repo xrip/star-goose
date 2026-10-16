@@ -418,14 +418,31 @@ void pictures_fill(int x, int y, int width, int height, int color) {
 }
 
 #if defined(__SWITCH__)
-/* Handheld is 1280x720, a docked TV is 1920x1080. Both are 16:9. */
+/* Handheld is 1280x720, a docked TV is 1920x1080. Both are 16:9.
+ * The native window has to be this size before raylib creates its EGL surface.
+ * raylib itself still records 1280x720, so the GL view is set again each frame. */
 static int panel_w = 1280;
 static int panel_h = 720;
 
-void pictures_prepare_screen(void) {
+static void switch_panel(int *width, int *height) {
     AppletOperationMode mode = appletGetOperationMode();
-    int width = (mode == AppletOperationMode_Console) ? 1920 : 1280;
-    int height = (mode == AppletOperationMode_Console) ? 1080 : 720;
+    *width = (mode == AppletOperationMode_Console) ? 1920 : 1280;
+    *height = (mode == AppletOperationMode_Console) ? 1080 : 720;
+}
+
+void pictures_switch_window(void) {
+    int width;
+    int height;
+    switch_panel(&width, &height);
+    nwindowSetDimensions(nwindowGetDefault(), (u32)width, (u32)height);
+    panel_w = width;
+    panel_h = height;
+}
+
+void pictures_prepare_screen(void) {
+    int width;
+    int height;
+    switch_panel(&width, &height);
     if (width != panel_w || height != panel_h)
         nwindowSetDimensions(nwindowGetDefault(), (u32)width, (u32)height);
     panel_w = width;
@@ -438,6 +455,7 @@ void pictures_prepare_screen(void) {
     rlLoadIdentity();
 }
 #else
+void pictures_switch_window(void) {}
 void pictures_prepare_screen(void) {}
 #endif
 
