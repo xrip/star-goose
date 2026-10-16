@@ -9,6 +9,9 @@ void pictures_clear(void);
 void pictures_draw_tiles(const Surface *game);
 void pictures_draw_ship(const Surface *game);
 void pictures_sprite(const char *name, int world_x, int world_y, int z, int camera_y);
+/* Stamps a high-score name or digit row onto a drifting title sprite. */
+void pictures_score_text(const char *sprite, int world_x, int world_y, int z, int camera_y,
+                         const uint8_t *chars, int count, int digits);
 void pictures_anchor(const char *name, int *anchor_x, int *anchor_y);
 void pictures_intro(void);
 void pictures_tunnel(const uint8_t *bits, int color);

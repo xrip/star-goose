@@ -6,6 +6,7 @@
 #include "sound.h"
 #include "terrain.h"
 #include "tunnel.h"
+#include "raylib.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -145,6 +146,12 @@ enum {
     SCRIPT_HOLD = 0xfe,
     SCRIPT_END = 0xff,
     SCRIPT_PAIR = 0x80,
+    SCORE_SLOTS = 7,
+    SCORE_SHOW = 6,
+    NAME_LEN = 12,
+    HISCORE_BYTES = 140,
+    SCORE_ROW_FIRST = 12,
+    SCORE_ROW_LAST = 23,
     GROUND_LIFE = 5,
     EXPLOSION_FRAMES = 5,
     BURST_FRAMES = 6
@@ -264,6 +271,14 @@ static uint8_t tunnel_flash;
 static int attract_seen;
 static unsigned attract_step;
 static int attract_base;
+static int scores_ready;
+static int pending_name;
+static int name_editing;
+static int name_cursor;
+static int name_slot;
+static uint8_t names[SCORE_SLOTS][NAME_LEN];
+static uint8_t board[SCORE_SLOTS][SCORE_PLACES];
+static uint8_t score_order[SCORE_SLOTS];
 static uint8_t tunnel_pattern_index;
 static uint8_t tunnel_pattern;
 static uint8_t tunnel_last_section = NO_SECTION;
@@ -1576,10 +1591,125 @@ static void respawn(Game *game) {
     remember(game);
 }
 
+static void load_scores(void) {
+    memset(names, '.', sizeof names);
+    names[0][0] = '_';
+    memset(board, 0, sizeof board);
+    for (int i = 0; i < SCORE_SLOTS; i++) score_order[i] = (uint8_t)i;
+    FILE *file = fopen("hiscores", "rb");
+    if (!file) return;
+    uint8_t blob[HISCORE_BYTES];
+    if (fread(blob, 1, HISCORE_BYTES, file) == HISCORE_BYTES) {
+        memcpy(names, blob, sizeof names);
+        memcpy(board, blob + sizeof names, sizeof board);
+        memcpy(score_order, blob + HISCORE_BYTES - SCORE_SLOTS, sizeof score_order);
+    }
+    fclose(file);
+}
+
+static void save_scores(void) {
+    uint8_t blob[HISCORE_BYTES];
+    memset(blob, 0xff, sizeof blob);
+    memcpy(blob, names, sizeof names);
+    memcpy(blob + sizeof names, board, sizeof board);
+    memcpy(blob + HISCORE_BYTES - SCORE_SLOTS, score_order, sizeof score_order);
+    FILE *file = fopen("hiscores", "wb");
+    if (!file) return;
+    fwrite(blob, 1, HISCORE_BYTES, file);
+    fclose(file);
+}
+
+static void ensure_scores(void) {
+    if (scores_ready) return;
+    scores_ready = 1;
+    load_scores();
+}
+
+static int board_greater(int left, int right) {
+    for (int place = 0; place < SCORE_PLACES; place++) {
+        if (board[left][place] == board[right][place]) continue;
+        return board[left][place] > board[right][place];
+    }
+    return 0;
+}
+
+static void sort_scores(void) {
+    uint8_t scratch[SCORE_SLOTS];
+    memcpy(scratch, score_order, sizeof scratch);
+    for (int out = 0; out < SCORE_SLOTS; out++) {
+        int chosen = 0;
+        while (chosen < SCORE_SLOTS && scratch[chosen] == 0xff) chosen++;
+        if (chosen >= SCORE_SLOTS) chosen = 0;
+        if (chosen < SCORE_SLOTS - 1) {
+            for (int other = chosen + 1; other < SCORE_SLOTS; other++) {
+                if (scratch[other] == 0xff) continue;
+                if (board_greater(scratch[other], scratch[chosen])) chosen = other;
+            }
+        }
+        score_order[out] = scratch[chosen];
+        scratch[chosen] = 0xff;
+    }
+}
+
+static void finish_name(void) {
+    if (name_cursor < NAME_LEN && names[name_slot][name_cursor] == '_')
+        names[name_slot][name_cursor] = '.';
+    save_scores();
+    pending_name = 0;
+    name_editing = 0;
+}
+
+static void type_name(int ch) {
+    if (ch >= 'a' && ch <= 'z') ch -= 'a' - 'A';
+    if (name_cursor >= NAME_LEN) return;
+    if (!((ch >= 'A' && ch <= 'Z') || ch == ' ')) return;
+    names[name_slot][name_cursor] = (uint8_t)ch;
+    name_cursor++;
+    if (name_cursor >= NAME_LEN) finish_name();
+    else names[name_slot][name_cursor] = '_';
+}
+
+static void erase_name(void) {
+    if (name_cursor < 0 || name_cursor >= NAME_LEN) return;
+    names[name_slot][name_cursor] = '.';
+    if (name_cursor > 0) name_cursor--;
+    names[name_slot][name_cursor] = '_';
+}
+
+static void poll_name(void) {
+    if (!name_editing) return;
+    int ch;
+    while (name_editing && (ch = GetCharPressed()) != 0) type_name(ch);
+    if (!name_editing) return;
+    if (IsKeyPressed(KEY_BACKSPACE)) erase_name();
+    if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) finish_name();
+}
+
+static void insert_score(void) {
+    ensure_scores();
+    memcpy(board[0], score_digits, SCORE_PLACES);
+    sort_scores();
+    if (score_order[SCORE_SLOTS - 1] == 0) {
+        pending_name = 0;
+        return;
+    }
+    pending_name = 1;
+    int slot = score_order[SCORE_SLOTS - 1];
+    memcpy(board[slot], board[0], SCORE_PLACES);
+    memcpy(names[slot], names[0], NAME_LEN);
+    int rank = 0;
+    while (rank < SCORE_SLOTS && score_order[rank] != 0) rank++;
+    if (rank < SCORE_SLOTS) score_order[rank] = (uint8_t)slot;
+    score_order[SCORE_SLOTS - 1] = 0;
+    name_slot = slot;
+    name_cursor = 0;
+}
+
 static void attract_begin(void) {
     clear_actors();
     attract_step = 0;
     attract_base = attract_seen ? 0 : ATTRACT_INTRO;
+    name_editing = 0;
 }
 
 static void spawn_attract(int frame) {
@@ -1618,7 +1748,11 @@ static void read_attract_command(Game *game) {
         return;
     }
     unsigned command = script[index];
-    if (command == 0 || command == SCRIPT_HOLD) return;
+    if (command == 0) return;
+    if (command == SCRIPT_HOLD) {
+        if (pending_name) name_editing = 1;
+        return;
+    }
     if (command == SCRIPT_END) {
         game_play(game);
         return;
@@ -1629,6 +1763,7 @@ static void read_attract_command(Game *game) {
 }
 
 static void attract_tick(Game *game) {
+    if (name_editing) return;
     for (int i = 0; i < ACTORS; i++) {
         Actor *actor = &actors[i];
         if (actor->flags == 0 || actor->handler != HANDLER_DRIFT) continue;
@@ -1648,7 +1783,8 @@ void game_boot(Game *game) {
     hud_frame = 0;
     side_charges = SIDE_CHARGES_FULL;
     sound_reset();
-    sound_music_start(0);
+    ensure_scores();
+    sound_music_start(pending_name);
     surface_start(&game->flight);
     attract_begin();
 }
@@ -1680,6 +1816,7 @@ void game_tick(Game *game, unsigned controls) {
         if (game->lives > 0) respawn(game);
         else {
             attract_seen = 1;
+            insert_score();
             game_boot(game);
         }
         return;
@@ -1712,11 +1849,22 @@ void game_draw(Game *game) {
     pictures_clear();
     if (game->mode == MODE_TITLE) {
         pictures_intro();
+        poll_name();
         for (int i = 0; i < ACTORS; i++) {
             if (actors[i].flags == 0 || actors[i].waiting) continue;
             char name[24];
             sprite_name(&actors[i], name, sizeof name);
             pictures_sprite(name, actors[i].x, (int)actors[i].y, actors[i].z, TUNNEL_CAMERA);
+            if (actors[i].handler != HANDLER_DRIFT) continue;
+            if (actors[i].frame < SCORE_ROW_FIRST || actors[i].frame > SCORE_ROW_LAST) continue;
+            int rank = (actors[i].frame - SCORE_ROW_FIRST) / 2;
+            if (rank < 0 || rank >= SCORE_SHOW) continue;
+            int slot = score_order[rank];
+            if (slot >= SCORE_SLOTS) slot = 0;
+            int digits = actors[i].frame & 1;
+            pictures_score_text(name, actors[i].x, (int)actors[i].y, actors[i].z, TUNNEL_CAMERA,
+                                digits ? board[slot] : names[slot],
+                                digits ? SCORE_PLACES : NAME_LEN, digits);
         }
     } else if (game->mode == MODE_TUNNEL) {
         uint8_t bits[TUNNEL_BYTES];

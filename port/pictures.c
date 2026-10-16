@@ -217,6 +217,44 @@ void pictures_sprite(const char *name, int world_x, int world_y, int z, int came
     blit_sprite(sprite, 0, sprite->w, dest_x, dest_y);
 }
 
+void pictures_score_text(const char *sprite, int world_x, int world_y, int z, int camera_y,
+                         const uint8_t *chars, int count, int digits) {
+    enum {
+        GLYPH_W = 12,
+        GLYPH_H = 11,
+        GLYPH_STEP = 6,
+        GLYPH_SPACE = 0x6546,
+        GLYPH_DOT = 0x6f6c,
+        GLYPH_MARK = 0x764c,
+        GLYPH_DIGIT = 0x44c0,
+        BANK_BIRD2 = 2
+    };
+    const AtlasSprite *frame = find_sprite(sprite);
+    if (!frame || !chars || count <= 0) return;
+    int z_sum = (z + frame->anchor_y) & BYTE_MASK;
+    int dest_x = VIEW_X + world_x - frame->anchor_x;
+    int dest_y = screen_y(world_y - signed8((unsigned)z_sum), camera_y);
+    int leading = 1;
+    for (int i = 0; i < count; i++) {
+        unsigned char ch = chars[i];
+        unsigned glyph;
+        if (digits) {
+            if (ch != 0) leading = 0;
+            glyph = leading ? GLYPH_DOT : GLYPH_DIGIT + (unsigned)ch * GLYPH_STEP;
+        } else if (ch == ' ') {
+            glyph = GLYPH_SPACE;
+        } else if (ch == '.') {
+            glyph = GLYPH_DOT;
+        } else if (ch == '_') {
+            glyph = GLYPH_MARK;
+        } else {
+            glyph = (unsigned)(uint8_t)(ch - 'A') * GLYPH_STEP;
+        }
+        pictures_blit_bank(BANK_BIRD2, glyph, GLYPH_W, GLYPH_H,
+                           dest_x + i * GLYPH_W, dest_y, GLYPH_W);
+    }
+}
+
 void pictures_intro(void) {
     if (intro_ready) memcpy(screen, intro_pixels, sizeof screen);
 }
