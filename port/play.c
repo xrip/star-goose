@@ -1026,6 +1026,7 @@ static void update_ground_shot(Game *game, Actor *actor) {
         actor->y = (actor->y + SHOT_LIFT) & WORLD_MASK;
         actor->state[2]--;
         if (actor->state[2] & HP_DEPLETED) {
+            spawn_explosion(actor->x, actor->y, actor->z);
             actor->flags = 0;
             return;
         }
@@ -1037,6 +1038,8 @@ static void update_ground_shot(Game *game, Actor *actor) {
         int dx = actor->x - target->x;
         if (dx < 0) dx = -dx;
         if (dx > GROUND_HALF[target->kind]) continue;
+        score_add(game, 0, 1, 5, 0);
+        spawn_explosion(target->x, target->y, target->z);
         consume_actor(target);
         target->flags = 0;
         sound_trigger(SOUND_IMPACT);
