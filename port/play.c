@@ -176,6 +176,16 @@ enum {
     IMPACT_ANCHOR = 2,
     IMPACT_FRAMES = 4,
     BANK_BIRD1 = 0,
+    BANK_BIRD2 = 2,
+    BANK_BLOX = 4,
+    GATE_W = 32,
+    GATE_H = 30,
+    GATE_AX = 4,
+    GATE_AY = 8,
+    EXIT_W = 32,
+    EXIT_H = 24,
+    EXIT_AX = 4,
+    EXIT_AY = -3,
     GROUND_LIFE = 5,
     EXPLOSION_FRAMES = 5,
     BURST_FRAMES = 6
@@ -1164,6 +1174,13 @@ static void nudge_x(Game *game, int dx) {
     }
 }
 
+static const unsigned GATE_SPRITE[6] = {
+    0x2348, 0x2358, 0x2368, 0x2378, 0x3200, 0x3210
+};
+static const unsigned EXIT_SPRITE[9] = {
+    0x6e32, 0x6e42, 0x6e52, 0x6e72, 0x6e82, 0x5e92, 0x5ea2, 0x5eb2, 0x5ec2
+};
+
 static void update_gate(Game *game, Actor *actor, int entrance_b) {
     int dx = absolute(game->flight.x - actor->x - GATE_INSET);
     int dy = absolute((int)player_y(game) - (int)actor->y);
@@ -1173,11 +1190,15 @@ static void update_gate(Game *game, Actor *actor, int entrance_b) {
     } else if (open != 0) {
         actor->frame--;
     }
-    if (open >= 1 && game->flight.frame != 0) {
-        int pull = game->flight.x - actor->x - GATE_INSET;
-        if (pull < 0) pull = -pull;
+    if (open == ENTRANCE_FULL) actor->layer = 0;
+    else {
+        actor->layer = LAYER_TOP;
+        actor->state[0] = (uint8_t)open;
+    }
+    if (open >= 1) {
+        int pull = absolute(game->flight.x - actor->x - GATE_INSET);
         nudge_x(game, game->flight.x - actor->x - GATE_INSET);
-        if (pull <= PULL_LIMIT && dy <= PULL_LIMIT) {
+        if (!dying && pull <= PULL_LIMIT && dy <= PULL_LIMIT) {
             resume_x = game->flight.x;
             pending_object = actor->object_index;
             pending_part = level_part;
@@ -1213,11 +1234,13 @@ static void update_exit(Game *game, Actor *actor) {
     } else if (open != 0) {
         actor->frame--;
     }
+    actor->layer = LAYER_TOP;
+    actor->state[0] = (uint8_t)open;
     if (open >= 2) {
         int pull = game->flight.x - actor->x - GATE_INSET;
         if (pull < 0) pull = -pull;
         nudge_x(game, game->flight.x - actor->x - GATE_INSET);
-        if (open == GATE_OPEN && pull <= PULL_LIMIT && dy <= PULL_LIMIT) {
+        if (!dying && open == GATE_OPEN && pull <= PULL_LIMIT && dy <= PULL_LIMIT) {
             if (game->flight.frame == 0) {
                 pending_object = actor->object_index;
                 pending_part = level_part;
@@ -1518,7 +1541,7 @@ static void step_frames(Game *game, Actor *actor, unsigned limit) {
 }
 
 static void update_actor(Game *game, Actor *actor) {
-    if (actor->flags == 0) return;
+    if (actor->flags == 0 || actor->waiting) return;
     if (actor->handler == HANDLER_PLAYER_SHOT) update_shot(game, actor);
     else if (actor->handler == HANDLER_IMPACT) update_impact(game, actor);
     else if (actor->handler == HANDLER_SIDE_IMPACT) update_side_impact(actor);
@@ -2327,7 +2350,24 @@ void game_draw(Game *game) {
     } else {
         pictures_draw_tiles(&game->flight);
         for (int i = 0; i < ACTORS; i++) {
-            if (actors[i].flags == 0) continue;
+            if (actors[i].flags == 0 || actors[i].waiting) continue;
+            if (actors[i].handler == HANDLER_GATE_A || actors[i].handler == HANDLER_GATE_B) {
+                if (actors[i].layer == 0 && actors[i].frame != 0) continue;
+                unsigned index = actors[i].state[0];
+                if (index >= sizeof GATE_SPRITE / sizeof GATE_SPRITE[0]) index = 0;
+                pictures_bank_sprite(BANK_BLOX, GATE_SPRITE[index], GATE_W, GATE_H,
+                                     GATE_AX, GATE_AY, actors[i].x, (int)actors[i].y,
+                                     actors[i].z, (int)game->flight.camera_y);
+                continue;
+            }
+            if (actors[i].handler == HANDLER_LEVEL_EXIT) {
+                unsigned index = actors[i].state[0];
+                if (index >= sizeof EXIT_SPRITE / sizeof EXIT_SPRITE[0]) index = 0;
+                pictures_bank_sprite(BANK_BIRD2, EXIT_SPRITE[index], EXIT_W, EXIT_H,
+                                     EXIT_AX, EXIT_AY, actors[i].x, (int)actors[i].y,
+                                     actors[i].z, (int)game->flight.camera_y);
+                continue;
+            }
             if (actors[i].handler == HANDLER_IMPACT) {
                 unsigned index = actors[i].state[0];
                 if (index >= IMPACT_FRAMES) index = IMPACT_FRAMES - 1;
