@@ -41,76 +41,47 @@
     }
     #install { cursor: pointer; z-index: 4; }
     #ios-install { max-width: 16em; z-index: 4; }
-    #touch { display: none; }
-    @media (pointer: coarse) {
-      #touch { display: block; }
+    #touch, #rotate { display: none; }
+    body.touch #touch { display: block; }
+    #touch { position: fixed; inset: 0; z-index: 3; pointer-events: none; user-select: none;
+             -webkit-user-select: none; -webkit-touch-callout: none; }
+    #touch button { pointer-events: auto; position: absolute; display: grid; place-items: center;
+                    width: 56px; height: 56px; padding: 0; border-radius: 50%;
+                    border: 2px solid rgba(85, 255, 255, 0.45); background: rgba(0, 0, 0, 0.45);
+                    color: #55ffff; opacity: 0.85; -webkit-tap-highlight-color: transparent;
+                    touch-action: none; transition: transform 80ms, background 80ms; }
+    #touch svg { width: 55%; height: 55%; fill: none; stroke: currentColor; stroke-width: 2;
+                 stroke-linecap: round; stroke-linejoin: round; }
+    #touch button.down { transform: scale(0.88); background: rgba(85, 255, 255, 0.4); color: #000; opacity: 1; }
+    #touch-actions { position: absolute; width: 200px; height: 200px;
+                     right: calc(8px + env(safe-area-inset-right));
+                     bottom: calc(8px + env(safe-area-inset-bottom)); }
+    #touch-actions .fire { width: 84px; height: 84px; left: 102px; top: 102px; }
+    #touch-actions .left { left: 16px; top: 116px; }
+    #touch-actions .right { left: 64px; top: 40px; }
+    #touch-stick { pointer-events: auto; position: absolute; left: 0; bottom: 0;
+                   width: calc(240px + env(safe-area-inset-left)); height: 240px; }
+    .stick-base { position: absolute; left: calc(100px + env(safe-area-inset-left)); top: 140px;
+                  width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%;
+                  border: 2px solid rgba(85, 255, 255, 0.35); background: rgba(0, 0, 0, 0.35);
+                  opacity: 0.45; transition: opacity 120ms; }
+    .stick-base.active { opacity: 1; }
+    .stick-knob { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px;
+                  margin: -26px 0 0 -26px; border-radius: 50%; background: rgba(85, 255, 255, 0.55); }
+    @media (orientation: portrait) and ((pointer: coarse) or (hover: none)) {
+      #rotate { display: flex; position: fixed; inset: 0; z-index: 6; align-items: center;
+                justify-content: center; padding: 2rem; background: #000; color: #fff;
+                font: 18px/1.4 sans-serif; text-align: center; }
+      #touch { display: none !important; }
     }
-    #pad, #weapons {
-      position: fixed;
-      z-index: 3;
-      bottom: max(12px, env(safe-area-inset-bottom));
-      pointer-events: none;
-    }
-    #pad {
-      left: max(12px, env(safe-area-inset-left));
-      display: grid;
-      grid-template-columns: repeat(3, clamp(52px, 16vmin, 76px));
-      grid-template-areas: ". up ." "left . right" ". down .";
-      gap: 6px;
-    }
-    #weapons {
-      right: max(12px, env(safe-area-inset-right));
-      display: flex;
-      align-items: flex-end;
-      gap: 10px;
-    }
-    #sides { display: flex; flex-direction: column; gap: 6px; }
-    #touch button {
-      pointer-events: auto;
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      border: 2px solid #fff;
-      background: rgba(0, 0, 0, 0.55);
-      color: #fff;
-      font: 700 14px/1 sans-serif;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
-    }
-    #pad button, #sides button { width: clamp(52px, 16vmin, 76px); height: clamp(52px, 16vmin, 76px); }
-    #touch .up { grid-area: up; }
-    #touch .left { grid-area: left; }
-    #touch .right { grid-area: right; }
-    #touch .down { grid-area: down; }
-    #touch .fire {
-      width: clamp(76px, 22vmin, 112px);
-      height: clamp(76px, 22vmin, 112px);
-      font-size: 16px;
-    }
-    #touch button.held { background: #55ffff; color: #000; }
   </style>
 </head>
 <body>
   <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
   <button id="install" type="button" hidden>Установить</button>
   <p id="ios-install" hidden>В Safari: Поделиться, затем «На экран Домой».</p>
-  <div id="touch">
-    <div id="pad">
-      <button type="button" class="up" data-bit="4" tabindex="-1">↑</button>
-      <button type="button" class="left" data-bit="1" tabindex="-1">←</button>
-      <button type="button" class="right" data-bit="2" tabindex="-1">→</button>
-      <button type="button" class="down" data-bit="8" tabindex="-1">↓</button>
-    </div>
-    <div id="weapons">
-      <div id="sides">
-        <button type="button" data-bit="64" tabindex="-1">ЛЕВ</button>
-        <button type="button" data-bit="32" tabindex="-1">ПРАВ</button>
-      </div>
-      <button type="button" class="fire" data-bit="128" tabindex="-1">ОГОНЬ</button>
-    </div>
-  </div>
+  <div id="rotate">Поверните устройство горизонтально.</div>
+  <script src="touch_controls.js"></script>
   <script>
     var installEvent = null;
     var installButton = document.getElementById("install");
@@ -145,6 +116,9 @@
 
     if (!installed() && /iphone|ipad|ipod/i.test(navigator.userAgent)) iosHint.hidden = false;
 
+    gooseTouch.lock();
+    window.addEventListener("pointerdown", function () { gooseTouch.lock(); }, { once: true });
+
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", function () {
         navigator.serviceWorker.register("sw.js");
@@ -157,51 +131,16 @@
       });
     }
 
-    var touchHeld = {};
     var Module = {
       canvas: document.getElementById("canvas"),
-      touchMask: 0
-    };
-
-    function refreshTouch() {
-      var mask = 0;
-      for (var id in touchHeld) mask |= touchHeld[id].bit;
-      Module.touchMask = mask;
-    }
-
-    function buttonStillHeld(button) {
-      for (var id in touchHeld) {
-        if (touchHeld[id].button === button) return true;
-      }
-      return false;
-    }
-
-    var touchButtons = document.querySelectorAll("#touch button");
-    for (var i = 0; i < touchButtons.length; i++) {
-      (function (button) {
-        var bit = parseInt(button.getAttribute("data-bit"), 10);
-        button.addEventListener("contextmenu", function (event) { event.preventDefault(); });
-        button.addEventListener("pointerdown", function (event) {
-          if (event.button !== 0) return;
-          event.preventDefault();
-          event.stopPropagation();
-          button.setPointerCapture(event.pointerId);
-          touchHeld[event.pointerId] = { bit: bit, button: button };
-          button.classList.add("held");
-          refreshTouch();
+      touchMask: 0,
+      preRun: [function () {
+        Module.addRunDependency("landscape");
+        gooseTouch.landscape().then(function () {
+          Module.removeRunDependency("landscape");
         });
-        function release(event) {
-          var press = touchHeld[event.pointerId];
-          if (!press) return;
-          delete touchHeld[event.pointerId];
-          if (!buttonStillHeld(press.button)) press.button.classList.remove("held");
-          refreshTouch();
-        }
-        button.addEventListener("pointerup", release);
-        button.addEventListener("pointercancel", release);
-        button.addEventListener("lostpointercapture", release);
-      })(touchButtons[i]);
-    }
+      }]
+    };
   </script>
   {{{ SCRIPT }}}
 </body>

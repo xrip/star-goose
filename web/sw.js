@@ -1,4 +1,4 @@
-var CACHE = "star-goose-v1";
+var CACHE = "star-goose-v2";
 var FILES = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ var FILES = [
   "./goose.wasm",
   "./goose.data",
   "./manifest.json",
+  "./touch_controls.js",
   "./icon-192.png",
   "./icon-512.png"
 ];
