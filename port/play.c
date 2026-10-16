@@ -37,6 +37,7 @@ enum {
     HANDLER_ARC = 30,
     HANDLER_ARC_BURST = 31,
     HANDLER_COLLECTIBLE = 32,
+    HANDLER_DRIFT = 33,
     HANDLER_TUNNEL_SIDE = 34,
     DIRECT_RELOAD = 8,
     ARC_RELOAD = 18,
@@ -136,6 +137,14 @@ enum {
     ANGLE_HISTORY = 3,
     FLASH_HOT = 15,
     FLASH_DIM = 7,
+    ATTRACT_X = 128,
+    ATTRACT_Y = 200,
+    DRIFT_STEP = 2,
+    ATTRACT_EVERY = 8,
+    ATTRACT_INTRO = 15,
+    SCRIPT_HOLD = 0xfe,
+    SCRIPT_END = 0xff,
+    SCRIPT_PAIR = 0x80,
     GROUND_LIFE = 5,
     EXPLOSION_FRAMES = 5,
     BURST_FRAMES = 6
@@ -252,6 +261,9 @@ static unsigned pending_resume;
 static uint8_t ship_angle;
 static uint8_t angle_hist[ANGLE_HISTORY];
 static uint8_t tunnel_flash;
+static int attract_seen;
+static unsigned attract_step;
+static int attract_base;
 static uint8_t tunnel_pattern_index;
 static uint8_t tunnel_pattern;
 static uint8_t tunnel_last_section = NO_SECTION;
@@ -1564,6 +1576,70 @@ static void respawn(Game *game) {
     remember(game);
 }
 
+static void attract_begin(void) {
+    clear_actors();
+    attract_step = 0;
+    attract_base = attract_seen ? 0 : ATTRACT_INTRO;
+}
+
+static void spawn_attract(int frame) {
+    static const uint8_t height[24] = {
+        30, 30, 23, 15, 19, 14, 15, 15, 12, 15, 12, 23, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11
+    };
+    static const int8_t anchor_y[24] = {
+        0, 0, 12, -13, 7, 21, 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    };
+    if (frame < 0 || frame >= 24) return;
+    Actor *actor = spawn();
+    if (!actor) return;
+    *actor = (Actor){0};
+    actor->object_index = -1;
+    actor->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    actor->handler = HANDLER_DRIFT;
+    actor->waiting = 1;
+    actor->animated = 1;
+    actor->frame = (uint8_t)frame;
+    actor->height = height[frame];
+    actor->anchor_y = anchor_y[frame];
+    actor->x = ATTRACT_X;
+    actor->y = ATTRACT_Y;
+    snprintf(actor->sprite, sizeof actor->sprite, "fs_0120");
+}
+
+static void read_attract_command(Game *game) {
+    static const uint8_t script[] = {
+        0x00, 0x01, 0x0b, 0x00, 0x8c, 0x8e, 0x90, 0x92, 0x94, 0x96, 0x00, 0xfe, 0x00, 0x00, 0x00,
+        0x00, 0x01, 0x02, 0x00, 0x09, 0x00, 0x0a, 0x00, 0x00, 0x06, 0x00, 0x00, 0x07, 0x00, 0x00, 0x03,
+        0x04, 0x05, 0x00, 0x08, 0x00, 0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff
+    };
+    unsigned index = (unsigned)attract_base + (attract_step >> 3);
+    if (index >= sizeof script) {
+        game_play(game);
+        return;
+    }
+    unsigned command = script[index];
+    if (command == 0 || command == SCRIPT_HOLD) return;
+    if (command == SCRIPT_END) {
+        game_play(game);
+        return;
+    }
+    int frame = (int)(command & (SCRIPT_PAIR - 1));
+    spawn_attract(frame);
+    if (command & SCRIPT_PAIR) spawn_attract(frame + 1);
+}
+
+static void attract_tick(Game *game) {
+    for (int i = 0; i < ACTORS; i++) {
+        Actor *actor = &actors[i];
+        if (actor->flags == 0 || actor->handler != HANDLER_DRIFT) continue;
+        actor->waiting = 0;
+        actor->y = (actor->y - DRIFT_STEP) & WORLD_MASK;
+        if (cull_before(actor, TUNNEL_CAMERA)) actor->flags = 0;
+    }
+    attract_step++;
+    if ((attract_step & (ATTRACT_EVERY - 1)) == 0) read_attract_command(game);
+}
+
 void game_boot(Game *game) {
     memset(game, 0, sizeof *game);
     game->mode = MODE_TITLE;
@@ -1574,6 +1650,7 @@ void game_boot(Game *game) {
     sound_reset();
     sound_music_start(0);
     surface_start(&game->flight);
+    attract_begin();
 }
 
 void game_play(Game *game) {
@@ -1587,6 +1664,7 @@ void game_play(Game *game) {
 void game_tick(Game *game, unsigned controls) {
     if (game->mode == MODE_TITLE) {
         if (controls & CONTROL_FIRE) game_play(game);
+        else attract_tick(game);
         return;
     }
     hud_tick(game);
@@ -1601,6 +1679,7 @@ void game_tick(Game *game, unsigned controls) {
         game->lives--;
         if (game->lives > 0) respawn(game);
         else {
+            attract_seen = 1;
             game_boot(game);
         }
         return;
@@ -1633,6 +1712,12 @@ void game_draw(Game *game) {
     pictures_clear();
     if (game->mode == MODE_TITLE) {
         pictures_intro();
+        for (int i = 0; i < ACTORS; i++) {
+            if (actors[i].flags == 0 || actors[i].waiting) continue;
+            char name[24];
+            sprite_name(&actors[i], name, sizeof name);
+            pictures_sprite(name, actors[i].x, (int)actors[i].y, actors[i].z, TUNNEL_CAMERA);
+        }
     } else if (game->mode == MODE_TUNNEL) {
         uint8_t bits[TUNNEL_BYTES];
         tunnel_build_bitmap(bits, (unsigned)game->tunnel_distance, tunnel_min_radius);
