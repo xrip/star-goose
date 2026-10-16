@@ -742,10 +742,111 @@ static void update_ground_shot(Game *game, Actor *actor) {
     }
 }
 
+static const uint8_t MAP_DAMAGE[21] = {
+    10, 10, 10, 15, 20, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+static const int MAP_HALF[6] = {0x1c, 0x16, 0x16, 0x1c, 0x18, 0x1c};
+static const int MAP_RIGHT[6] = {0xec, 0xec, 0xe0, 0xec, 0xec, 0xec};
+
+/* CS:06C7. A row word is kind<<10 ORed with the column bit. Column 0 is bit 9. */
+static unsigned map_row_mask(unsigned row) {
+    unsigned mask = 0;
+    for (int i = 0; i < ACTORS; i++) {
+        const Actor *actor = &actors[i];
+        if (actor->object_index < 0 || actor->object_index >= 32) continue;
+        if (level_part >= 0 && level_part < 3 && (consumed[level_part] & (1u << actor->object_index))) continue;
+        if ((actor->y >> 4) != row || actor->kind >= 21) continue;
+        int grid = (actor->x + 4) / 24;
+        if (grid < 1 || grid > 10) continue;
+        mask |= ((unsigned)actor->kind << 10) | (1u << (9 - (grid - 1)));
+    }
+    return mask;
+}
+
+/* CS:0A51. Inclusive window around the column cursor. Returns damage, or 0. */
+static int query_player_row(const Game *game, unsigned row, int *column) {
+    unsigned mask = map_row_mask(row);
+    if (mask == 0) return 0;
+    unsigned kind = mask >> 10;
+    if (kind >= 6 || MAP_DAMAGE[kind] == 0) return 0;
+    int x = MAP_RIGHT[kind];
+    int half = MAP_HALF[kind];
+    int at = 10;
+    for (int i = 0; i < 10; i++) {
+        if (mask & 1u) {
+            if (x - half <= game->flight.x && game->flight.x <= x + half) {
+                *column = at;
+                return MAP_DAMAGE[kind];
+            }
+        }
+        mask >>= 1;
+        x -= 24;
+        at--;
+    }
+    return 0;
+}
+
+static void spawn_explosion(int x, unsigned y, int z) {
+    Actor *boom = spawn();
+    if (!boom) return;
+    *boom = (Actor){0};
+    boom->object_index = -1;
+    boom->flags = GOOSE_RENDER | GOOSE_UPDATE;
+    boom->handler = 16;
+    boom->animated = 1;
+    boom->x = x;
+    boom->y = y;
+    boom->z = (int8_t)z;
+    snprintf(boom->sprite, sizeof boom->sprite, "fs_12B5");
+}
+
+static void apply_map_hit(Game *game, int damage, int column, unsigned row) {
+    hurt(game, damage);
+    sound_trigger(6);
+    int expect_x = 24 * column - 4;
+    for (int i = 0; i < ACTORS; i++) {
+        Actor *actor = &actors[i];
+        if (actor->flags == 0 || actor->object_index < 0) continue;
+        if ((actor->y >> 4) != row || actor->x != expect_x) continue;
+        score_add(game, 0, 1, 5, 0);
+        spawn_explosion(actor->x, actor->y, actor->z);
+        consume_actor(actor);
+        actor->flags = 0;
+        return;
+    }
+}
+
+/* CS:1192 checks this row, then the next row, and a hit is applied before weapons. */
+static void collide_player_map(Game *game) {
+    if (!game->flight.alive || game->flight.tiles == 0) return;
+    unsigned row = (player_y(game) >> 4) & 63u;
+    int column = 0;
+    int damage = query_player_row(game, row, &column);
+    unsigned hit_row = row;
+    if (damage == 0) {
+        hit_row = (row + 1u) & 63u;
+        damage = query_player_row(game, hit_row, &column);
+    }
+    if (damage == 0) return;
+    apply_map_hit(game, damage, column, hit_row);
+    if (game->flight.shield <= 0) {
+        game->flight.alive = 0;
+        sound_trigger(0x0c);
+    }
+}
+
 static void update_actor(Game *game, Actor *actor) {
     if (actor->flags == 0) return;
     if (actor->handler == 19) update_shot(game, actor);
-    else if (actor->handler == 24) update_side_follow(game, actor);
+    else if (actor->handler == 16) {
+        actor->state[3]++;
+        unsigned frame = (actor->state[3] >> 2) & 7u;
+        if (frame >= 5) actor->flags = 0;
+        else {
+            actor->frame = (uint8_t)frame;
+            if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
+        }
+    } else if (actor->handler == 24) update_side_follow(game, actor);
     else if (actor->handler == 25) update_ground_shot(game, actor);
     else if (actor->handler == 20) update_enemy_shot(game, actor);
     else if (actor->handler == 22) {
@@ -1124,6 +1225,7 @@ void game_tick(Game *game, unsigned controls) {
     surface_tick(&game->flight, controls);
     if (was_alive && !game->flight.alive) sound_trigger(0x0c);
     push_history(game);
+    collide_player_map(game);
     update_devices(game, controls);
     advance_spawns(game->flight.camera_y);
     if (game->flight.alive && game->flight.frame != 0 && game->ammo > 0 && (controls & CONTROL_FIRE)) {
