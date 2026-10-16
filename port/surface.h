@@ -7,10 +7,11 @@ enum {
     CONTROL_LEFT = 0x01,
     CONTROL_RIGHT = 0x02,
     CONTROL_UP = 0x04,
-    CONTROL_DOWN = 0x08
+    CONTROL_DOWN = 0x08,
+    CONTROL_FIRE = 0x80
 };
 
-/* One surface flight. Tunnel, enemies, and weapons are not in this slice. */
+/* Surface flight. Weapons and the tunnel live in the session around this. */
 typedef struct Surface {
     int x;
     int velocity;
@@ -32,5 +33,7 @@ extern const uint8_t goose_level0_tiles[768];
 
 void surface_start(Surface *game);
 void surface_tick(Surface *game, unsigned controls);
+void surface_update_speed(Surface *game, unsigned controls);
+void surface_apply_fuel(Surface *game);
 
 #endif

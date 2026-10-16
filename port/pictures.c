@@ -35,6 +35,8 @@ extern const uint8_t goose_height_delta[TILES];
 static uint8_t *atlas_pixels;
 static int atlas_w;
 static int atlas_h;
+static uint8_t intro_pixels[SCREEN_W * SCREEN_H];
+static int intro_ready;
 static uint8_t screen[SCREEN_W * SCREEN_H];
 static Color upload[SCREEN_W * SCREEN_H];
 static Texture2D frame;
@@ -87,6 +89,28 @@ int pictures_load(void) {
     }
     UnloadImage(image);
 
+    const char *intro_path = find_file("assets/png/INTRO.png");
+    if (intro_path) {
+        Image intro = LoadImage(intro_path);
+        if (IsImageValid(intro)) {
+            ImageFormat(&intro, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+            const unsigned char *pixels = intro.data;
+            int copy_w = intro.width < SCREEN_W ? intro.width : SCREEN_W;
+            int copy_h = intro.height < SCREEN_H ? intro.height : SCREEN_H;
+            memset(intro_pixels, 0, sizeof intro_pixels);
+            for (int y = 0; y < copy_h; y++) {
+                for (int x = 0; x < copy_w; x++) {
+                    int i = y * intro.width + x;
+                    intro_pixels[y * SCREEN_W + x] = pixels[i * 4 + 3] < 128
+                        ? 0
+                        : (uint8_t)ega_index(pixels[i * 4], pixels[i * 4 + 1], pixels[i * 4 + 2]);
+                }
+            }
+            intro_ready = 1;
+            UnloadImage(intro);
+        }
+    }
+
     Image blank = GenImageColor(SCREEN_W, SCREEN_H, BLACK);
     frame = LoadTextureFromImage(blank);
     UnloadImage(blank);
@@ -118,7 +142,56 @@ static int screen_y(int world_y, int camera_y) {
     return VIEW_Y + relative;
 }
 
-static void draw_tiles(const Surface *game) {
+static const AtlasSprite *find_sprite(const char *name) {
+    if (!name) return 0;
+    for (int i = 0; i < atlas_sprite_count; i++) {
+        if (strcmp(atlas_sprite_names[i], name) == 0) return &atlas_sprites[i];
+    }
+    return 0;
+}
+
+void pictures_clear(void) {
+    memset(screen, 0, sizeof screen);
+}
+
+void pictures_anchor(const char *name, int *anchor_x, int *anchor_y) {
+    const AtlasSprite *sprite = find_sprite(name);
+    if (anchor_x) *anchor_x = sprite ? sprite->anchor_x : 0;
+    if (anchor_y) *anchor_y = sprite ? sprite->anchor_y : 0;
+}
+
+void pictures_sprite(const char *name, int world_x, int world_y, int z, int camera_y) {
+    const AtlasSprite *sprite = find_sprite(name);
+    if (!sprite) return;
+    int z_sum = (z + sprite->anchor_y) & 255;
+    int dest_x = VIEW_X + world_x - sprite->anchor_x;
+    int dest_y = screen_y(world_y - signed8((unsigned)z_sum), camera_y);
+    blit_sprite(sprite, 0, sprite->w, dest_x, dest_y);
+}
+
+void pictures_intro(void) {
+    if (intro_ready) memcpy(screen, intro_pixels, sizeof screen);
+}
+
+void pictures_tunnel(const uint8_t *bits, int color) {
+    if (color < 0 || color > 15) color = 3;
+    for (int row = 0; row < VIEW_H; row++) {
+        const uint8_t *src = bits + (row + 26) * 32;
+        for (int x = 0; x < VIEW_W; x++) {
+            if (src[x >> 3] & (uint8_t)(0x80u >> (x & 7))) {
+                screen[(VIEW_Y + row) * SCREEN_W + VIEW_X + x] = (uint8_t)color;
+            }
+        }
+    }
+}
+
+void pictures_finish(void) {
+    if (!ready) return;
+    for (int i = 0; i < SCREEN_W * SCREEN_H; i++) upload[i] = EGA[screen[i]];
+    UpdateTexture(frame, upload);
+}
+
+void pictures_draw_tiles(const Surface *game) {
     const uint8_t *tiles = game->tiles;
     int camera = (int)game->camera_y;
     for (int stored = 0; stored < 64; stored++) {
@@ -147,7 +220,7 @@ static void draw_tiles(const Surface *game) {
     }
 }
 
-static void draw_ship(const Surface *game) {
+void pictures_draw_ship(const Surface *game) {
     int frame_index = game->frame;
     if (frame_index < 0 || frame_index > 10) return;
     const AtlasSprite *sprite = &atlas_ship[frame_index];
@@ -158,12 +231,10 @@ static void draw_ship(const Surface *game) {
 }
 
 void pictures_draw_surface(const Surface *game) {
-    if (!ready) return;
-    memset(screen, 0, sizeof screen);
-    draw_tiles(game);
-    draw_ship(game);
-    for (int i = 0; i < SCREEN_W * SCREEN_H; i++) upload[i] = EGA[screen[i]];
-    UpdateTexture(frame, upload);
+    pictures_clear();
+    pictures_draw_tiles(game);
+    pictures_draw_ship(game);
+    pictures_finish();
 }
 
 void pictures_present(void) {

@@ -27,7 +27,7 @@ static void sync_player(Surface *game) {
     game->frame = ground.frame;
 }
 
-static void update_scroll_speed(Surface *game, unsigned controls) {
+void surface_update_speed(Surface *game, unsigned controls) {
     unsigned bits = game->fuel > 0 ? controls : CONTROL_DOWN;
     int speed = game->scroll_speed;
     if (bits & CONTROL_UP) {
@@ -78,7 +78,7 @@ static void move_x(Surface *game, unsigned controls) {
     }
 }
 
-static void apply_fuel(Surface *game) {
+void surface_apply_fuel(Surface *game) {
     int delta = game->fuel_delta;
     game->fuel_delta = 0;
     if (delta < 0) {
@@ -106,7 +106,7 @@ void surface_start(Surface *game) {
 
 void surface_tick(Surface *game, unsigned controls) {
     if (!game->alive) return;
-    update_scroll_speed(game, controls);
+    surface_update_speed(game, controls);
     advance_scroll(game);
     move_x(game, controls);
     if (game->frame != 0) sync_player(game);
@@ -116,5 +116,5 @@ void surface_tick(Surface *game, unsigned controls) {
         game->zero_frame_age = (uint8_t)(game->zero_frame_age + 1u);
         if (game->zero_frame_age >= VOID_FRAMES) game->alive = 0;
     }
-    apply_fuel(game);
+    surface_apply_fuel(game);
 }
