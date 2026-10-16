@@ -4,6 +4,7 @@
 /* PC speaker driven by the original descriptors. The timer IRQ is PIT0 divisor 0x4D0E. */
 void sound_init(void);
 void sound_reset(void);
+void sound_music_start(int name_pending);
 void sound_shutdown(void);
 void sound_context(int charges, int angle);
 void sound_trigger(unsigned id);

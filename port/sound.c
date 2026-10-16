@@ -136,7 +136,7 @@ static void music_tick(void) {
     music_divider = 7;
     music_duration = 0x0e;
     music_modulation = 4;
-    if (music_cursor >= sizeof MUSIC) {
+    if (music_origin + music_cursor >= sizeof MUSIC) {
         music_active = 0;
         return;
     }
@@ -217,6 +217,14 @@ void sound_trigger(unsigned id) {
         return;
     }
     if (id > priority_id) priority_id = (uint8_t)id;
+}
+
+/* CS:39B8. No pending name uses the sequence at 0x8DEC, 160 bytes into the blob. */
+void sound_music_start(int name_pending) {
+    music_divider = 0;
+    music_cursor = 0;
+    music_active = 1;
+    music_origin = name_pending ? 0u : 160u;
 }
 
 void sound_reset(void) {

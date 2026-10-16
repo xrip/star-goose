@@ -1340,6 +1340,7 @@ void game_boot(Game *game) {
     hud_frame = 0;
     side_charges = 6;
     sound_reset();
+    sound_music_start(0);
     surface_start(&game->flight);
 }
 
