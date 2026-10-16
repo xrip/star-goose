@@ -27,6 +27,7 @@ enum {
     HANDLER_TUNNEL_EXIT = 14,
     HANDLER_TUNNEL_PICKUP = 15,
     HANDLER_EXPLOSION = 16,
+    HANDLER_CULL = 18,
     HANDLER_PLAYER_SHOT = 19,
     HANDLER_ENEMY_SHOT = 20,
     HANDLER_IMPACT = 21,
@@ -220,6 +221,14 @@ static const Kind KINDS[] = {
     {HANDLER_COLLECTIBLE, 5, 0, 0, "collectible_05"}
 };
 
+/* DS:031E. Index is the handler that stood on the obstacle before it was broken. */
+static const char *REPLACEMENT_SPRITE[8] = {
+    "collectible_00", "collectible_00", "collectible_00", "collectible_03",
+    "collectible_04", "collectible_05", "collectible_06", "collectible_05"
+};
+static const uint8_t REPLACEMENT_H[8] = {11, 11, 11, 5, 5, 13, 13, 13};
+static const int8_t REPLACEMENT_ANCHOR[8] = {-2, -2, -2, -4, 4, 0, 1, 0};
+
 /* DS:1495 and DS:14C5. Low 10 bits are the resume camera, high 2 bits are the reward. */
 static const uint16_t DEST_A[24] = {
     0x0380, 0xc0e0, 0x0380, 0x0380, 0x0380, 0xc180, 0x80d0, 0x0380,
@@ -400,6 +409,47 @@ static void activate_row(unsigned row) {
     }
 }
 
+static void spawn_replaced(int index, const GooseMapObject *object, int active) {
+    if (object->kind >= sizeof KINDS / sizeof KINDS[0]) return;
+    unsigned handler = KINDS[object->kind].handler;
+    if (handler >= sizeof REPLACEMENT_SPRITE / sizeof REPLACEMENT_SPRITE[0]) return;
+    Actor *actor = spawn();
+    if (!actor) return;
+    *actor = (Actor){0};
+    actor->object_index = index;
+    actor->kind = object->kind;
+    actor->handler = HANDLER_CULL;
+    actor->height = REPLACEMENT_H[handler];
+    actor->anchor_y = REPLACEMENT_ANCHOR[handler];
+    actor->x = map_object_x(object->column);
+    actor->y = (unsigned)object->stored_row << 4;
+    actor->z = (int8_t)column_z(TILE_ROWS - 1 - object->stored_row, object->column + 1);
+    snprintf(actor->sprite, sizeof actor->sprite, "%s", REPLACEMENT_SPRITE[handler]);
+    actor->waiting = active ? 0 : 1;
+    if (active) actor->flags = GOOSE_RENDER | GOOSE_UPDATE;
+}
+
+static int replacement_present(int index) {
+    for (int i = 0; i < ACTORS; i++) {
+        if (actors[i].object_index != index) continue;
+        if (actors[i].flags || actors[i].waiting) return 1;
+    }
+    return 0;
+}
+
+static int map_number(void);
+
+static void spawn_replacements(unsigned row) {
+    if (level_part < 0 || level_part >= PARTS) return;
+    const GooseMap *map = &goose_maps[map_number()];
+    for (int i = 0; i < map->object_count; i++) {
+        if (map->objects[i].stored_row != row) continue;
+        if ((consumed[level_part] & (1u << i)) == 0) continue;
+        if (replacement_present(i)) continue;
+        spawn_replaced(i, &map->objects[i], 1);
+    }
+}
+
 static int map_number(void) {
     int level = level_index;
     int part = level_part;
@@ -425,7 +475,10 @@ static void place_map(Game *game, unsigned camera) {
         if (kind >= sizeof KINDS / sizeof KINDS[0]) continue;
         if (kind >= COLLECTIBLE_KIND && kind - COLLECTIBLE_KIND < COLLECTIBLES &&
             collected[kind - COLLECTIBLE_KIND]) continue;
-        if (level_part >= 0 && level_part < PARTS && (consumed[level_part] & (1u << i))) continue;
+        if (level_part >= 0 && level_part < PARTS && (consumed[level_part] & (1u << i))) {
+            spawn_replaced(i, &map->objects[i], 0);
+            continue;
+        }
         const Kind *info = &KINDS[kind];
         Actor *actor = spawn();
         if (!actor) return;
@@ -455,6 +508,7 @@ static void place_map(Game *game, unsigned camera) {
 static void advance_spawns(unsigned camera) {
     unsigned row = spawn_row(camera);
     if (row == last_spawn_row) return;
+    spawn_replacements(row);
     activate_row(row);
     last_spawn_row = row;
 }
