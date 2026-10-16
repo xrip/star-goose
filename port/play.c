@@ -9,6 +9,9 @@
 #include "raylib.h"
 #include <stdio.h>
 #include <string.h>
+#if defined(__SWITCH__)
+#include <sys/stat.h>
+#endif
 
 enum { ACTORS = 48 };
 enum {
@@ -2077,12 +2080,22 @@ static void respawn(Game *game) {
     spawn_respawn_effect(game);
 }
 
+static const char *score_path(void) {
+#if defined(__SWITCH__)
+    mkdir("sdmc:/switch", 0777);
+    mkdir("sdmc:/switch/star-goose", 0777);
+    return "sdmc:/switch/star-goose/hiscores";
+#else
+    return "hiscores";
+#endif
+}
+
 static void load_scores(void) {
     memset(names, '.', sizeof names);
     names[0][0] = '_';
     memset(board, 0, sizeof board);
     for (int i = 0; i < SCORE_SLOTS; i++) score_order[i] = (uint8_t)i;
-    FILE *file = fopen("hiscores", "rb");
+    FILE *file = fopen(score_path(), "rb");
     if (!file) return;
     uint8_t blob[HISCORE_BYTES];
     if (fread(blob, 1, HISCORE_BYTES, file) == HISCORE_BYTES) {
@@ -2099,7 +2112,7 @@ static void save_scores(void) {
     memcpy(blob, names, sizeof names);
     memcpy(blob + sizeof names, board, sizeof board);
     memcpy(blob + HISCORE_BYTES - SCORE_SLOTS, score_order, sizeof score_order);
-    FILE *file = fopen("hiscores", "wb");
+    FILE *file = fopen(score_path(), "wb");
     if (!file) return;
     fwrite(blob, 1, HISCORE_BYTES, file);
     fclose(file);

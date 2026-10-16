@@ -9,6 +9,9 @@
 #if defined(__EMSCRIPTEN__)
 #include <emscripten.h>
 #endif
+#if defined(__SWITCH__)
+#include <unistd.h>
+#endif
 
 enum { SCREEN_W = 320, SCREEN_H = 200, SCALE = 3 };
 enum { MOUSE_X_DEAD = 5, MOUSE_Y_DEAD = 10 };
@@ -125,6 +128,9 @@ static void service_keys(void) {
         sound_gate = 0;
     }
     if (key_down(binding[BIND_QUIT])) ui_mode = UI_QUIT;
+#if defined(__SWITCH__)
+    if (IsGamepadButtonPressed(0, GAMEPAD_BUTTON_MIDDLE_LEFT)) ui_mode = UI_QUIT;
+#endif
 }
 
 static float mouse_x;
@@ -207,17 +213,55 @@ static void sample_mouse(void) {
     mouse_y += delta.y;
 }
 
+/* Joy-Con faces are not the emulated keyboard: A is not Space. */
+static unsigned switch_pad(void) {
+#if defined(__SWITCH__)
+    unsigned pad = 0;
+    float x;
+    float y;
+    int left;
+    int right;
+    int up;
+    int down;
+    if (!IsGamepadAvailable(0)) return 0;
+    x = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_X);
+    y = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y);
+    left = IsGamepadButtonDown(0, GAMEPAD_BUTTON_LEFT_FACE_LEFT) || x < -0.4f;
+    right = IsGamepadButtonDown(0, GAMEPAD_BUTTON_LEFT_FACE_RIGHT) || x > 0.4f;
+    up = IsGamepadButtonDown(0, GAMEPAD_BUTTON_LEFT_FACE_UP) || y > 0.4f;
+    down = IsGamepadButtonDown(0, GAMEPAD_BUTTON_LEFT_FACE_DOWN) || y < -0.4f;
+    if (left) pad |= CONTROL_LEFT;
+    else if (right) pad |= CONTROL_RIGHT;
+    if (up) pad |= CONTROL_UP;
+    else if (down) pad |= CONTROL_DOWN;
+    if (IsGamepadButtonDown(0, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT) ||
+        IsGamepadButtonDown(0, GAMEPAD_BUTTON_RIGHT_TRIGGER_2))
+        pad |= CONTROL_FIRE;
+    if (IsGamepadButtonDown(0, GAMEPAD_BUTTON_LEFT_TRIGGER_1) ||
+        IsGamepadButtonDown(0, GAMEPAD_BUTTON_LEFT_TRIGGER_2) ||
+        IsGamepadButtonDown(0, GAMEPAD_BUTTON_RIGHT_FACE_LEFT))
+        pad |= CONTROL_LEFT_DEVICE;
+    if (IsGamepadButtonDown(0, GAMEPAD_BUTTON_RIGHT_TRIGGER_1) ||
+        IsGamepadButtonDown(0, GAMEPAD_BUTTON_RIGHT_FACE_UP))
+        pad |= CONTROL_RIGHT_DEVICE;
+    return pad;
+#else
+    return 0;
+#endif
+}
+
 static unsigned read_controls(void) {
     unsigned controls = 0;
     unsigned touch = touch_controls();
+    unsigned pad = switch_pad();
     unsigned direction = CONTROL_LEFT | CONTROL_RIGHT | CONTROL_UP | CONTROL_DOWN;
-    if (key_down(binding[BIND_LEFT]) || (touch & CONTROL_LEFT)) controls = CONTROL_LEFT;
-    else if (key_down(binding[BIND_RIGHT]) || (touch & CONTROL_RIGHT)) controls = CONTROL_RIGHT;
-    if (key_down(binding[BIND_UP]) || (touch & CONTROL_UP)) controls |= CONTROL_UP;
-    else if (key_down(binding[BIND_DOWN]) || (touch & CONTROL_DOWN)) controls |= CONTROL_DOWN;
-    if (key_down(binding[BIND_FIRE]) || (touch & CONTROL_FIRE)) controls |= CONTROL_FIRE;
-    if (key_down(binding[BIND_N]) || (touch & CONTROL_LEFT_DEVICE)) controls |= CONTROL_LEFT_DEVICE;
-    if (key_down(binding[BIND_M]) || (touch & CONTROL_RIGHT_DEVICE)) controls |= CONTROL_RIGHT_DEVICE;
+    if (key_down(binding[BIND_LEFT]) || (touch & CONTROL_LEFT) || (pad & CONTROL_LEFT)) controls = CONTROL_LEFT;
+    else if (key_down(binding[BIND_RIGHT]) || (touch & CONTROL_RIGHT) || (pad & CONTROL_RIGHT)) controls = CONTROL_RIGHT;
+    if (key_down(binding[BIND_UP]) || (touch & CONTROL_UP) || (pad & CONTROL_UP)) controls |= CONTROL_UP;
+    else if (key_down(binding[BIND_DOWN]) || (touch & CONTROL_DOWN) || (pad & CONTROL_DOWN)) controls |= CONTROL_DOWN;
+    if (key_down(binding[BIND_FIRE]) || (touch & CONTROL_FIRE) || (pad & CONTROL_FIRE)) controls |= CONTROL_FIRE;
+    if (key_down(binding[BIND_N]) || (touch & CONTROL_LEFT_DEVICE) || (pad & CONTROL_LEFT_DEVICE)) controls |= CONTROL_LEFT_DEVICE;
+    if (key_down(binding[BIND_M]) || (touch & CONTROL_RIGHT_DEVICE) || (pad & CONTROL_RIGHT_DEVICE)) controls |= CONTROL_RIGHT_DEVICE;
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) controls |= CONTROL_FIRE;
     if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) controls |= CONTROL_RIGHT_DEVICE;
     if (controls & direction) return controls;
@@ -234,6 +278,10 @@ int main(void) {
     /* The maximize box is what delivers WM_MAXIMIZE. The restored size stays 960x600. */
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(SCREEN_W * SCALE, SCREEN_H * SCALE, "Star Goose");
+#if defined(__SWITCH__)
+    /* raylib mounts RomFS but leaves the working directory on the SD card. */
+    chdir("romfs:/");
+#endif
     watch_web_canvas();
     SetTargetFPS(60);
     SetExitKey(KEY_NULL);
@@ -274,7 +322,11 @@ int main(void) {
                 if (step > 0.25f) step = 0.25f;
                 while (step >= tick && ui_mode == UI_PLAY) {
                     step -= tick;
-                    if (IsKeyPressed(KEY_R)) game_boot(&game);
+                    if (IsKeyPressed(KEY_R)
+#if defined(__SWITCH__)
+                        || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_MIDDLE_RIGHT)
+#endif
+                        ) game_boot(&game);
                     else game_tick(&game, read_controls());
                 }
             }

@@ -1,3 +1,9 @@
 build/
 __pycache__/
 *.pyc
+switch/build/
+switch/romfs/
+switch/*.nro
+switch/*.nacp
+switch/*.elf
+switch/*.map

@@ -415,12 +415,12 @@ void pictures_fill(int x, int y, int width, int height, int color) {
 }
 
 void pictures_present(void) {
-    /* Windowed play stays at 3x. A maximized desktop window, and the web
-     * canvas, use the largest whole factor of 320x200 that fits. */
+    /* Windowed play stays at 3x. A maximized desktop window, the web canvas,
+     * and the Switch screen use the largest whole factor of 320x200 that fits. */
     int scale = PRESENT_SCALE;
     int origin_x = 0;
     int origin_y = 0;
-#if defined(__EMSCRIPTEN__)
+#if defined(__EMSCRIPTEN__) || defined(__SWITCH__)
     int fit = 1;
 #else
     int fit = IsWindowMaximized();
