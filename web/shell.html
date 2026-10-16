@@ -2,28 +2,97 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Star Goose">
   <title>Star Goose</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <style>
     html, body {
       margin: 0;
       height: 100%;
       background: #000;
-    }
-    body {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      overflow: hidden;
+      touch-action: none;
     }
     canvas.emscripten {
+      display: block;
       background: #000;
       outline: none;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
     }
+    #install, #ios-install {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      z-index: 2;
+      margin: 0;
+      padding: 6px 10px;
+      border: 2px solid #fff;
+      background: #000;
+      color: #fff;
+      font: 14px/1 sans-serif;
+    }
+    #install { cursor: pointer; }
+    #ios-install { max-width: 16em; }
   </style>
 </head>
 <body>
   <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+  <button id="install" type="button" hidden>Установить</button>
+  <p id="ios-install" hidden>В Safari: Поделиться, затем «На экран Домой».</p>
   <script>
+    var installEvent = null;
+    var installButton = document.getElementById("install");
+    var iosHint = document.getElementById("ios-install");
+
+    function installed() {
+      return window.matchMedia("(display-mode: fullscreen)").matches
+        || window.matchMedia("(display-mode: standalone)").matches
+        || navigator.standalone === true;
+    }
+
+    window.addEventListener("beforeinstallprompt", function (event) {
+      event.preventDefault();
+      if (installed()) return;
+      installEvent = event;
+      installButton.hidden = false;
+    });
+
+    installButton.addEventListener("click", function () {
+      if (!installEvent) return;
+      installEvent.prompt();
+      installEvent.userChoice.then(function () {
+        installEvent = null;
+        installButton.hidden = true;
+      });
+    });
+
+    window.addEventListener("appinstalled", function () {
+      installButton.hidden = true;
+      iosHint.hidden = true;
+    });
+
+    if (!installed() && /iphone|ipad|ipod/i.test(navigator.userAgent)) iosHint.hidden = false;
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("sw.js");
+      });
+    }
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", function () {
+        window.dispatchEvent(new Event("resize"));
+      });
+    }
+
     var Module = {
       canvas: document.getElementById("canvas")
     };

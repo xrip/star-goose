@@ -415,12 +415,17 @@ void pictures_fill(int x, int y, int width, int height, int color) {
 }
 
 void pictures_present(void) {
-    /* Windowed play stays at 3x. WM_MAXIMIZE (IsWindowMaximized) picks the
-     * largest integer factor of 320x200 that fits the client area. */
+    /* Windowed play stays at 3x. A maximized desktop window, and the web
+     * canvas, use the largest whole factor of 320x200 that fits. */
     int scale = PRESENT_SCALE;
     int origin_x = 0;
     int origin_y = 0;
-    if (IsWindowMaximized()) {
+#if defined(__EMSCRIPTEN__)
+    int fit = 1;
+#else
+    int fit = IsWindowMaximized();
+#endif
+    if (fit) {
         int width = GetScreenWidth();
         int height = GetScreenHeight();
         int fit_x = width / SCREEN_W;
