@@ -73,6 +73,14 @@ void surface_apply_fuel(Surface *game) {
     }
 }
 
+void surface_coast(Surface *game) {
+    int speed = game->scroll_speed - 1;
+    if (speed >= 0) game->scroll_speed = speed;
+    advance_scroll(game);
+    sync_player(game);
+    surface_apply_fuel(game);
+}
+
 void surface_start(Surface *game) {
     *game = (Surface){0};
     game->tiles = goose_level0_tiles;

@@ -60,5 +60,7 @@ void surface_start(Surface *game);
 void surface_tick(Surface *game, unsigned controls);
 void surface_update_speed(Surface *game, unsigned controls);
 void surface_apply_fuel(Surface *game);
+/* Handler 17: slow the scroll by one, then keep the camera and the terrain moving. */
+void surface_coast(Surface *game);
 
 #endif

@@ -152,6 +152,7 @@ enum {
     HISCORE_BYTES = 140,
     SCORE_ROW_FIRST = 12,
     SCORE_ROW_LAST = 23,
+    DEATH_TICKS = 40,
     GROUND_LIFE = 5,
     EXPLOSION_FRAMES = 5,
     BURST_FRAMES = 6
@@ -261,6 +262,7 @@ static uint8_t hist_z[4];
 static uint32_t consumed[3];
 static const uint8_t *map_tiles;
 static int death_hold;
+static int dying;
 static int tunnel_pending;
 static unsigned last_spawn_row;
 static uint8_t pending_reward;
@@ -1130,10 +1132,7 @@ static void collide_player_map(Game *game) {
     }
     if (damage == 0) return;
     apply_map_hit(game, damage, column, hit_row);
-    if (game->flight.shield <= 0) {
-        game->flight.alive = 0;
-        sound_trigger(SOUND_DEATH);
-    }
+    if (game->flight.shield <= 0) game->flight.alive = 0;
 }
 
 static void update_actor(Game *game, Actor *actor) {
@@ -1550,6 +1549,7 @@ static void begin_level(Game *game) {
     ammo_use = 0;
     variation = 0;
     death_hold = 0;
+    dying = 0;
     tunnel_pending = 0;
     level_index = 0;
     level_part = 0;
@@ -1571,6 +1571,7 @@ static void begin_level(Game *game) {
 
 static void respawn(Game *game) {
     death_hold = 0;
+    dying = 0;
     game->flight.alive = 1;
     game->flight.fuel = FUEL_FULL;
     game->flight.shield = SHIELD_FULL;
@@ -1797,6 +1798,32 @@ void game_play(Game *game) {
     game->lives = lives;
 }
 
+static void finish_death(Game *game) {
+    dying = 0;
+    if (game->lives == 0) {
+        attract_seen = 1;
+        insert_score();
+        game_boot(game);
+        return;
+    }
+    game->lives--;
+    respawn(game);
+}
+
+static void begin_surface_death(Game *game) {
+    if (dying) return;
+    dying = 1;
+    death_hold = 0;
+    sound_trigger(SOUND_DEATH);
+    spawn_explosion(game->flight.x, player_y(game), game->flight.z);
+}
+
+static void update_surface_actors(Game *game) {
+    tunnel_pending = 0;
+    for (int i = 0; i < ACTORS; i++) update_actor(game, &actors[i]);
+    if (tunnel_pending) enter_tunnel(game);
+}
+
 void game_tick(Game *game, unsigned controls) {
     if (game->mode == MODE_TITLE) {
         if (controls & CONTROL_FIRE) game_play(game);
@@ -1809,31 +1836,33 @@ void game_tick(Game *game, unsigned controls) {
         tunnel_tick(game, controls);
         return;
     }
-    if (!game->flight.alive) {
-        death_hold++;
-        if (death_hold < 20) return;
-        game->lives--;
-        if (game->lives > 0) respawn(game);
-        else {
-            attract_seen = 1;
-            insert_score();
-            game_boot(game);
+    if (dying) {
+        if (death_hold >= DEATH_TICKS) {
+            finish_death(game);
+            return;
         }
+        surface_coast(&game->flight);
+        advance_spawns(game->flight.camera_y);
+        update_surface_actors(game);
+        death_hold++;
         return;
     }
     int was_alive = game->flight.alive;
     surface_tick(&game->flight, controls);
-    if (was_alive && !game->flight.alive) sound_trigger(SOUND_DEATH);
     push_history(game);
     collide_player_map(game);
+    if (was_alive && !game->flight.alive) begin_surface_death(game);
+    if (dying) {
+        advance_spawns(game->flight.camera_y);
+        update_surface_actors(game);
+        return;
+    }
     update_devices(game, controls);
     advance_spawns(game->flight.camera_y);
     if (game->flight.alive && game->flight.frame != 0 && game->ammo > 0 && (controls & CONTROL_FIRE)) {
         fire(game);
     }
-    tunnel_pending = 0;
-    for (int i = 0; i < ACTORS; i++) update_actor(game, &actors[i]);
-    if (tunnel_pending) enter_tunnel(game);
+    update_surface_actors(game);
 }
 
 static void draw_tunnel_layer(int layer) {
@@ -1887,7 +1916,7 @@ void game_draw(Game *game) {
             sprite_name(&actors[i], name, sizeof name);
             pictures_sprite(name, actors[i].x, (int)actors[i].y, actors[i].z, (int)game->flight.camera_y);
         }
-        pictures_draw_ship(&game->flight);
+        if (game->flight.alive) pictures_draw_ship(&game->flight);
     }
     if (game->mode != MODE_TITLE) {
         hud_draw(game->flight.fuel, game->ammo, game->flight.shield, game->lives, side_charges,
