@@ -15,6 +15,8 @@ static unsigned read_controls(void) {
     if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W)) controls |= CONTROL_UP;
     if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S)) controls |= CONTROL_DOWN;
     if (IsKeyDown(KEY_SPACE) || IsKeyDown(KEY_Z) || IsKeyDown(KEY_LEFT_CONTROL)) controls |= CONTROL_FIRE;
+    if (IsKeyDown(KEY_N)) controls |= CONTROL_LEFT_DEVICE;
+    if (IsKeyDown(KEY_M)) controls |= CONTROL_RIGHT_DEVICE;
     return controls;
 }
 
@@ -42,6 +44,8 @@ int main(void) {
         if (getenv("GOOSE_LEFT")) held |= CONTROL_LEFT;
         if (getenv("GOOSE_RIGHT")) held |= CONTROL_RIGHT;
         if (getenv("GOOSE_FIRE")) held |= CONTROL_FIRE;
+        if (getenv("GOOSE_N")) held |= CONTROL_LEFT_DEVICE;
+        if (getenv("GOOSE_M")) held |= CONTROL_RIGHT_DEVICE;
         for (int i = 0; i < count; i++) game_tick(&game, held);
         shot = 1;
     }

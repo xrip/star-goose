@@ -14,6 +14,7 @@ enum { ACTORS = 48, AMMO_FULL = 48, LIVES_FULL = 3 };
 typedef struct Actor {
     uint8_t flags;
     uint8_t handler;
+    uint8_t kind;
     uint8_t param;
     uint8_t frame;
     uint8_t height;
@@ -104,6 +105,12 @@ static uint8_t collected[6];
 static uint8_t score_digits[6];
 static int hud_frame;
 static int side_charges;
+static uint8_t left_device;
+static uint8_t right_device;
+static int hist_x[4];
+static unsigned hist_y[4];
+static uint8_t hist_frame[4];
+static uint8_t hist_z[4];
 static uint32_t consumed[3];
 static const uint8_t *map_tiles;
 static int death_hold;
@@ -249,6 +256,7 @@ static void place_map(Game *game, unsigned camera) {
         actor->object_index = i;
         actor->waiting = 1;
         actor->handler = info->handler;
+        actor->kind = (uint8_t)kind;
         actor->param = info->param;
         actor->animated = info->animated;
         actor->state[2] = info->hp;
@@ -610,9 +618,129 @@ static void update_exit(Game *game, Actor *actor) {
     if (cull_after(actor, game->flight.camera_y)) actor->flags = 0;
 }
 
+static const int8_t SIDE_Z[10] = {0, 0, 0, 0, 4, -4, 4, -4, 4, -4};
+static const int GROUND_HALF[6] = {14, 8, 8, 14, 10, 14};
+
+static void reset_history(const Game *game) {
+    for (int i = 0; i < 4; i++) {
+        hist_x[i] = game->flight.x;
+        hist_y[i] = player_y(game);
+        hist_frame[i] = game->flight.frame;
+        hist_z[i] = (uint8_t)game->flight.z;
+    }
+}
+
+static void push_history(const Game *game) {
+    for (int i = 3; i > 0; i--) {
+        hist_x[i] = hist_x[i - 1];
+        hist_y[i] = hist_y[i - 1];
+        hist_frame[i] = hist_frame[i - 1];
+        hist_z[i] = hist_z[i - 1];
+    }
+    hist_x[0] = game->flight.x;
+    hist_y[0] = player_y(game);
+    hist_frame[0] = game->flight.frame;
+    hist_z[0] = (uint8_t)game->flight.z;
+}
+
+static void position_side(Actor *actor) {
+    int side = (actor->flags & GOOSE_SIDE) != 0;
+    unsigned frame = hist_frame[3];
+    int zoff = frame < 10 ? SIDE_Z[frame] : 0;
+    int z = (hist_z[3] + 6u) & 255u;
+    actor->x = hist_x[3] + (side ? 8 : -8);
+    actor->y = (hist_y[3] + 6u) & 1023u;
+    actor->frame = frame < 10 ? (uint8_t)frame : 9;
+    actor->z = (int8_t)signed_byte((unsigned)(side ? z - zoff : z + zoff));
+}
+
+static int launch_side(int side) {
+    Actor *actor = spawn();
+    if (!actor) return 0;
+    *actor = (Actor){0};
+    actor->object_index = -1;
+    actor->flags = GOOSE_RENDER | GOOSE_UPDATE | GOOSE_PROJECTILE;
+    if (side) actor->flags |= GOOSE_SIDE;
+    actor->handler = 24;
+    actor->animated = 1;
+    actor->state[2] = 5;
+    snprintf(actor->sprite, sizeof actor->sprite, "fs_0DDA");
+    position_side(actor);
+    side_charges--;
+    sound_trigger(1);
+    return 1;
+}
+
+/* CS:11F0. Press from 0 launches. Press from 2 detaches. Release walks 1→2 and 3→0. */
+static void device_button(uint8_t *state, int held, int side) {
+    if (held) {
+        if (*state == 0) {
+            if (side_charges > 0 && launch_side(side)) *state = 1;
+        } else if (*state == 2) {
+            *state = 3;
+            sound_trigger(2);
+        }
+    } else if (*state == 1) {
+        *state = 2;
+    } else if (*state == 3) {
+        *state = 0;
+    }
+}
+
+static void update_devices(Game *game, unsigned controls) {
+    if (!game->flight.alive || game->flight.frame == 0) return;
+    device_button(&left_device, (controls & CONTROL_LEFT_DEVICE) != 0, 0);
+    device_button(&right_device, (controls & CONTROL_RIGHT_DEVICE) != 0, 1);
+}
+
+static void update_side_follow(Game *game, Actor *actor) {
+    if (!game->flight.alive) {
+        actor->flags = 0;
+        return;
+    }
+    position_side(actor);
+    uint8_t state = (actor->flags & GOOSE_SIDE) ? right_device : left_device;
+    if (state == 3) actor->handler = 25;
+}
+
+static void update_ground_shot(Game *game, Actor *actor) {
+    if (cull_before(actor, game->flight.camera_y)) {
+        actor->flags = 0;
+        return;
+    }
+    actor->y = (actor->y - 6u) & 1023u;
+    TerrainSample ground = terrain_sample(game->flight.tiles, (unsigned)actor->x, actor->y);
+    actor->z = (int8_t)(ground.height + 4);
+    actor->frame = ground.frame;
+    unsigned row = ground.row;
+    if (actor->frame == 0) {
+        actor->y = (actor->y + 4u) & 1023u;
+        actor->state[2]--;
+        if (actor->state[2] & 0x80) {
+            actor->flags = 0;
+            return;
+        }
+    }
+    for (int i = 0; i < ACTORS; i++) {
+        Actor *target = &actors[i];
+        if (target->flags == 0 || target->object_index < 0 || target->kind >= 6) continue;
+        if ((target->y >> 4) != row) continue;
+        int dx = actor->x - target->x;
+        if (dx < 0) dx = -dx;
+        if (dx > GROUND_HALF[target->kind]) continue;
+        consume_actor(target);
+        target->flags = 0;
+        sound_trigger(6);
+        actor->flags = 0;
+        return;
+    }
+}
+
 static void update_actor(Game *game, Actor *actor) {
     if (actor->flags == 0) return;
     if (actor->handler == 19) update_shot(game, actor);
+    else if (actor->handler == 24) update_side_follow(game, actor);
+    else if (actor->handler == 25) update_ground_shot(game, actor);
     else if (actor->handler == 20) update_enemy_shot(game, actor);
     else if (actor->handler == 22) {
         if (actor->frame == 0) actor->flags = 0;
@@ -666,6 +794,8 @@ static void enter_tunnel(Game *game) {
     tunnel_player_position(ship_angle, &game->tunnel_x, &game->tunnel_y);
     game->tunnel_frame = tunnel_player_frame(ship_angle);
     clear_actors();
+    left_device = 0;
+    right_device = 0;
     tunnel_pending = 0;
 }
 
@@ -677,6 +807,8 @@ static void leave_tunnel(Game *game) {
     game->flight.frame = 1;
     game->flight.zero_frame_age = 0;
     game->flight.alive = 1;
+    left_device = 0;
+    right_device = 0;
     if (game->tunnel_reward == 0xf0) {
         stage_counter++;
         int base = 16;
@@ -758,6 +890,8 @@ static void begin_level(Game *game) {
     level_part = 0;
     stage_counter = 1;
     side_charges = 6;
+    left_device = 0;
+    right_device = 0;
     reload_pending = 0;
     pending_object = -1;
     memset(collected, 0, sizeof collected);
@@ -765,6 +899,7 @@ static void begin_level(Game *game) {
     game->flight.base_scroll_speed = 16;
     resume_y = 0;
     place_map(game, game->flight.camera_y);
+    reset_history(game);
     remember(game);
 }
 
@@ -782,8 +917,11 @@ static void respawn(Game *game) {
     game->flight.frame = 1;
     game->flight.zero_frame_age = 0;
     side_charges = 6;
+    left_device = 0;
+    right_device = 0;
     if (level_part != 0) level_part = 0;
     place_map(game, game->flight.camera_y);
+    reset_history(game);
     remember(game);
 }
 
@@ -830,6 +968,8 @@ void game_tick(Game *game, unsigned controls) {
     int was_alive = game->flight.alive;
     surface_tick(&game->flight, controls);
     if (was_alive && !game->flight.alive) sound_trigger(0x0c);
+    push_history(game);
+    update_devices(game, controls);
     advance_spawns(game->flight.camera_y);
     if (game->flight.alive && game->flight.frame != 0 && game->ammo > 0 && (controls & CONTROL_FIRE)) {
         fire(game);
