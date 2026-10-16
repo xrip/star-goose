@@ -11,8 +11,13 @@ add_library(goose_surface
     port/goose_model.c)
 target_include_directories(goose_surface PUBLIC port)
 
-add_executable(surface_check port/surface_check.c)
-target_link_libraries(surface_check PRIVATE goose_surface)
+if (EMSCRIPTEN)
+    set(PLATFORM Web CACHE STRING "Platform to build for." FORCE)
+    string(REPLACE "-rdynamic" "" CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "${CMAKE_SHARED_LIBRARY_LINK_C_FLAGS}")
+else()
+    add_executable(surface_check port/surface_check.c)
+    target_link_libraries(surface_check PRIVATE goose_surface)
+endif()
 
 include(FetchContent)
 FetchContent_Declare(raylib
@@ -26,4 +31,16 @@ add_executable(goose port/main.c port/pictures.c port/atlas_data.c port/play.c p
 target_link_libraries(goose PRIVATE goose_surface raylib)
 if (WIN32)
     target_link_libraries(goose PRIVATE winmm gdi32)
+endif()
+if (EMSCRIPTEN)
+    # WindowShouldClose sleeps through emscripten_sleep, so the desktop loop
+    # stays. Pages cannot send COOP/COEP, so this build does not use pthreads.
+    set_target_properties(goose PROPERTIES SUFFIX ".html")
+    target_link_options(goose PRIVATE
+        "SHELL:-s WASM=1"
+        "SHELL:-s ASYNCIFY=1"
+        "SHELL:-s ALLOW_MEMORY_GROWTH=1"
+        "SHELL:-s INITIAL_MEMORY=67108864"
+        "SHELL:--shell-file ${CMAKE_SOURCE_DIR}/web/shell.html"
+        "SHELL:--preload-file ${CMAKE_SOURCE_DIR}/assets@assets")
 endif()

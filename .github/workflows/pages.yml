@@ -1,0 +1,54 @@
+name: pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.71
+          actions-cache-folder: emsdk-cache
+
+      - name: Configure
+        run: emcmake cmake -S . -B build/web -DPLATFORM=Web -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build/web --target goose
+
+      - name: Stage site
+        run: |
+          mkdir -p site
+          cp build/web/goose.html site/index.html
+          cp build/web/goose.js build/web/goose.wasm build/web/goose.data site/
+          : > site/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
