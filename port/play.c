@@ -1891,8 +1891,14 @@ static void erase_name(void) {
     names[name_slot][name_cursor] = '_';
 }
 
+static int input_held;
+
+void game_hold_input(int hold) {
+    input_held = hold;
+}
+
 static void poll_name(void) {
-    if (!name_editing) return;
+    if (input_held || !name_editing) return;
     int ch;
     while (name_editing && (ch = GetCharPressed()) != 0) type_name(ch);
     if (!name_editing) return;

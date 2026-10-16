@@ -14,6 +14,8 @@ enum {
     SOUND_COLLECT = 10,
     SOUND_TUNNEL = 11,
     SOUND_DEATH = 12,
+    SOUND_UNMUTE = 13,
+    SOUND_MUTE = 14,
     SOUND_NOTE = 15
 };
 
@@ -23,6 +25,7 @@ void sound_music_start(int name_pending);
 void sound_shutdown(void);
 void sound_context(int charges, int angle);
 void sound_trigger(unsigned id);
+void sound_set_enabled(int on);
 void sound_pump(void);
 
 #endif

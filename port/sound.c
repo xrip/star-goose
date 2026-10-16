@@ -222,6 +222,10 @@ void sound_context(int next_charges, int next_angle) {
     angle = next_angle;
 }
 
+void sound_set_enabled(int on) {
+    enabled = on ? 1 : 0;
+}
+
 void sound_trigger(unsigned id) {
     if (music_active || !enabled || id < 1 || id > SOUND_NOTE) return;
     if (active_id == 0) {

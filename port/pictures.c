@@ -367,6 +367,19 @@ void pictures_blit_bank(int bank_offset, unsigned offset, int width, int height,
     }
 }
 
+void pictures_fill(int x, int y, int width, int height, int color) {
+    if (color < 0 || color > 15) color = 0;
+    for (int dy = 0; dy < height; dy++) {
+        int row = y + dy;
+        if (row < 0 || row >= SCREEN_H) continue;
+        for (int dx = 0; dx < width; dx++) {
+            int col = x + dx;
+            if (col < 0 || col >= SCREEN_W) continue;
+            screen[row * SCREEN_W + col] = (uint8_t)color;
+        }
+    }
+}
+
 void pictures_present(void) {
     DrawTextureEx(frame, (Vector2){0, 0}, 0, PRESENT_SCALE, WHITE);
 }

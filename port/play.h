@@ -24,5 +24,6 @@ void game_boot(Game *game);
 void game_play(Game *game);
 void game_tick(Game *game, unsigned controls);
 void game_draw(Game *game);
+void game_hold_input(int hold);
 
 #endif

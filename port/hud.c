@@ -80,3 +80,50 @@ void hud_draw(int fuel, int ammo, int shield, int lives, int charges,
         place++;
     }
 }
+
+static void fill_ega(unsigned dest, int byte_width, int rows, int color) {
+    int x, y;
+    ega_origin(dest, &x, &y);
+    pictures_fill(x, y, byte_width * BYTE_PX, rows, color);
+}
+
+static const unsigned PROMPT_BANK[8] = {4, 4, 4, 4, 2, 2, 4, 4};
+static const unsigned PROMPT_SRC[8] = {
+    0x1338, 0x3dc8, 0x35fc, 0x4718, 0x73a0, 0x7592, 0x4e98, 0x4e98
+};
+static const unsigned PROMPT_AT[8] = {
+    0x0dcd, 0x0dcd, 0x0dcd, 0x0dcd, 0x0dcd, 0x0dcd, 0x0dd3, 0x0dd4
+};
+static const int PROMPT_W[8] = {40, 48, 60, 64, 36, 40, 60, 60};
+static const int PROMPT_H[8] = {12, 15, 12, 12, 12, 12, 12, 12};
+
+static void prompt_piece(int index) {
+    if (index < 0 || index > 7) return;
+    blit((int)PROMPT_BANK[index], PROMPT_SRC[index], PROMPT_AT[index], PROMPT_W[index], PROMPT_H[index], -1);
+}
+
+void hud_quit_dialog(void) {
+    fill_ega(0x0aac, 0x10, 0x28, 5);
+    fill_ega(0x0b4d, 0x0e, 0x20, 2);
+    blit(BANK_SHIP, 0x7592, 0x0c8f, 0x28, 0x0c, -1);
+    blit(BANK_TILES, 0x1ab8, 0x0ce4, 0x20, 0x0d, -1);
+}
+
+void hud_redefine_dialog(void) {
+    fill_ega(0x0a0b, 0x13, 0x30, 5);
+    fill_ega(0x0aac, 0x11, 0x28, 2);
+    blit(BANK_TILES, 0x5a5c, 0x0b4d, 0x78, 0x0f, -1);
+}
+
+void hud_control_prompt(int index) {
+    fill_ega(0x0dcc, 0x0f, 0x11, 2);
+    if (index == 6) {
+        prompt_piece(0);
+        prompt_piece(6);
+    } else if (index == 7) {
+        prompt_piece(1);
+        prompt_piece(7);
+    } else {
+        prompt_piece(index);
+    }
+}
