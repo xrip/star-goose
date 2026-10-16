@@ -138,32 +138,59 @@ static unsigned touch_controls(void) {
 #endif
 }
 
-/* Raylib sizes the web canvas once, from window.innerWidth, and a later
- * orientation lock often never updates that size. The CSS box can also stay
- * at the 960x600 startup size, so the picture cannot grow. Measure the visible
- * viewport every frame and integer-scale into its device pixels. */
-static void fit_web_canvas(void) {
 #if defined(__EMSCRIPTEN__)
-    int size[2] = {1, 1};
+/* The browser calls this only after a real size change. The frame loop does not. */
+EMSCRIPTEN_KEEPALIVE
+void goose_fit_canvas(int buf_w, int buf_h, int css_w, int css_h) {
+    static int last_buf_w, last_buf_h, last_css_w, last_css_h;
+    if (buf_w == last_buf_w && buf_h == last_buf_h && css_w == last_css_w && css_h == last_css_h)
+        return;
+    last_buf_w = buf_w;
+    last_buf_h = buf_h;
+    last_css_w = css_w;
+    last_css_h = css_h;
+    if (GetScreenWidth() != buf_w || GetScreenHeight() != buf_h)
+        SetWindowSize(buf_w, buf_h);
     EM_ASM({
-        var view = window.visualViewport;
-        var cssW = view ? view.width : window.innerWidth;
-        var cssH = view ? view.height : window.innerHeight;
-        var dpr = window.devicePixelRatio || 1;
-        if (dpr < 1) dpr = 1;
-        setValue($0, Math.max(1, Math.round(cssW * dpr)), "i32");
-        setValue($0 + 4, Math.max(1, Math.round(cssH * dpr)), "i32");
-    }, size);
-    if (GetScreenWidth() != size[0] || GetScreenHeight() != size[1])
-        SetWindowSize(size[0], size[1]);
-    EM_ASM({
-        var view = window.visualViewport;
-        var cssW = view ? view.width : window.innerWidth;
-        var cssH = view ? view.height : window.innerHeight;
         var canvas = Module.canvas || document.getElementById("canvas");
         if (!canvas) return;
-        canvas.style.width = cssW + "px";
-        canvas.style.height = cssH + "px";
+        canvas.style.width = $0 + "px";
+        canvas.style.height = $1 + "px";
+    }, css_w, css_h);
+}
+#endif
+
+/* Raylib reads the viewport once. A later turn of the phone may not update it,
+ * and the CSS box can stay at the 960x600 startup size. Watch the viewport and
+ * integer-scale into its device pixels only when those numbers change. */
+static void watch_web_canvas(void) {
+#if defined(__EMSCRIPTEN__)
+    EM_ASM({
+        function measure() {
+            var view = window.visualViewport;
+            var cssW = Math.round(view ? view.width : window.innerWidth);
+            var cssH = Math.round(view ? view.height : window.innerHeight);
+            var dpr = window.devicePixelRatio || 1;
+            if (dpr < 1) dpr = 1;
+            var bufW = Math.max(1, Math.round(cssW * dpr));
+            var bufH = Math.max(1, Math.round(cssH * dpr));
+            if (bufW === Module.viewBufW && bufH === Module.viewBufH &&
+                cssW === Module.viewCssW && cssH === Module.viewCssH) return;
+            Module.viewBufW = bufW;
+            Module.viewBufH = bufH;
+            Module.viewCssW = cssW;
+            Module.viewCssH = cssH;
+            Module._goose_fit_canvas(bufW, bufH, cssW, cssH);
+        }
+        function later() {
+            requestAnimationFrame(function () { requestAnimationFrame(measure); });
+        }
+        window.addEventListener("resize", later);
+        window.addEventListener("orientationchange", later);
+        document.addEventListener("fullscreenchange", later);
+        if (screen.orientation) screen.orientation.addEventListener("change", later);
+        if (window.visualViewport) window.visualViewport.addEventListener("resize", later);
+        measure();
     });
 #endif
 }
@@ -207,6 +234,7 @@ int main(void) {
     /* The maximize box is what delivers WM_MAXIMIZE. The restored size stays 960x600. */
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(SCREEN_W * SCALE, SCREEN_H * SCALE, "Star Goose");
+    watch_web_canvas();
     SetTargetFPS(60);
     SetExitKey(KEY_NULL);
     if (!pictures_load()) {
@@ -259,7 +287,6 @@ int main(void) {
             hud_control_prompt(REBIND_PROMPT[rebind_step]);
         }
         pictures_finish();
-        fit_web_canvas();
         BeginDrawing();
         ClearBackground(BLACK);
         pictures_present();

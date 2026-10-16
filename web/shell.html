@@ -158,18 +158,6 @@
       });
     }
 
-    function kickResize() {
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          window.dispatchEvent(new Event("resize"));
-        });
-      });
-    }
-    window.addEventListener("orientationchange", kickResize);
-    document.addEventListener("fullscreenchange", kickResize);
-    if (screen.orientation) screen.orientation.addEventListener("change", kickResize);
-    if (window.visualViewport) window.visualViewport.addEventListener("resize", kickResize);
-
     var Module = {
       canvas: document.getElementById("canvas"),
       touchMask: 0,
