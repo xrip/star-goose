@@ -2,11 +2,32 @@
 #include "terrain.h"
 #include "goose_model.h"
 
-static void sync_player(Surface *game) {
-    unsigned y = (game->camera_y + PLAYER_AHEAD) & WORLD_MASK;
-    TerrainSample ground = terrain_sample(game->tiles, (unsigned)game->x, y);
-    game->z = ground.height;
-    game->frame = ground.frame;
+static void sync_ground(Surface *ship, int ahead) {
+    unsigned y = (ship->camera_y + (unsigned)ahead) & WORLD_MASK;
+    TerrainSample ground = terrain_sample(ship->tiles, (unsigned)ship->x, y);
+    ship->z = ground.height;
+    ship->frame = ground.frame;
+}
+
+static void sync_player(Surface *ship) {
+    sync_ground(ship, PLAYER_AHEAD);
+}
+
+static void add_fuel_distance(Surface *ship, unsigned fuel_step) {
+    unsigned distance = (ship->fuel_distance + fuel_step) & 0xffffu;
+    if (distance > FUEL_DISTANCE_LIMIT) {
+        distance = 0;
+        ship->fuel_delta = -1;
+    }
+    ship->fuel_distance = distance;
+}
+
+static void mark_hull(Surface *ship) {
+    if (ship->shield <= 0) ship->alive = 0;
+    else if (ship->frame == 0) {
+        ship->zero_frame_age = (uint8_t)(ship->zero_frame_age + 1u);
+        if (ship->zero_frame_age >= VOID_FRAMES) ship->alive = 0;
+    }
 }
 
 void surface_update_speed(Surface *game, unsigned controls) {
@@ -26,12 +47,7 @@ static void advance_scroll(Surface *game) {
     unsigned coarse = ((unsigned)game->scroll_speed + 15u) >> 3;
     unsigned fuel_step = (coarse - 1u) & 0xffffu;
     unsigned camera_step = coarse >> 1;
-    unsigned distance = (game->fuel_distance + fuel_step) & 0xffffu;
-    if (distance > FUEL_DISTANCE_LIMIT) {
-        distance = 0;
-        game->fuel_delta = -1;
-    }
-    game->fuel_distance = distance;
+    add_fuel_distance(game, fuel_step);
     game->camera_y = (game->camera_y - camera_step) & WORLD_MASK;
 }
 
@@ -106,15 +122,8 @@ void surface_start(Surface *game) {
     sync_player(game);
 }
 
-static void sync_passenger(Surface *ship) {
-    unsigned y = (ship->camera_y + (unsigned)(PLAYER_AHEAD + ship->nose)) & WORLD_MASK;
-    TerrainSample ground = terrain_sample(ship->tiles, (unsigned)ship->x, y);
-    ship->z = ground.height;
-    ship->frame = ground.frame;
-}
-
 void surface_passenger(Surface *ship, const Surface *lead, unsigned controls) {
-    if (!ship->alive || lead == 0) return;
+    if (!ship->alive) return;
     ship->camera_y = lead->camera_y;
     ship->tiles = lead->tiles;
     if (controls & CONTROL_UP) ship->nose -= 2;
@@ -123,19 +132,9 @@ void surface_passenger(Surface *ship, const Surface *lead, unsigned controls) {
     if (ship->nose > 32) ship->nose = 32;
     move_x(ship, controls);
     unsigned coarse = ((unsigned)lead->scroll_speed + 15u) >> 3;
-    unsigned fuel_step = (coarse - 1u) & 0xffffu;
-    unsigned distance = (ship->fuel_distance + fuel_step) & 0xffffu;
-    if (distance > FUEL_DISTANCE_LIMIT) {
-        distance = 0;
-        ship->fuel_delta = -1;
-    }
-    ship->fuel_distance = distance;
-    if (ship->frame != 0) sync_passenger(ship);
-    if (ship->shield <= 0) ship->alive = 0;
-    else if (ship->frame == 0) {
-        ship->zero_frame_age = (uint8_t)(ship->zero_frame_age + 1u);
-        if (ship->zero_frame_age >= VOID_FRAMES) ship->alive = 0;
-    }
+    add_fuel_distance(ship, (coarse - 1u) & 0xffffu);
+    if (ship->frame != 0) sync_ground(ship, PLAYER_AHEAD + ship->nose);
+    mark_hull(ship);
     surface_apply_fuel(ship);
 }
 
@@ -145,11 +144,6 @@ void surface_tick(Surface *game, unsigned controls) {
     advance_scroll(game);
     move_x(game, controls);
     if (game->frame != 0) sync_player(game);
-    if (game->shield <= 0) {
-        game->alive = 0;
-    } else if (game->frame == 0) {
-        game->zero_frame_age = (uint8_t)(game->zero_frame_age + 1u);
-        if (game->zero_frame_age >= VOID_FRAMES) game->alive = 0;
-    }
+    mark_hull(game);
     surface_apply_fuel(game);
 }

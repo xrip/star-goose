@@ -740,6 +740,10 @@ static unsigned wing_y(const Surface *ship) {
     return (ship->camera_y + (unsigned)(PLAYER_AHEAD + ship->nose)) & WORLD_MASK;
 }
 
+static int wing_leads(const Game *game) {
+    return game->wing_on && game->wing.alive && !game->flight.alive;
+}
+
 static void fire_wing(Game *game) {
     unsigned y = (wing_y(&game->wing) - 4u) & 1023u;
     launch_shots(game, &game->wing, y, &game->wing_ammo, &wing_ammo_use);
@@ -806,7 +810,7 @@ static void spawn_aimed(Game *game, Actor *from, int fire) {
 static int aim(Game *game, Actor *actor) {
     int aim_x = game->flight.x;
     unsigned aim_y = player_y(game);
-    if (game->wing_on && game->wing.alive && !game->flight.alive) {
+    if (wing_leads(game)) {
         aim_x = game->wing.x;
         aim_y = wing_y(&game->wing);
     } else if (game->wing_on && game->wing.alive && game->flight.alive) {
@@ -1012,7 +1016,7 @@ static void update_mobile(Game *game, Actor *actor) {
     if (!dying) {
         int aim_x = game->flight.x;
         unsigned aim_y = player_y(game);
-        if (game->wing_on && game->wing.alive && !game->flight.alive) {
+        if (wing_leads(game)) {
             aim_x = game->wing.x;
             aim_y = wing_y(&game->wing);
         }
@@ -1284,14 +1288,10 @@ static void nudge_ship(Surface *ship, int dx) {
     }
 }
 
-static void nudge_x(Game *game, int dx) {
-    nudge_ship(&game->flight, dx);
-}
-
 static Surface *gate_ship(Game *game, Actor *actor, int y_bias, int *dx, int *dy) {
     Surface *ship = &game->flight;
     unsigned y = player_y(game);
-    if (game->wing_on && game->wing.alive && !game->flight.alive) {
+    if (wing_leads(game)) {
         ship = &game->wing;
         y = wing_y(&game->wing);
     } else if (game->wing_on && game->wing.alive && game->flight.alive) {
@@ -1395,7 +1395,7 @@ static const int8_t SIDE_Z[10] = {0, 0, 0, 0, 4, -4, 4, -4, 4, -4};
 static void lead_sample(const Game *game, int *x, unsigned *y, uint8_t *frame, uint8_t *z) {
     const Surface *ship = &game->flight;
     unsigned at = player_y(game);
-    if (game->wing_on && !game->flight.alive && game->wing.alive) {
+    if (wing_leads(game)) {
         ship = &game->wing;
         at = wing_y(ship);
     }
@@ -1587,7 +1587,7 @@ static unsigned map_row_mask(unsigned row) {
 }
 
 /* CS:0A51. Inclusive window around the column cursor. Returns damage, or 0. */
-static int query_player_row(const Game *game, unsigned row, int *column) {
+static int query_x_row(int ship_x, unsigned row, int *column) {
     unsigned mask = map_row_mask(row);
     if (mask == 0) return 0;
     unsigned kind = mask >> 10;
@@ -1597,7 +1597,7 @@ static int query_player_row(const Game *game, unsigned row, int *column) {
     int at = 10;
     for (int i = 0; i < 10; i++) {
         if (mask & 1u) {
-            if (x - half <= game->flight.x && game->flight.x <= x + half) {
+            if (x - half <= ship_x && ship_x <= x + half) {
                 *column = at;
                 return MAP_DAMAGE[kind];
             }
@@ -1647,9 +1647,9 @@ static void burst_column(Game *game, int column, unsigned row) {
     }
 }
 
-static void apply_map_hit(Game *game, int damage, int column, unsigned row) {
+static void apply_map_hit(Game *game, int *delta, int damage, int column, unsigned row) {
     /* CS:1C58 assigns the delta. It does not subtract from a hit already stored. */
-    shield_delta = -damage;
+    *delta = -damage;
     sound_trigger(SOUND_IMPACT);
     burst_column(game, column, row);
 }
@@ -1727,56 +1727,28 @@ static int strike_map(Game *game, Actor *shot, unsigned row) {
 }
 
 /* CS:1192 checks this row, then the next row, and a hit is applied before weapons. */
-static void collide_player_map(Game *game) {
-    if (!game->flight.alive || game->flight.tiles == 0) return;
-    unsigned row = (player_y(game) >> 4) & (TILE_ROWS - 1);
+static void collide_ship_map(Game *game, int ship_x, unsigned y, int *delta) {
+    if (game->flight.tiles == 0) return;
+    unsigned row = (y >> 4) & (TILE_ROWS - 1);
     int column = 0;
-    int damage = query_player_row(game, row, &column);
+    int damage = query_x_row(ship_x, row, &column);
     unsigned hit_row = row;
     if (damage == 0) {
         hit_row = (row + 1u) & (TILE_ROWS - 1);
-        damage = query_player_row(game, hit_row, &column);
+        damage = query_x_row(ship_x, hit_row, &column);
     }
     if (damage == 0) return;
-    apply_map_hit(game, damage, column, hit_row);
+    apply_map_hit(game, delta, damage, column, hit_row);
 }
 
-static int query_x_row(int ship_x, unsigned row, int *column) {
-    unsigned mask = map_row_mask(row);
-    if (mask == 0) return 0;
-    unsigned kind = mask >> 10;
-    if (kind >= DAMAGE_KINDS || MAP_DAMAGE[kind] == 0) return 0;
-    int x = MAP_RIGHT[kind];
-    int half = MAP_HALF[kind];
-    int at = 10;
-    for (int i = 0; i < 10; i++) {
-        if (mask & 1u) {
-            if (x - half <= ship_x && ship_x <= x + half) {
-                *column = at;
-                return MAP_DAMAGE[kind];
-            }
-        }
-        mask >>= 1;
-        x -= COLUMN_SPAN;
-        at--;
-    }
-    return 0;
+static void collide_player_map(Game *game) {
+    if (!game->flight.alive) return;
+    collide_ship_map(game, game->flight.x, player_y(game), &shield_delta);
 }
 
 static void collide_wing_map(Game *game) {
-    if (!game->wing_on || !game->wing.alive || game->flight.tiles == 0) return;
-    unsigned row = (wing_y(&game->wing) >> 4) & (TILE_ROWS - 1);
-    int column = 0;
-    int damage = query_x_row(game->wing.x, row, &column);
-    unsigned hit_row = row;
-    if (damage == 0) {
-        hit_row = (row + 1u) & (TILE_ROWS - 1);
-        damage = query_x_row(game->wing.x, hit_row, &column);
-    }
-    if (damage == 0) return;
-    wing_shield_delta = -damage;
-    sound_trigger(SOUND_IMPACT);
-    burst_column(game, column, hit_row);
+    if (!game->wing_on || !game->wing.alive) return;
+    collide_ship_map(game, game->wing.x, wing_y(&game->wing), &wing_shield_delta);
 }
 
 static void step_frames(Game *game, Actor *actor, unsigned limit) {
@@ -1946,16 +1918,15 @@ static void spawn_tunnel_exit(void) {
     snprintf(actor->sprite, sizeof actor->sprite, "fs_1929");
 }
 
-/* CS:3059. Green adds ammo, red fuel, blue shield, and the exit color adds 2500.
- * who is 0 for the first ship and 1 for the second. */
-static void collect_tunnel_pickup(Game *game, Actor *actor, int who) {
+/* CS:3059. Green adds ammo, red fuel, blue shield, and the exit color adds 2500. */
+static void collect_tunnel_pickup(Game *game, Actor *actor, int wing) {
     actor->flags = 0;
-    int *ammo = who ? &game->wing_ammo : &game->ammo;
-    int *fuel = who ? &game->wing.fuel : &game->flight.fuel;
+    int *ammo = wing ? &game->wing_ammo : &game->ammo;
+    int *fuel = wing ? &game->wing.fuel : &game->flight.fuel;
     if (game->tunnel_reward == REWARD_AMMO) gain_capped(ammo, PICKUP_AMMO, AMMO_FULL);
     else if (game->tunnel_reward == REWARD_FUEL) gain_capped(fuel, PICKUP_FUEL, FUEL_FULL);
     else if (game->tunnel_reward == REWARD_SHIELD) {
-        if (who) wing_shield_delta += PICKUP_SHIELD;
+        if (wing) wing_shield_delta += PICKUP_SHIELD;
         else shield_delta += PICKUP_SHIELD;
     } else score_add(game, 2, 5, 0, 0);
 }
@@ -1977,9 +1948,8 @@ static void update_tunnel_pickup(Game *game, Actor *actor) {
     actor->frame = (uint8_t)(age >> 1);
     actor->layer = TUNNEL_PICKUP_LAYER[actor->frame];
     if (actor->layer != LAYER_SHIP) return;
-    int first = tunnel_sector_hit(game->tunnel_frame, actor->param);
+    int first = (!game->wing_on || game->flight.alive) && tunnel_sector_hit(game->tunnel_frame, actor->param);
     int second = game->wing_on && game->wing.alive && tunnel_sector_hit(wing_tunnel_frame, actor->param);
-    if (game->wing_on && !game->flight.alive) first = 0;
     if (!first && !second) return;
     sound_trigger(SOUND_TUNNEL_PICKUP);
     collect_tunnel_pickup(game, actor, first ? 0 : 1);
@@ -2009,10 +1979,10 @@ static void advance_tunnel_objects(Game *game) {
     if (direction) spawn_tunnel_pickup(game, direction);
 }
 
-static void collect_visible_pickups(Game *game, int who) {
+static void collect_visible_pickups(Game *game, int wing) {
     for (int i = 0; i < ACTORS; i++) {
         if ((actors[i].flags & GOOSE_RENDER) == 0) continue;
-        if (actors[i].handler == HANDLER_TUNNEL_PICKUP) collect_tunnel_pickup(game, &actors[i], who);
+        if (actors[i].handler == HANDLER_TUNNEL_PICKUP) collect_tunnel_pickup(game, &actors[i], wing);
     }
 }
 
@@ -2025,8 +1995,7 @@ static void update_tunnel_side(Game *game, Actor *actor) {
         return;
     }
     int offset = right ? TUNNEL_SIDE_OFFSET : -TUNNEL_SIDE_OFFSET;
-    uint8_t face = ship_angle;
-    if (game->wing_on && game->wing.alive && !game->flight.alive) face = wing_angle;
+    uint8_t face = wing_leads(game) ? wing_angle : ship_angle;
     uint8_t angle = (uint8_t)((uint8_t)offset + angle_hist[ANGLE_HISTORY - 1]) & ANGLE_MASK;
     int x, y;
     tunnel_side_position(angle, &x, &y);
@@ -2183,6 +2152,12 @@ static unsigned merged_vertical(unsigned lead, unsigned other) {
     return (lead & ~(CONTROL_UP | CONTROL_DOWN)) | vertical;
 }
 
+static unsigned scroll_controls(const Game *game, unsigned controls) {
+    if (!game->wing_on || !game->wing.alive) return controls;
+    if (!game->flight.alive) return partner_controls;
+    return merged_vertical(controls, partner_controls);
+}
+
 static void steer_tunnel(unsigned controls, int speed, int *spin, uint8_t *angle, int *x, int *y, int *frame) {
     int force = 0;
     if (controls & CONTROL_LEFT) force = -speed - 3;
@@ -2212,10 +2187,7 @@ static void steer_tunnel(unsigned controls, int speed, int *spin, uint8_t *angle
 
 static void tunnel_tick(Game *game, unsigned controls) {
     fade_tunnel_flash();
-    unsigned speed_controls = controls;
-    if (game->wing_on && game->wing.alive && !game->flight.alive) speed_controls = partner_controls;
-    else if (game->wing_on && game->wing.alive) speed_controls = merged_vertical(controls, partner_controls);
-    surface_update_speed(&game->flight, speed_controls);
+    surface_update_speed(&game->flight, scroll_controls(game, controls));
     int step = ((game->flight.scroll_speed + 7) >> 3) + 2;
     game->tunnel_distance += step;
     if (!game->wing_on || game->flight.alive) burn_tunnel_fuel(&game->flight, step);
@@ -2230,9 +2202,7 @@ static void tunnel_tick(Game *game, unsigned controls) {
         steer_tunnel(controls, speed, &angular, &ship_angle, &game->tunnel_x, &game->tunnel_y, &game->tunnel_frame);
     if (game->wing_on && game->wing.alive)
         steer_tunnel(partner_controls, speed, &wing_angular, &wing_angle, &wing_tunnel_x, &wing_tunnel_y, &wing_tunnel_frame);
-    uint8_t face = ship_angle;
-    if (game->wing_on && game->wing.alive && !game->flight.alive) face = wing_angle;
-    shift_angle_history(face);
+    shift_angle_history(wing_leads(game) ? wing_angle : ship_angle);
     tunnel_device_button(&left_device, (controls & CONTROL_LEFT_DEVICE) != 0);
     tunnel_device_button(&right_device, (controls & CONTROL_RIGHT_DEVICE) != 0);
     for (int i = 0; i < ACTORS; i++) {
@@ -2626,40 +2596,34 @@ static void revive_one(Game *game, int wing) {
     ship->nose = 0;
 }
 
+static void tick_hold(Game *game, int *hold, int wing) {
+    if (*hold <= 0) return;
+    *hold -= 1;
+    if (*hold == 0) revive_one(game, wing);
+}
+
 static void tick_holds(Game *game) {
-    if (flight_hold > 0) {
-        flight_hold--;
-        if (flight_hold == 0) revive_one(game, 0);
-    }
-    if (wing_hold > 0) {
-        wing_hold--;
-        if (wing_hold == 0) revive_one(game, 1);
-    }
+    tick_hold(game, &flight_hold, 0);
+    tick_hold(game, &wing_hold, 1);
 }
 
 static void note_ship_death(Game *game, int wing) {
+    Surface *ship = wing ? &game->wing : &game->flight;
+    int *hold = wing ? &wing_hold : &flight_hold;
     sound_trigger(SOUND_DEATH);
-    if (wing) spawn_explosion(game->wing.x, wing_y(&game->wing), game->wing.z);
-    else spawn_explosion(game->flight.x, player_y(game), game->flight.z);
+    spawn_explosion(ship->x, wing ? wing_y(ship) : player_y(game), ship->z);
     if (game->lives == 0) {
-        if (wing) wing_hold = -1;
-        else flight_hold = -1;
+        *hold = -1;
         return;
     }
     game->lives--;
-    if (wing) wing_hold = DEATH_TICKS;
-    else flight_hold = DEATH_TICKS;
+    *hold = DEATH_TICKS;
 }
 
 static void record_death(Game *game, int flight_died, int wing_died) {
-    if (!flight_died && !wing_died) return;
-    if (flight_died && wing_died) {
-        begin_surface_death(game);
-        return;
-    }
-    if (flight_died && game->wing_on && game->wing.alive) note_ship_death(game, 0);
+    if (flight_died && game->wing.alive) note_ship_death(game, 0);
     else if (wing_died && game->flight.alive) note_ship_death(game, 1);
-    else begin_surface_death(game);
+    else if (flight_died || wing_died) begin_surface_death(game);
 }
 
 static void update_surface_actors(Game *game) {
@@ -2719,9 +2683,7 @@ void game_tick(Game *game, unsigned controls) {
     int flight_was = game->flight.alive;
     int wing_was = game->wing_on && game->wing.alive;
     if (game->flight.alive) {
-        unsigned lead = controls;
-        if (game->wing_on && game->wing.alive) lead = merged_vertical(controls, partner_controls);
-        surface_tick(&game->flight, lead);
+        surface_tick(&game->flight, scroll_controls(game, controls));
         if (partner_on && !game->wing_on) arm_wing(game);
         if (game->wing_on && game->wing.alive)
             surface_passenger(&game->wing, &game->flight, partner_controls);
@@ -2729,10 +2691,8 @@ void game_tick(Game *game, unsigned controls) {
     } else if (game->wing_on && game->wing.alive) {
         game->wing.nose = 0;
         copy_scroll(&game->wing, &game->flight);
-        surface_tick(&game->wing, partner_controls);
+        surface_tick(&game->wing, scroll_controls(game, controls));
         copy_scroll(&game->flight, &game->wing);
-    } else if (partner_on && !game->wing_on) {
-        arm_wing(game);
     }
     push_history(game);
     collide_player_map(game);
