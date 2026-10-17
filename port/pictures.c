@@ -366,7 +366,7 @@ void pictures_draw_ship(const Surface *game) {
     int frame_index = game->frame;
     if (frame_index < 0 || frame_index > SHIP_LAST) return;
     const AtlasSprite *sprite = &atlas_ship[frame_index];
-    int world_y = (int)((game->camera_y + PLAYER_AHEAD) & WORLD_MASK);
+    int world_y = (int)((game->camera_y + (unsigned)(PLAYER_AHEAD + game->nose)) & WORLD_MASK);
     int dest_x, dest_y;
     sprite_dest(game->x, world_y, game->z, sprite->anchor_x, sprite->anchor_y,
                 (int)game->camera_y, &dest_x, &dest_y);

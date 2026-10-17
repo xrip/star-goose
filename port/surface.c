@@ -106,6 +106,39 @@ void surface_start(Surface *game) {
     sync_player(game);
 }
 
+static void sync_passenger(Surface *ship) {
+    unsigned y = (ship->camera_y + (unsigned)(PLAYER_AHEAD + ship->nose)) & WORLD_MASK;
+    TerrainSample ground = terrain_sample(ship->tiles, (unsigned)ship->x, y);
+    ship->z = ground.height;
+    ship->frame = ground.frame;
+}
+
+void surface_passenger(Surface *ship, const Surface *lead, unsigned controls) {
+    if (!ship->alive || lead == 0) return;
+    ship->camera_y = lead->camera_y;
+    ship->tiles = lead->tiles;
+    if (controls & CONTROL_UP) ship->nose -= 2;
+    else if (controls & CONTROL_DOWN) ship->nose += 2;
+    if (ship->nose < -32) ship->nose = -32;
+    if (ship->nose > 32) ship->nose = 32;
+    move_x(ship, controls);
+    unsigned coarse = ((unsigned)lead->scroll_speed + 15u) >> 3;
+    unsigned fuel_step = (coarse - 1u) & 0xffffu;
+    unsigned distance = (ship->fuel_distance + fuel_step) & 0xffffu;
+    if (distance > FUEL_DISTANCE_LIMIT) {
+        distance = 0;
+        ship->fuel_delta = -1;
+    }
+    ship->fuel_distance = distance;
+    if (ship->frame != 0) sync_passenger(ship);
+    if (ship->shield <= 0) ship->alive = 0;
+    else if (ship->frame == 0) {
+        ship->zero_frame_age = (uint8_t)(ship->zero_frame_age + 1u);
+        if (ship->zero_frame_age >= VOID_FRAMES) ship->alive = 0;
+    }
+    surface_apply_fuel(ship);
+}
+
 void surface_tick(Surface *game, unsigned controls) {
     if (!game->alive) return;
     surface_update_speed(game, controls);

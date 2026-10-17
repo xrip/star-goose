@@ -303,6 +303,11 @@ static int hud_frame;
 static int side_charges;
 static int side_charge_delta;
 static int shield_delta;
+static int wing_shield_delta;
+static int partner_on;
+static int partner_join;
+static unsigned partner_controls;
+static unsigned wing_ammo_use;
 static uint8_t left_device;
 static uint8_t right_device;
 static int hist_x[4];
@@ -674,14 +679,13 @@ static void spawn_shot(Game *game, int x, unsigned y, int z, int frame, int heig
     snprintf(shot->sprite, sizeof shot->sprite, "player_shot");
 }
 
-static void fire(Game *game) {
-    int frame = game->flight.frame;
+static void launch_shots(Game *game, const Surface *ship, unsigned y, int *ammo, unsigned *spend) {
+    int frame = ship->frame;
     if (frame < 0) frame = 0;
     if (frame > SHIP_FIRE_FRAME) frame = SHIP_FIRE_FRAME;
     int shot_frame = SHOT_FRAME[frame];
-    unsigned y = (player_y(game) - 4u) & 1023u;
-    int z = game->flight.z;
-    spawn_shot(game, game->flight.x + LEFT_DX[frame], y, z + LEFT_DZ[frame], shot_frame, SHOT_HEIGHT[shot_frame]);
+    int z = ship->z;
+    spawn_shot(game, ship->x + LEFT_DX[frame], y, z + LEFT_DZ[frame], shot_frame, SHOT_HEIGHT[shot_frame]);
     variation = (uint8_t)((variation + 1u) & BYTE_MASK);
     Actor *flash = spawn();
     if (flash) {
@@ -692,12 +696,12 @@ static void fire(Game *game) {
         flash->layer = LAYER_FLASH;
         flash->frame = VARIATION[variation & VARIATION_MASK];
         flash->animated = 1;
-        flash->x = game->flight.x + LEFT_DX[frame];
+        flash->x = ship->x + LEFT_DX[frame];
         flash->y = y;
         flash->z = (int8_t)goose_signed8((unsigned)(z + LEFT_DZ[frame]));
         snprintf(flash->sprite, sizeof flash->sprite, "fs_100E");
     }
-    spawn_shot(game, game->flight.x + RIGHT_DX[frame], y, z + RIGHT_DZ[frame], shot_frame, SHOT_HEIGHT[shot_frame]);
+    spawn_shot(game, ship->x + RIGHT_DX[frame], y, z + RIGHT_DZ[frame], shot_frame, SHOT_HEIGHT[shot_frame]);
     flash = spawn();
     if (flash) {
         *flash = (Actor){0};
@@ -707,16 +711,39 @@ static void fire(Game *game) {
         flash->layer = LAYER_FLASH;
         flash->frame = VARIATION[variation & VARIATION_MASK];
         flash->animated = 1;
-        flash->x = game->flight.x + RIGHT_DX[frame];
+        flash->x = ship->x + RIGHT_DX[frame];
         flash->y = y;
         flash->z = (int8_t)goose_signed8((unsigned)(z + RIGHT_DZ[frame]));
         snprintf(flash->sprite, sizeof flash->sprite, "fs_100E");
     }
-    ammo_use = (ammo_use + (variation & VARIATION_MASK)) & 0xffffu;
-    if (ammo_use > AMMO_SPEND) {
-        ammo_use = 0;
-        if (game->ammo > 0) game->ammo--;
+    *spend = (*spend + (variation & VARIATION_MASK)) & 0xffffu;
+    if (*spend > AMMO_SPEND) {
+        *spend = 0;
+        if (*ammo > 0) (*ammo)--;
     }
+}
+
+static void fire(Game *game) {
+    unsigned y = (player_y(game) - 4u) & 1023u;
+    launch_shots(game, &game->flight, y, &game->ammo, &ammo_use);
+}
+
+static unsigned wing_y(const Surface *ship) {
+    return (ship->camera_y + (unsigned)(PLAYER_AHEAD + ship->nose)) & WORLD_MASK;
+}
+
+static void fire_wing(Game *game) {
+    unsigned y = (wing_y(&game->wing) - 4u) & 1023u;
+    launch_shots(game, &game->wing, y, &game->wing_ammo, &wing_ammo_use);
+}
+
+static int wing_overlaps(const Game *game, int x, unsigned y, int xlim, int ylim) {
+    if (!game->wing_on || !game->wing.alive) return 0;
+    return absolute(x - game->wing.x) < xlim && absolute((int)y - (int)wing_y(&game->wing)) < ylim;
+}
+
+static void hurt_wing(int amount) {
+    wing_shield_delta -= amount;
 }
 
 static void update_enemy_shot(Game *game, Actor *shot);
@@ -911,6 +938,11 @@ static void update_enemy_shot(Game *game, Actor *shot) {
         hurt(game, TOUCH_HURT);
         sound_trigger(SOUND_SHIELD_TAP);
         become_impact(shot);
+    } else if (wing_overlaps(game, shot->x, shot->y, PLAYER_HIT_X, ENEMY_HIT_Y) &&
+               byte_gap(shot->z, game->wing.z) < HIT_Z) {
+        hurt_wing(TOUCH_HURT);
+        sound_trigger(SOUND_SHIELD_TAP);
+        become_impact(shot);
     }
 }
 
@@ -926,6 +958,9 @@ static void update_mobile(Game *game, Actor *actor) {
     if (ground.frame < 10) actor->frame = ground.frame;
     if (!dying && near_player(game, actor, MOBILE_HIT_X, MOBILE_HIT_Y)) {
         hurt(game, MOBILE_HURT);
+        actor->state[2] = HP_MARK;
+    } else if (!dying && wing_overlaps(game, actor->x, actor->y, MOBILE_HIT_X, MOBILE_HIT_Y)) {
+        hurt_wing(MOBILE_HURT);
         actor->state[2] = HP_MARK;
     }
     for (int i = 0; i < ACTORS; i++) {
@@ -1133,14 +1168,23 @@ static void update_ground_enemy_shot(Game *game, Actor *shot) {
     TerrainSample ground = terrain_sample(game->flight.tiles, (unsigned)shot->x, shot->y);
     shot->z = (int8_t)(ground.height + LOB_Z);
     shot->frame = ground.frame < SHIP_FIRE_FRAME + 1 ? ground.frame : 0;
-    if (!game->flight.alive) return;
-    int dx = absolute(shot->x - game->flight.x);
-    int dy = absolute(wrapped_delta(shot->y, player_y(game)) - LOB_Z);
-    if (dx >= GROUND_HIT || dy >= GROUND_HIT) return;
-    sound_trigger(SOUND_HEAVY_HIT);
-    hurt(game, HEAVY_HURT);
-    spawn_explosion(shot->x, shot->y, shot->z);
-    shot->flags = 0;
+    if (game->flight.alive) {
+        int dx = absolute(shot->x - game->flight.x);
+        int dy = absolute(wrapped_delta(shot->y, player_y(game)) - LOB_Z);
+        if (dx < GROUND_HIT && dy < GROUND_HIT) {
+            sound_trigger(SOUND_HEAVY_HIT);
+            hurt(game, HEAVY_HURT);
+            spawn_explosion(shot->x, shot->y, shot->z);
+            shot->flags = 0;
+            return;
+        }
+    }
+    if (wing_overlaps(game, shot->x, shot->y, GROUND_HIT, GROUND_HIT)) {
+        sound_trigger(SOUND_HEAVY_HIT);
+        hurt_wing(HEAVY_HURT);
+        spawn_explosion(shot->x, shot->y, shot->z);
+        shot->flags = 0;
+    }
 }
 
 static void update_arcing(Game *game, Actor *shot) {
@@ -1177,7 +1221,14 @@ static void update_arcing(Game *game, Actor *shot) {
     int dx = absolute(shot->x - game->flight.x);
     int dy = absolute(wrapped_delta(shot->y, player_y(game)));
     int dz = byte_gap(shot->z, game->flight.z);
-    if (dx >= ARC_HIT_X || dy >= ARC_HIT_Y || dz >= HIT_Z) return;
+    if (dx >= ARC_HIT_X || dy >= ARC_HIT_Y || dz >= HIT_Z) {
+        if (!wing_overlaps(game, shot->x, shot->y, ARC_HIT_X, ARC_HIT_Y) ||
+            byte_gap(shot->z, game->wing.z) >= HIT_Z)
+            return;
+        hurt_wing(ARC_HURT);
+        sound_trigger(SOUND_HEAVY_HIT);
+        return;
+    }
     hurt(game, ARC_HURT);
     sound_trigger(SOUND_HEAVY_HIT);
 }
@@ -1333,6 +1384,20 @@ static void apply_shield_delta(Game *game) {
             game->flight.shield++;
         }
     }
+    delta = wing_shield_delta;
+    wing_shield_delta = 0;
+    if (!game->wing_on) return;
+    if (delta < 0) {
+        for (int i = 0; i > delta; i--) {
+            if (game->wing.shield <= 0) break;
+            game->wing.shield--;
+        }
+    } else {
+        for (int i = 0; i < delta; i++) {
+            if (game->wing.shield >= SHIELD_FULL) break;
+            game->wing.shield++;
+        }
+    }
 }
 
 static void apply_side_charges(Game *game) {
@@ -1482,10 +1547,7 @@ static void explode_map(const Actor *actor) {
     spawn_explosion(x, y, actor->z);
 }
 
-static void apply_map_hit(Game *game, int damage, int column, unsigned row) {
-    /* CS:1C58 assigns the delta. It does not subtract from a hit already stored. */
-    shield_delta = -damage;
-    sound_trigger(SOUND_IMPACT);
+static void burst_column(Game *game, int column, unsigned row) {
     int expect_x = COLUMN_SPAN * column - COLUMN_BIAS;
     for (int i = 0; i < ACTORS; i++) {
         Actor *actor = &actors[i];
@@ -1496,6 +1558,13 @@ static void apply_map_hit(Game *game, int damage, int column, unsigned row) {
         destroy_map_actor(actor);
         return;
     }
+}
+
+static void apply_map_hit(Game *game, int damage, int column, unsigned row) {
+    /* CS:1C58 assigns the delta. It does not subtract from a hit already stored. */
+    shield_delta = -damage;
+    sound_trigger(SOUND_IMPACT);
+    burst_column(game, column, row);
 }
 
 static int query_shot_row(int shot_x, unsigned row, int *column) {
@@ -1583,6 +1652,44 @@ static void collide_player_map(Game *game) {
     }
     if (damage == 0) return;
     apply_map_hit(game, damage, column, hit_row);
+}
+
+static int query_x_row(int ship_x, unsigned row, int *column) {
+    unsigned mask = map_row_mask(row);
+    if (mask == 0) return 0;
+    unsigned kind = mask >> 10;
+    if (kind >= DAMAGE_KINDS || MAP_DAMAGE[kind] == 0) return 0;
+    int x = MAP_RIGHT[kind];
+    int half = MAP_HALF[kind];
+    int at = 10;
+    for (int i = 0; i < 10; i++) {
+        if (mask & 1u) {
+            if (x - half <= ship_x && ship_x <= x + half) {
+                *column = at;
+                return MAP_DAMAGE[kind];
+            }
+        }
+        mask >>= 1;
+        x -= COLUMN_SPAN;
+        at--;
+    }
+    return 0;
+}
+
+static void collide_wing_map(Game *game) {
+    if (!game->wing_on || !game->wing.alive || game->flight.tiles == 0) return;
+    unsigned row = (wing_y(&game->wing) >> 4) & (TILE_ROWS - 1);
+    int column = 0;
+    int damage = query_x_row(game->wing.x, row, &column);
+    unsigned hit_row = row;
+    if (damage == 0) {
+        hit_row = (row + 1u) & (TILE_ROWS - 1);
+        damage = query_x_row(game->wing.x, hit_row, &column);
+    }
+    if (damage == 0) return;
+    wing_shield_delta = -damage;
+    sound_trigger(SOUND_IMPACT);
+    burst_column(game, column, hit_row);
 }
 
 static void step_frames(Game *game, Actor *actor, unsigned limit) {
@@ -1998,6 +2105,18 @@ static void tunnel_tick(Game *game, unsigned controls) {
     }
 }
 
+static void arm_wing(Game *game) {
+    surface_start(&game->wing);
+    game->wing.x = START_X + 48;
+    if (game->wing.x > X_MAX) game->wing.x = X_MAX;
+    game->wing.camera_y = game->flight.camera_y;
+    game->wing.tiles = game->flight.tiles;
+    game->wing_ammo = AMMO_FULL;
+    game->wing_on = 1;
+    wing_shield_delta = 0;
+    wing_ammo_use = 0;
+}
+
 static void begin_level(Game *game) {
     surface_start(&game->flight);
     game->ammo = AMMO_FULL;
@@ -2028,6 +2147,7 @@ static void begin_level(Game *game) {
     place_map(game, game->flight.camera_y);
     reset_history(game);
     remember(game);
+    if (partner_on) arm_wing(game);
 }
 
 static void spawn_respawn_effect(const Game *game) {
@@ -2078,6 +2198,7 @@ static void respawn(Game *game) {
     reset_history(game);
     remember(game);
     spawn_respawn_effect(game);
+    if (partner_on) arm_wing(game);
 }
 
 static const char *score_path(void) {
@@ -2333,8 +2454,10 @@ static void update_surface_actors(Game *game) {
 
 void game_tick(Game *game, unsigned controls) {
     if (game->mode == MODE_TITLE) {
-        if (controls & CONTROL_FIRE) game_play(game);
-        else attract_tick(game);
+        if ((controls & CONTROL_FIRE) || partner_join) {
+            partner_join = 0;
+            game_play(game);
+        } else attract_tick(game);
         return;
     }
     hud_tick(game);
@@ -2366,8 +2489,13 @@ void game_tick(Game *game, unsigned controls) {
     }
     int was_alive = game->flight.alive;
     surface_tick(&game->flight, controls);
+    if (partner_on && !game->wing_on) arm_wing(game);
+    if (game->wing_on && game->wing.alive)
+        surface_passenger(&game->wing, &game->flight, partner_controls);
+    else if (game->wing_on) game->wing.camera_y = game->flight.camera_y;
     push_history(game);
     collide_player_map(game);
+    collide_wing_map(game);
     if (was_alive && !game->flight.alive) begin_surface_death(game);
     if (dying) {
         advance_spawns(game->flight.camera_y);
@@ -2380,6 +2508,9 @@ void game_tick(Game *game, unsigned controls) {
     if (game->flight.alive && game->flight.frame != 0 && game->ammo > 0 && (controls & CONTROL_FIRE)) {
         fire(game);
     }
+    if (game->wing_on && game->wing.alive && game->wing.frame != 0 && game->wing_ammo > 0 &&
+        (partner_controls & CONTROL_FIRE))
+        fire_wing(game);
     update_surface_actors(game);
     apply_side_charges(game);
 }
@@ -2497,11 +2628,32 @@ void game_draw(Game *game) {
                 draw_surface_actor(&actors[i], camera);
             }
             if (layer == LAYER_PLAYER && game->flight.alive) pictures_draw_ship(&game->flight);
+            if (layer == LAYER_PLAYER && game->wing_on && game->wing.alive) pictures_draw_ship(&game->wing);
         }
     }
     if (game->mode != MODE_TITLE) {
         hud_draw(game->flight.fuel, game->ammo, game->flight.shield, game->lives, side_charges,
                  collected, score_digits);
+        if (game->wing_on) {
+            int fuel = game->wing.fuel < 0 ? 0 : game->wing.fuel;
+            int shield = game->wing.shield < 0 ? 0 : game->wing.shield;
+            int ammo = game->wing_ammo < 0 ? 0 : game->wing_ammo;
+            pictures_fill(2, 2, fuel, 2, 10);
+            pictures_fill(2, 5, shield, 2, 9);
+            pictures_fill(2, 8, ammo, 2, 12);
+        }
     }
     pictures_finish();
+}
+
+void game_partner(int enabled, unsigned controls) {
+    if (enabled && !partner_on) partner_join = 1;
+    if (enabled) partner_on = 1;
+    partner_controls = controls;
+}
+
+void game_wing_strike(Game *game, int amount) {
+    if (!game->wing_on || amount <= 0) return;
+    wing_shield_delta -= amount;
+    apply_shield_delta(game);
 }

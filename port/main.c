@@ -250,6 +250,33 @@ static unsigned switch_pad(void) {
 #endif
 }
 
+static unsigned read_partner(void) {
+    unsigned pad = 0;
+    if (IsGamepadAvailable(1)) {
+        float x = GetGamepadAxisMovement(1, GAMEPAD_AXIS_LEFT_X);
+        float y = GetGamepadAxisMovement(1, GAMEPAD_AXIS_LEFT_Y);
+        int left = IsGamepadButtonDown(1, GAMEPAD_BUTTON_LEFT_FACE_LEFT) || x < -0.4f;
+        int right = IsGamepadButtonDown(1, GAMEPAD_BUTTON_LEFT_FACE_RIGHT) || x > 0.4f;
+        int up = IsGamepadButtonDown(1, GAMEPAD_BUTTON_LEFT_FACE_UP) || y > 0.4f;
+        int down = IsGamepadButtonDown(1, GAMEPAD_BUTTON_LEFT_FACE_DOWN) || y < -0.4f;
+        if (left) pad |= CONTROL_LEFT;
+        else if (right) pad |= CONTROL_RIGHT;
+        if (up) pad |= CONTROL_UP;
+        else if (down) pad |= CONTROL_DOWN;
+        if (IsGamepadButtonDown(1, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT) ||
+            IsGamepadButtonDown(1, GAMEPAD_BUTTON_RIGHT_TRIGGER_2))
+            pad |= CONTROL_FIRE;
+    }
+    unsigned keys = 0;
+    if (IsKeyDown(KEY_A) || (pad & CONTROL_LEFT)) keys = CONTROL_LEFT;
+    else if (IsKeyDown(KEY_D) || (pad & CONTROL_RIGHT)) keys = CONTROL_RIGHT;
+    if (IsKeyDown(KEY_W) || (pad & CONTROL_UP)) keys |= CONTROL_UP;
+    else if (IsKeyDown(KEY_S) || (pad & CONTROL_DOWN)) keys |= CONTROL_DOWN;
+    if (IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_CONTROL) || (pad & CONTROL_FIRE))
+        keys |= CONTROL_FIRE;
+    return keys;
+}
+
 static unsigned read_controls(void) {
     unsigned controls = 0;
     unsigned touch = touch_controls();
@@ -298,17 +325,28 @@ int main(void) {
     const float tick = 1.0f / 20.0f;
     int shot = getenv("GOOSE_SHOT") != 0;
     const char *scripted = getenv("GOOSE_TICKS");
+    if (getenv("GOOSE_WING")) game_partner(1, 0);
     if (shot || scripted) game_play(&game);
     if (scripted) {
         int count = atoi(scripted);
         unsigned held = 0;
+        unsigned wing = 0;
         if (getenv("GOOSE_UP")) held |= CONTROL_UP;
         if (getenv("GOOSE_LEFT")) held |= CONTROL_LEFT;
         if (getenv("GOOSE_RIGHT")) held |= CONTROL_RIGHT;
         if (getenv("GOOSE_FIRE")) held |= CONTROL_FIRE;
         if (getenv("GOOSE_N")) held |= CONTROL_LEFT_DEVICE;
         if (getenv("GOOSE_M")) held |= CONTROL_RIGHT_DEVICE;
-        for (int i = 0; i < count; i++) game_tick(&game, held);
+        if (getenv("GOOSE_WING_UP")) wing |= CONTROL_UP;
+        if (getenv("GOOSE_WING_LEFT")) wing |= CONTROL_LEFT;
+        if (getenv("GOOSE_WING_RIGHT")) wing |= CONTROL_RIGHT;
+        if (getenv("GOOSE_WING_DOWN")) wing |= CONTROL_DOWN;
+        if (getenv("GOOSE_WING_FIRE")) wing |= CONTROL_FIRE;
+        for (int i = 0; i < count; i++) {
+            if (getenv("GOOSE_WING")) game_partner(1, wing);
+            game_tick(&game, held);
+        }
+        if (getenv("GOOSE_WING_HURT")) game_wing_strike(&game, atoi(getenv("GOOSE_WING_HURT")));
         shot = 1;
     }
 
@@ -328,7 +366,11 @@ int main(void) {
                         || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_MIDDLE_RIGHT)
 #endif
                         ) game_boot(&game);
-                    else game_tick(&game, read_controls());
+                    else {
+                        unsigned partner = read_partner();
+                        game_partner(IsKeyDown(KEY_TWO) || partner != 0, partner);
+                        game_tick(&game, read_controls());
+                    }
                 }
             }
         }
@@ -349,6 +391,10 @@ int main(void) {
             printf("mode %d level %d part %d score %d ammo %d lives %d tunnel %d fuel %d shield %d\n",
                    game.mode, game.level, game.part, game.score, game.ammo, game.lives,
                    game.tunnel_distance, game.flight.fuel, game.flight.shield);
+            if (game.wing_on)
+                printf("wing x %d nose %d ammo %d fuel %d shield %d alive %d\n",
+                       game.wing.x, game.wing.nose, game.wing_ammo, game.wing.fuel,
+                       game.wing.shield, game.wing.alive);
         }
         EndDrawing();
         if (shot) break;

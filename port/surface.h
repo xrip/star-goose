@@ -54,12 +54,16 @@ typedef struct Surface {
     uint8_t zero_frame_age;
     int alive;
     const uint8_t *tiles;
+    /* Second ship only. Steps ahead of or behind the shared camera. The lead stays at 0. */
+    int nose;
 } Surface;
 
 extern const uint8_t goose_level0_tiles[768];
 
 void surface_start(Surface *game);
 void surface_tick(Surface *game, unsigned controls);
+/* A second ship on the lead's camera. Own x, fuel, shield, and a small fore-aft offset. */
+void surface_passenger(Surface *ship, const Surface *lead, unsigned controls);
 void surface_update_speed(Surface *game, unsigned controls);
 void surface_apply_fuel(Surface *game);
 /* Handler 17: slow the scroll by one, then keep the camera and the terrain moving. */
