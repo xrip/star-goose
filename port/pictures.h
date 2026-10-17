@@ -7,8 +7,9 @@
 int pictures_load(void);
 void pictures_clear(void);
 void pictures_draw_tiles(const Surface *game);
-void pictures_draw_ship(const Surface *game);
+void pictures_draw_ship(const Surface *game, int green);
 void pictures_sprite(const char *name, int world_x, int world_y, int z, int camera_y);
+void pictures_wing_sprite(const char *name, int world_x, int world_y, int z, int camera_y);
 /* Same placement as pictures_sprite, but the pixels come from a graphics bank.
  * key is the original transparent color, 0..15. */
 void pictures_sprite_bank(const char *name, int bank, unsigned offset, int key,

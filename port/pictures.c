@@ -60,6 +60,7 @@ static int atlas_h;
 static uint8_t intro_pixels[SCREEN_W * SCREEN_H];
 static int intro_ready;
 static uint8_t screen[SCREEN_W * SCREEN_H];
+static uint8_t wing_tint[SCREEN_W * SCREEN_H];
 static Color upload[SCREEN_W * SCREEN_H];
 static Texture2D frame;
 static int ready;
@@ -171,7 +172,23 @@ int pictures_load(void) {
     return 1;
 }
 
-static void blit_sprite(const AtlasSprite *sprite, int src_dx, int width, int dest_x, int dest_y) {
+static void put_screen(int x, int y, int color, int green) {
+    int i = y * SCREEN_W + x;
+    screen[i] = (uint8_t)color;
+    wing_tint[i] = (uint8_t)(green ? 1 : 0);
+}
+
+static Color green_cast(Color color) {
+    int g = color.g + (255 - color.g) / 6;
+    return (Color){
+        (unsigned char)(color.r * 4 / 5),
+        (unsigned char)g,
+        (unsigned char)(color.b * 4 / 5),
+        255
+    };
+}
+
+static void blit_sprite(const AtlasSprite *sprite, int src_dx, int width, int dest_x, int dest_y, int green) {
     if (!sprite || width <= 0 || sprite->h == 0) return;
     for (int dy = 0; dy < sprite->h; dy++) {
         int sy = sprite->y + dy;
@@ -183,7 +200,7 @@ static void blit_sprite(const AtlasSprite *sprite, int src_dx, int width, int de
             if (sx < 0 || sx >= atlas_w || x < VIEW_X || x >= VIEW_X + VIEW_W) continue;
             uint8_t color = atlas_pixels[sy * atlas_w + sx];
             if (color == CLEAR) continue;
-            screen[y * SCREEN_W + x] = color;
+            put_screen(x, y, color, green);
         }
     }
 }
@@ -211,6 +228,7 @@ static const AtlasSprite *find_sprite(const char *name) {
 
 void pictures_clear(void) {
     memset(screen, 0, sizeof screen);
+    memset(wing_tint, 0, sizeof wing_tint);
 }
 
 void pictures_anchor(const char *name, int *anchor_x, int *anchor_y) {
@@ -235,12 +253,20 @@ void pictures_bank_sprite(int bank, unsigned offset, int width, int height,
     pictures_blit_bank(bank, offset, width, height, dest_x, dest_y, width);
 }
 
-void pictures_sprite(const char *name, int world_x, int world_y, int z, int camera_y) {
+static void place_sprite(const char *name, int world_x, int world_y, int z, int camera_y, int green) {
     const AtlasSprite *sprite = find_sprite(name);
     if (!sprite) return;
     int dest_x, dest_y;
     sprite_dest(world_x, world_y, z, sprite->anchor_x, sprite->anchor_y, camera_y, &dest_x, &dest_y);
-    blit_sprite(sprite, 0, sprite->w, dest_x, dest_y);
+    blit_sprite(sprite, 0, sprite->w, dest_x, dest_y, green);
+}
+
+void pictures_sprite(const char *name, int world_x, int world_y, int z, int camera_y) {
+    place_sprite(name, world_x, world_y, z, camera_y, 0);
+}
+
+void pictures_wing_sprite(const char *name, int world_x, int world_y, int z, int camera_y) {
+    place_sprite(name, world_x, world_y, z, camera_y, 1);
 }
 
 void pictures_sprite_bank(const char *name, int bank_offset, unsigned offset, int key,
@@ -269,7 +295,7 @@ void pictures_sprite_bank(const char *name, int bank_offset, unsigned offset, in
             if (x < VIEW_X || x >= VIEW_X + VIEW_W || src_x + dx < 0 || src_x + dx >= SCREEN_W) continue;
             int color = bank[(src_y + dy) * SCREEN_W + src_x + dx];
             if (color == key) continue;
-            screen[y * SCREEN_W + x] = (uint8_t)color;
+            put_screen(x, y, color, 0);
         }
     }
 }
@@ -312,7 +338,9 @@ void pictures_score_text(const char *sprite, int world_x, int world_y, int z, in
 }
 
 void pictures_intro(void) {
-    if (intro_ready) memcpy(screen, intro_pixels, sizeof screen);
+    if (!intro_ready) return;
+    memcpy(screen, intro_pixels, sizeof screen);
+    memset(wing_tint, 0, sizeof wing_tint);
 }
 
 void pictures_tunnel(const uint8_t *bits, int color) {
@@ -321,7 +349,7 @@ void pictures_tunnel(const uint8_t *bits, int color) {
         const uint8_t *src = bits + (row + TUNNEL_CAMERA) * TUNNEL_STRIDE;
         for (int x = 0; x < VIEW_W; x++) {
             if (src[x >> 3] & (uint8_t)(BIT7 >> (x & 7))) {
-                screen[(VIEW_Y + row) * SCREEN_W + VIEW_X + x] = (uint8_t)color;
+                put_screen(VIEW_X + x, VIEW_Y + row, color, 0);
             }
         }
     }
@@ -329,7 +357,11 @@ void pictures_tunnel(const uint8_t *bits, int color) {
 
 void pictures_finish(void) {
     if (!ready) return;
-    for (int i = 0; i < SCREEN_W * SCREEN_H; i++) upload[i] = EGA[screen[i]];
+    for (int i = 0; i < SCREEN_W * SCREEN_H; i++) {
+        Color color = EGA[screen[i]];
+        if (wing_tint[i]) color = green_cast(color);
+        upload[i] = color;
+    }
     UpdateTexture(frame, upload);
 }
 
@@ -357,12 +389,12 @@ void pictures_draw_tiles(const Surface *game) {
                 dest_x = VIEW_X + VIEW_W - EDGE_W;
             }
             int world_y = world_row * ROW_H + TILE_Y_ADJUST[tile] - goose_signed8(z);
-            blit_sprite(sprite, src_dx, width, dest_x, screen_y(world_y, camera));
+            blit_sprite(sprite, src_dx, width, dest_x, screen_y(world_y, camera), 0);
         }
     }
 }
 
-void pictures_draw_ship(const Surface *game) {
+void pictures_draw_ship(const Surface *game, int green) {
     int frame_index = game->frame;
     if (frame_index < 0 || frame_index > SHIP_LAST) return;
     const AtlasSprite *sprite = &atlas_ship[frame_index];
@@ -370,7 +402,7 @@ void pictures_draw_ship(const Surface *game) {
     int dest_x, dest_y;
     sprite_dest(game->x, world_y, game->z, sprite->anchor_x, sprite->anchor_y,
                 (int)game->camera_y, &dest_x, &dest_y);
-    blit_sprite(sprite, 0, sprite->w, dest_x, dest_y);
+    blit_sprite(sprite, 0, sprite->w, dest_x, dest_y, green);
 }
 
 void pictures_blit_bank(int bank_offset, unsigned offset, int width, int height,
@@ -401,6 +433,7 @@ void pictures_blit_bank(int bank_offset, unsigned offset, int width, int height,
                 continue;
             }
             screen[y * SCREEN_W + x] = (uint8_t)color;
+            wing_tint[y * SCREEN_W + x] = 0;
         }
     }
 }
@@ -414,6 +447,7 @@ void pictures_fill(int x, int y, int width, int height, int color) {
             int col = x + dx;
             if (col < 0 || col >= SCREEN_W) continue;
             screen[row * SCREEN_W + col] = (uint8_t)color;
+            wing_tint[row * SCREEN_W + col] = 0;
         }
     }
 }

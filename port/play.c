@@ -2822,7 +2822,7 @@ void game_draw(Game *game) {
         }
         if (game->wing_on && game->wing.alive) {
             snprintf(name, sizeof name, "fs_1594_%02u", wing_tunnel_frame);
-            pictures_sprite(name, wing_tunnel_x, wing_tunnel_y, 0, TUNNEL_CAMERA);
+            pictures_wing_sprite(name, wing_tunnel_x, wing_tunnel_y, 0, TUNNEL_CAMERA);
         }
         draw_tunnel_layer(2);
         draw_tunnel_layer(1);
@@ -2834,8 +2834,8 @@ void game_draw(Game *game) {
                 if (actors[i].layer != (uint8_t)layer) continue;
                 draw_surface_actor(&actors[i], camera);
             }
-            if (layer == LAYER_PLAYER && game->flight.alive) pictures_draw_ship(&game->flight);
-            if (layer == LAYER_PLAYER && game->wing_on && game->wing.alive) pictures_draw_ship(&game->wing);
+            if (layer == LAYER_PLAYER && game->flight.alive) pictures_draw_ship(&game->flight, 0);
+            if (layer == LAYER_PLAYER && game->wing_on && game->wing.alive) pictures_draw_ship(&game->wing, 1);
         }
     }
     if (game->mode != MODE_TITLE) {
