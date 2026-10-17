@@ -342,7 +342,13 @@ int main(void) {
         if (getenv("GOOSE_WING_RIGHT")) wing |= CONTROL_RIGHT;
         if (getenv("GOOSE_WING_DOWN")) wing |= CONTROL_DOWN;
         if (getenv("GOOSE_WING_FIRE")) wing |= CONTROL_FIRE;
+        const char *flight_hurt = getenv("GOOSE_FLIGHT_HURT");
+        const char *wing_kill = getenv("GOOSE_WING_KILL");
+        int flight_hurt_tick = flight_hurt ? atoi(flight_hurt) : -1;
+        int wing_kill_tick = wing_kill ? atoi(wing_kill) : -1;
         for (int i = 0; i < count; i++) {
+            if (i == flight_hurt_tick) game.flight.shield = 0;
+            if (i == wing_kill_tick) game.wing.shield = 0;
             if (getenv("GOOSE_WING")) game_partner(1, wing);
             game_tick(&game, held);
         }
@@ -392,9 +398,9 @@ int main(void) {
                    game.mode, game.level, game.part, game.score, game.ammo, game.lives,
                    game.tunnel_distance, game.flight.fuel, game.flight.shield);
             if (game.wing_on)
-                printf("wing x %d nose %d ammo %d fuel %d shield %d alive %d\n",
+                printf("wing x %d nose %d ammo %d fuel %d shield %d alive %d flight %d\n",
                        game.wing.x, game.wing.nose, game.wing_ammo, game.wing.fuel,
-                       game.wing.shield, game.wing.alive);
+                       game.wing.shield, game.wing.alive, game.flight.alive);
         }
         EndDrawing();
         if (shot) break;
