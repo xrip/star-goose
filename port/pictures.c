@@ -36,7 +36,10 @@ enum {
     BIT7 = 0x80,
     KEY_COLOR = 2,
     GAUGE_FLIP = 7,
-    PRESENT_SCALE = 3
+    PRESENT_SCALE = 3,
+    VGA_COLORS = 256,
+    LEGACY_COLORS = 16,
+    TUNNEL_SHADES = 128
 };
 
 static const Color EGA[16] = {
@@ -45,6 +48,15 @@ static const Color EGA[16] = {
     {85, 85, 85, 255},    {85, 85, 255, 255},   {85, 255, 85, 255},   {85, 255, 255, 255},
     {255, 85, 85, 255},   {255, 85, 255, 255},  {255, 255, 85, 255},  {255, 255, 255, 255}
 };
+
+/* Index 255 is a real color. VGA transparency lives in vga_atlas_opaque. */
+static Color vga_palette[VGA_COLORS];
+static uint8_t vga_dim[VGA_COLORS];
+static uint8_t vga_fill[LEGACY_COLORS];
+static uint8_t vga_tunnel_line[LEGACY_COLORS][TUNNEL_SHADES];
+static uint8_t vga_tunnel_glow[LEGACY_COLORS][TUNNEL_SHADES];
+static uint8_t vga_tunnel_wall[LEGACY_COLORS][TUNNEL_SHADES];
+static uint8_t vga_tunnel_depth[VIEW_W * VIEW_H];
 
 static const int8_t TILE_Y_ADJUST[TILES] = {
     0, 0, 0, 0, 0, -8, 0, -8, 0, -8, 0, -8, 0, 0, -8, 0,
@@ -69,6 +81,19 @@ static uint8_t bank_blox[SCREEN_W * SCREEN_H];
 static int bank_bird1_ready;
 static int bank_bird2_ready;
 static int bank_blox_ready;
+
+typedef struct GraphicsBank {
+    uint8_t pixels[SCREEN_W * SCREEN_H];
+    uint8_t coverage[SCREEN_W * SCREEN_H];
+} GraphicsBank;
+
+static uint8_t *vga_atlas_pixels;
+static uint8_t *vga_atlas_opaque;
+static uint8_t vga_intro_pixels[SCREEN_W * SCREEN_H];
+static GraphicsBank vga_bank_bird1;
+static GraphicsBank vga_bank_bird2;
+static GraphicsBank vga_bank_blox;
+static int use_vga;
 
 static int ega_index(unsigned char r, unsigned char g, unsigned char b) {
     for (int i = 0; i < 16; i++) {
@@ -113,6 +138,232 @@ static void load_bank(const char *relative, uint8_t *pixels, int *flag) {
     decode_packed(data, pixels);
     UnloadFileData(data);
     *flag = 1;
+}
+
+static int vga_palette_index(unsigned char r, unsigned char g, unsigned char b) {
+    for (int i = 0; i < VGA_COLORS; i++) {
+        if (vga_palette[i].r == r && vga_palette[i].g == g && vga_palette[i].b == b) return i;
+    }
+    return -1;
+}
+
+static uint8_t vga_nearest(int r, int g, int b) {
+    unsigned best_distance = ~0u;
+    uint8_t best = 0;
+    for (int i = 0; i < VGA_COLORS; i++) {
+        int dr = (int)vga_palette[i].r - r;
+        int dg = (int)vga_palette[i].g - g;
+        int db = (int)vga_palette[i].b - b;
+        unsigned distance = (unsigned)(dr * dr * 2 + dg * dg * 3 + db * db);
+        if (distance < best_distance) {
+            best_distance = distance;
+            best = (uint8_t)i;
+        }
+    }
+    return best;
+}
+
+static void build_vga_shades(void) {
+    for (int i = 0; i < VGA_COLORS; i++) {
+        vga_dim[i] = vga_nearest(vga_palette[i].r / 5 + 7,
+                                 vga_palette[i].g / 5 + 10,
+                                 vga_palette[i].b / 5 + 16);
+    }
+    for (int i = 0; i < LEGACY_COLORS; i++) {
+        vga_fill[i] = (uint8_t)i;
+        for (int depth = 0; depth < TUNNEL_SHADES; depth++) {
+            int light = 96 + depth;
+            int wall = 8 + depth / 8;
+            vga_tunnel_line[i][depth] = vga_nearest(
+                vga_palette[i].r * light / 255 + 28,
+                vga_palette[i].g * light / 255 + 28,
+                vga_palette[i].b * light / 255 + 28);
+            vga_tunnel_glow[i][depth] = vga_nearest(
+                vga_palette[i].r * light / 768 + 4,
+                vga_palette[i].g * light / 768 + 6,
+                vga_palette[i].b * light / 768 + 10);
+            vga_tunnel_wall[i][depth] = vga_nearest(
+                vga_palette[i].r * wall / 255 + 2,
+                vga_palette[i].g * wall / 255 + 3,
+                vga_palette[i].b * wall / 255 + 6);
+        }
+    }
+    /* Indices 2 and 5 fill dialogs. They are not the transparent key. */
+    vga_fill[2] = vga_nearest(13, 20, 35);
+    vga_fill[5] = vga_nearest(76, 88, 112);
+    for (int y = 0; y < VIEW_H; y++) {
+        for (int x = 0; x < VIEW_W; x++) {
+            int dx = abs(x - TUNNEL_CENTER_X);
+            int dy = abs(y + TUNNEL_CAMERA - TUNNEL_CENTER_Y) * 6 / 5;
+            int depth = dx > dy ? dx + dy / 2 : dy + dx / 2;
+            if (depth >= TUNNEL_SHADES) depth = TUNNEL_SHADES - 1;
+            vga_tunnel_depth[y * VIEW_W + x] = (uint8_t)depth;
+        }
+    }
+}
+
+static Image load_rgba(const char *relative) {
+    const char *path = find_file(relative);
+    Image image = {0};
+    if (path) image = LoadImage(path);
+    if (!IsImageValid(image)) {
+        fprintf(stderr, "VGA256: cannot load %s\n", relative);
+        return (Image){0};
+    }
+    ImageFormat(&image, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+    return image;
+}
+
+static int load_vga_palette(void) {
+    const char *relative = "assets/vga/palette.png";
+    Image image = load_rgba(relative);
+    if (!IsImageValid(image)) return 0;
+    if (image.width != VGA_COLORS || image.height != 1) {
+        fprintf(stderr, "VGA256: %s must be 256x1\n", relative);
+        UnloadImage(image);
+        return 0;
+    }
+    const unsigned char *pixels = image.data;
+    for (int i = 0; i < VGA_COLORS; i++) {
+        if (pixels[i * 4 + 3] != 255) {
+            fprintf(stderr, "VGA256: palette entry %d is not opaque\n", i);
+            UnloadImage(image);
+            return 0;
+        }
+        vga_palette[i] = (Color){pixels[i * 4], pixels[i * 4 + 1], pixels[i * 4 + 2], 255};
+    }
+    UnloadImage(image);
+    if (vga_palette[0].r || vga_palette[0].g || vga_palette[0].b) {
+        fprintf(stderr, "VGA256: palette entry 0 must be black\n");
+        return 0;
+    }
+    build_vga_shades();
+    return 1;
+}
+
+static int index_vga_image(Image image, uint8_t *indices, uint8_t *opaque, const char *relative) {
+    const unsigned char *pixels = image.data;
+    for (int i = 0; i < image.width * image.height; i++) {
+        int visible = pixels[i * 4 + 3] >= 128;
+        if (opaque) opaque[i] = (uint8_t)visible;
+        if (!visible) {
+            indices[i] = 0;
+            continue;
+        }
+        int color = vga_palette_index(pixels[i * 4], pixels[i * 4 + 1], pixels[i * 4 + 2]);
+        if (color < 0) {
+            fprintf(stderr, "VGA256: %s pixel (%d,%d) RGB %u,%u,%u is outside the shared palette\n",
+                    relative, i % image.width, i / image.width,
+                    pixels[i * 4], pixels[i * 4 + 1], pixels[i * 4 + 2]);
+            return 0;
+        }
+        indices[i] = (uint8_t)color;
+    }
+    return 1;
+}
+
+static int load_vga_screen(const char *relative, uint8_t *indices) {
+    Image image = load_rgba(relative);
+    if (!IsImageValid(image)) return 0;
+    int ok = image.width == SCREEN_W && image.height == SCREEN_H;
+    if (!ok) fprintf(stderr, "VGA256: %s must be 320x200\n", relative);
+    if (ok) {
+        const unsigned char *pixels = image.data;
+        for (int i = 0; i < SCREEN_W * SCREEN_H; i++) {
+            if (pixels[i * 4 + 3] != 255) {
+                fprintf(stderr, "VGA256: %s must be opaque; bank coverage comes from a separate _MASK.png\n", relative);
+                ok = 0;
+                break;
+            }
+        }
+    }
+    if (ok) ok = index_vga_image(image, indices, 0, relative);
+    UnloadImage(image);
+    return ok;
+}
+
+static unsigned vga_coverage_bit(int key) {
+    if (key == 0) return 1;
+    if (key == 2) return 2;
+    if (key == 13) return 4;
+    return 0;
+}
+
+static int decode_vga_coverage(Image image, uint8_t *coverage, const char *relative) {
+    const unsigned char *pixels = image.data;
+    for (int i = 0; i < image.width * image.height; i++) {
+        unsigned bits = 0;
+        for (int channel = 0; channel < 3; channel++) {
+            unsigned value = pixels[i * 4 + channel];
+            if (value != 0 && value != 255) {
+                fprintf(stderr, "VGA256: %s mask pixel (%d,%d) channel %d must be 0 or 255\n",
+                        relative, i % image.width, i / image.width, channel);
+                return 0;
+            }
+            if (value) bits |= 1u << channel;
+        }
+        if (pixels[i * 4 + 3] != 255) {
+            fprintf(stderr, "VGA256: %s mask PNG must be opaque\n", relative);
+            return 0;
+        }
+        coverage[i] = (uint8_t)bits;
+    }
+    return 1;
+}
+
+static int load_vga_bank(const char *name, GraphicsBank *bank) {
+    char relative[128];
+    snprintf(relative, sizeof relative, "assets/vga/%s.png", name);
+    if (!load_vga_screen(relative, bank->pixels)) return 0;
+    snprintf(relative, sizeof relative, "assets/vga/%s_MASK.png", name);
+    Image image = load_rgba(relative);
+    if (!IsImageValid(image)) return 0;
+    int ok = image.width == SCREEN_W && image.height == SCREEN_H;
+    if (!ok) fprintf(stderr, "VGA256: %s must be 320x200\n", relative);
+    if (ok) ok = decode_vga_coverage(image, bank->coverage, relative);
+    UnloadImage(image);
+    return ok;
+}
+
+static int load_vga_atlas(void) {
+    const char *relative = "assets/vga/atlas/goose.png";
+    Image image = load_rgba(relative);
+    if (!IsImageValid(image)) return 0;
+    size_t size = (size_t)atlas_w * (size_t)atlas_h;
+    int ok = image.width == atlas_w && image.height == atlas_h;
+    if (!ok) fprintf(stderr, "VGA256: %s must match the EGA atlas\n", relative);
+    if (ok) {
+        vga_atlas_pixels = malloc(size);
+        vga_atlas_opaque = malloc(size);
+        ok = vga_atlas_pixels && vga_atlas_opaque;
+        if (!ok) fprintf(stderr, "VGA256: cannot allocate atlas\n");
+    }
+    if (ok) ok = index_vga_image(image, vga_atlas_pixels, vga_atlas_opaque, relative);
+    UnloadImage(image);
+    return ok;
+}
+
+static int load_vga_pack(void) {
+    if (!load_vga_palette()) return 0;
+    if (!load_vga_atlas()) return 0;
+    if (!load_vga_screen("assets/vga/INTRO.png", vga_intro_pixels)) return 0;
+    if (!load_vga_bank("BIRD1", &vga_bank_bird1)) return 0;
+    if (!load_vga_bank("BIRD2", &vga_bank_bird2)) return 0;
+    return load_vga_bank("BLOX", &vga_bank_blox);
+}
+
+static void release_vga_pack(void) {
+    free(vga_atlas_pixels);
+    free(vga_atlas_opaque);
+    vga_atlas_pixels = 0;
+    vga_atlas_opaque = 0;
+    use_vga = 0;
+}
+
+static const GraphicsBank *vga_bank(int bank_offset) {
+    if (bank_offset == 0) return &vga_bank_bird1;
+    if (bank_offset == BANK_BLOX) return &vga_bank_blox;
+    return &vga_bank_bird2;
 }
 
 int pictures_load(void) {
@@ -167,12 +418,23 @@ int pictures_load(void) {
     load_bank("assets/BIRD1.X", bank_bird1, &bank_bird1_ready);
     load_bank("assets/BIRD2.X", bank_bird2, &bank_bird2_ready);
     load_bank("assets/BLOX.X", bank_blox, &bank_blox_ready);
+    if (!load_vga_pack()) {
+        fprintf(stderr, "VGA256: pack not used; original EGA graphics stay on\n");
+        release_vga_pack();
+    }
     ready = 1;
     return 1;
 }
 
+void pictures_toggle_vga(void) {
+    if (!vga_atlas_pixels) return;
+    use_vga = !use_vga;
+}
+
 static void blit_sprite(const AtlasSprite *sprite, int src_dx, int width, int dest_x, int dest_y) {
-    if (!sprite || width <= 0 || sprite->h == 0) return;
+    const uint8_t *pixels = use_vga ? vga_atlas_pixels : atlas_pixels;
+    const uint8_t *opaque = use_vga ? vga_atlas_opaque : 0;
+    if (!sprite || !pixels || width <= 0 || sprite->h == 0) return;
     for (int dy = 0; dy < sprite->h; dy++) {
         int sy = sprite->y + dy;
         int y = dest_y + dy;
@@ -181,9 +443,13 @@ static void blit_sprite(const AtlasSprite *sprite, int src_dx, int width, int de
             int sx = sprite->x + src_dx + dx;
             int x = dest_x + dx;
             if (sx < 0 || sx >= atlas_w || x < VIEW_X || x >= VIEW_X + VIEW_W) continue;
-            uint8_t color = atlas_pixels[sy * atlas_w + sx];
-            if (color == CLEAR) continue;
-            screen[y * SCREEN_W + x] = color;
+            int index = sy * atlas_w + sx;
+            if (opaque) {
+                if (!opaque[index]) continue;
+            } else if (pixels[index] == CLEAR) {
+                continue;
+            }
+            screen[y * SCREEN_W + x] = pixels[index];
         }
     }
 }
@@ -256,18 +522,27 @@ void pictures_sprite_bank(const char *name, int bank_offset, unsigned offset, in
         bank = bank_blox;
         bank_ready = bank_blox_ready;
     }
-    if (!bank_ready) return;
+    if (!use_vga && !bank_ready) return;
     int dest_x, dest_y;
     sprite_dest(world_x, world_y, z, sprite->anchor_x, sprite->anchor_y, camera_y, &dest_x, &dest_y);
     int src_y = (int)(offset / PACKED_STRIDE);
     int src_x = (int)(offset % PACKED_STRIDE) * 2;
+    const GraphicsBank *art = vga_bank(bank_offset);
+    unsigned coverage = vga_coverage_bit(key);
+    if (use_vga && !coverage) return;
     for (int dy = 0; dy < sprite->h; dy++) {
         int y = dest_y + dy;
         if (y < VIEW_Y || y >= VIEW_Y + VIEW_H || src_y + dy < 0 || src_y + dy >= SCREEN_H) continue;
         for (int dx = 0; dx < sprite->w; dx++) {
             int x = dest_x + dx;
             if (x < VIEW_X || x >= VIEW_X + VIEW_W || src_x + dx < 0 || src_x + dx >= SCREEN_W) continue;
-            int color = bank[(src_y + dy) * SCREEN_W + src_x + dx];
+            int src = (src_y + dy) * SCREEN_W + src_x + dx;
+            if (use_vga) {
+                if (!(art->coverage[src] & coverage)) continue;
+                screen[y * SCREEN_W + x] = art->pixels[src];
+                continue;
+            }
+            int color = bank[src];
             if (color == key) continue;
             screen[y * SCREEN_W + x] = (uint8_t)color;
         }
@@ -312,11 +587,32 @@ void pictures_score_text(const char *sprite, int world_x, int world_y, int z, in
 }
 
 void pictures_intro(void) {
-    if (intro_ready) memcpy(screen, intro_pixels, sizeof screen);
+    if (use_vga) memcpy(screen, vga_intro_pixels, sizeof screen);
+    else if (intro_ready) memcpy(screen, intro_pixels, sizeof screen);
 }
 
 void pictures_tunnel(const uint8_t *bits, int color) {
     if (color < 0 || color > 15) color = 3;
+    if (use_vga) {
+        for (int row = 0; row < VIEW_H; row++) {
+            const uint8_t *src = bits + (row + TUNNEL_CAMERA) * TUNNEL_STRIDE;
+            for (int x = 0; x < VIEW_W; x++) {
+                int depth = vga_tunnel_depth[row * VIEW_W + x];
+                unsigned mask = BIT7 >> (x & 7);
+                uint8_t pixel = vga_tunnel_wall[color][depth];
+                if (src[x >> 3] & mask) {
+                    pixel = vga_tunnel_line[color][depth];
+                } else {
+                    int glow = ((src[x / 8 - TUNNEL_STRIDE] | src[x / 8 + TUNNEL_STRIDE]) & mask) != 0;
+                    if (x > 0) glow |= (src[(x - 1) >> 3] & (BIT7 >> ((x - 1) & 7))) != 0;
+                    if (x + 1 < VIEW_W) glow |= (src[(x + 1) >> 3] & (BIT7 >> ((x + 1) & 7))) != 0;
+                    if (glow) pixel = vga_tunnel_glow[color][depth];
+                }
+                screen[(VIEW_Y + row) * SCREEN_W + VIEW_X + x] = pixel;
+            }
+        }
+        return;
+    }
     for (int row = 0; row < VIEW_H; row++) {
         const uint8_t *src = bits + (row + TUNNEL_CAMERA) * TUNNEL_STRIDE;
         for (int x = 0; x < VIEW_W; x++) {
@@ -329,7 +625,9 @@ void pictures_tunnel(const uint8_t *bits, int color) {
 
 void pictures_finish(void) {
     if (!ready) return;
-    for (int i = 0; i < SCREEN_W * SCREEN_H; i++) upload[i] = EGA[screen[i]];
+    for (int i = 0; i < SCREEN_W * SCREEN_H; i++) {
+        upload[i] = use_vga ? vga_palette[screen[i]] : EGA[screen[i]];
+    }
     UpdateTexture(frame, upload);
 }
 
@@ -384,17 +682,29 @@ void pictures_blit_bank(int bank_offset, unsigned offset, int width, int height,
         bank = bank_blox;
         bank_ready = bank_blox_ready;
     }
-    if (!bank_ready || width <= 0 || height <= 0) return;
+    const GraphicsBank *art = vga_bank(bank_offset);
+    if (!use_vga && !bank_ready) return;
+    if (width <= 0 || height <= 0) return;
     int src_y = (int)(offset / PACKED_STRIDE);
     int src_x = (int)(offset % PACKED_STRIDE) * 2;
     int live = live_columns < 0 ? width : live_columns;
+    unsigned coverage = vga_coverage_bit(KEY_COLOR);
     for (int dy = 0; dy < height; dy++) {
         int y = dest_y + dy;
         if (y < 0 || y >= SCREEN_H || src_y + dy < 0 || src_y + dy >= SCREEN_H) continue;
         for (int dx = 0; dx < width; dx++) {
             int x = dest_x + dx;
             if (x < 0 || x >= SCREEN_W || src_x + dx < 0 || src_x + dx >= SCREEN_W) continue;
-            int color = bank[(src_y + dy) * SCREEN_W + src_x + dx];
+            int src = (src_y + dy) * SCREEN_W + src_x + dx;
+            if (use_vga) {
+                int visible = (art->coverage[src] & coverage) != 0;
+                uint8_t color = art->pixels[src];
+                if (dx >= live) color = vga_dim[visible ? color : 0];
+                else if (!visible) continue;
+                screen[y * SCREEN_W + x] = color;
+                continue;
+            }
+            int color = bank[src];
             if (dx >= live) {
                 if (color == KEY_COLOR || (color & 1) == 0) color = (color == KEY_COLOR ? 0 : color) ^ GAUGE_FLIP;
             } else if (color == KEY_COLOR) {
@@ -406,7 +716,12 @@ void pictures_blit_bank(int bank_offset, unsigned offset, int width, int height,
 }
 
 void pictures_fill(int x, int y, int width, int height, int color) {
-    if (color < 0 || color > 15) color = 0;
+    if (use_vga) {
+        if (color < 0 || color >= VGA_COLORS) color = 0;
+        if (color < LEGACY_COLORS) color = vga_fill[color];
+    } else if (color < 0 || color > 15) {
+        color = 0;
+    }
     for (int dy = 0; dy < height; dy++) {
         int row = y + dy;
         if (row < 0 || row >= SCREEN_H) continue;
@@ -489,6 +804,7 @@ void pictures_save(const char *path) {
 void pictures_shutdown(void) {
     free(atlas_pixels);
     atlas_pixels = 0;
+    release_vga_pack();
     if (ready) UnloadTexture(frame);
     ready = 0;
 }

@@ -79,6 +79,8 @@ static int first_scancode(int skip_fixed) {
 }
 
 static void service_keys(void) {
+    /* F5 reloads a browser page, so the picture switch is F8. */
+    if (ui_mode != UI_REBIND && IsKeyPressed(KEY_F8)) pictures_toggle_vga();
     if (ui_mode == UI_PAUSE) {
         if (key_down(SCAN_F4)) ui_mode = UI_PLAY;
         return;
