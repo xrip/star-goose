@@ -349,7 +349,9 @@ static int load_vga_pack(void) {
     if (!load_vga_screen("assets/vga/INTRO.png", vga_intro_pixels)) return 0;
     if (!load_vga_bank("BIRD1", &vga_bank_bird1)) return 0;
     if (!load_vga_bank("BIRD2", &vga_bank_bird2)) return 0;
-    return load_vga_bank("BLOX", &vga_bank_blox);
+    if (!load_vga_bank("BLOX", &vga_bank_blox)) return 0;
+    use_vga = 1;
+    return 1;
 }
 
 static void release_vga_pack(void) {

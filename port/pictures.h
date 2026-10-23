@@ -13,7 +13,7 @@ void pictures_sprite(const char *name, int world_x, int world_y, int z, int came
  * key is the original transparent color, 0..15. */
 void pictures_sprite_bank(const char *name, int bank, unsigned offset, int key,
                           int world_x, int world_y, int z, int camera_y);
-/* F8. No effect when assets/vga did not load. */
+/* F8 forces the original picture. VGA is the default when assets/vga loaded. */
 void pictures_toggle_vga(void);
 /* Stamps a high-score name or digit row onto a drifting title sprite. */
 void pictures_score_text(const char *sprite, int world_x, int world_y, int z, int camera_y,
